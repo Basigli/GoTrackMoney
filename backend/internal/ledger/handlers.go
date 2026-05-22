@@ -1,0 +1,242 @@
+package ledger
+
+import (
+	"errors"
+	"log"
+	"net/http"
+
+	repo "github.com/sikozonpc/ecom/internal/adapters/postgresql/sqlc"
+	"github.com/sikozonpc/ecom/internal/auth"
+	"github.com/sikozonpc/ecom/internal/json"
+)
+
+type handler struct {
+	service Service
+	auth    *auth.Manager
+}
+
+type userResponse struct {
+	ID       int64  `json:"id"`
+	Username string `json:"username"`
+}
+
+type authResponse struct {
+	User  userResponse `json:"user"`
+	Token string       `json:"token"`
+}
+
+func NewHandler(service Service, authManager *auth.Manager) *handler {
+	return &handler{service: service, auth: authManager}
+}
+
+func (h *handler) ListUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := h.service.ListUsers(r.Context())
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.Write(w, http.StatusOK, toUserResponses(users))
+}
+
+func (h *handler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	var payload createUserParams
+	if err := json.Read(r, &payload); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	user, err := h.service.CreateUser(r.Context(), payload)
+	if err != nil {
+		log.Println(err)
+		switch {
+		case errors.Is(err, ErrUsernameTaken):
+			http.Error(w, err.Error(), http.StatusConflict)
+		default:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+	token, err := h.auth.Issue(user.ID)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.Write(w, http.StatusCreated, authResponse{
+		User:  toUserResponse(user),
+		Token: token,
+	})
+}
+
+func (h *handler) Login(w http.ResponseWriter, r *http.Request) {
+	var payload loginParams
+	if err := json.Read(r, &payload); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.service.AuthenticateUser(r.Context(), payload)
+	if err != nil {
+		log.Println(err)
+		switch {
+		case errors.Is(err, ErrInvalidCredentials):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		case errors.Is(err, auth.ErrUnauthorized):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	token, err := h.auth.Issue(user.ID)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.Write(w, http.StatusOK, authResponse{
+		User:  toUserResponse(user),
+		Token: token,
+	})
+}
+
+func (h *handler) Me(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.CurrentUser(r.Context())
+	if !ok {
+		http.Error(w, auth.ErrUnauthorized.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	json.Write(w, http.StatusOK, userResponse{
+		ID:       user.ID,
+		Username: user.Username,
+	})
+}
+
+func (h *handler) ListCategories(w http.ResponseWriter, r *http.Request) {
+	categories, err := h.service.ListCategories(r.Context())
+	if err != nil {
+		log.Println(err)
+		if errors.Is(err, auth.ErrUnauthorized) {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.Write(w, http.StatusOK, categories)
+}
+
+func (h *handler) CreateCategory(w http.ResponseWriter, r *http.Request) {
+	var payload createCategoryParams
+	if err := json.Read(r, &payload); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	category, err := h.service.CreateCategory(r.Context(), payload)
+	if err != nil {
+		log.Println(err)
+		switch {
+		case errors.Is(err, auth.ErrUnauthorized):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		default:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+	json.Write(w, http.StatusCreated, category)
+}
+
+func (h *handler) ListExpenses(w http.ResponseWriter, r *http.Request) {
+	expenses, err := h.service.ListExpenses(r.Context())
+	if err != nil {
+		log.Println(err)
+		if errors.Is(err, auth.ErrUnauthorized) {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.Write(w, http.StatusOK, expenses)
+}
+
+func (h *handler) CreateExpense(w http.ResponseWriter, r *http.Request) {
+	var payload createExpenseParams
+	if err := json.Read(r, &payload); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	expense, err := h.service.CreateExpense(r.Context(), payload)
+	if err != nil {
+		log.Println(err)
+		switch {
+		case errors.Is(err, auth.ErrUnauthorized):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		case errors.Is(err, ErrCategoryNotFound):
+			http.Error(w, err.Error(), http.StatusNotFound)
+		default:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+	json.Write(w, http.StatusCreated, expense)
+}
+
+func (h *handler) ListIncomes(w http.ResponseWriter, r *http.Request) {
+	incomes, err := h.service.ListIncomes(r.Context())
+	if err != nil {
+		log.Println(err)
+		if errors.Is(err, auth.ErrUnauthorized) {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.Write(w, http.StatusOK, incomes)
+}
+
+func (h *handler) CreateIncome(w http.ResponseWriter, r *http.Request) {
+	var payload createIncomeParams
+	if err := json.Read(r, &payload); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	income, err := h.service.CreateIncome(r.Context(), payload)
+	if err != nil {
+		log.Println(err)
+		switch {
+		case errors.Is(err, auth.ErrUnauthorized):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		case errors.Is(err, ErrCategoryNotFound):
+			http.Error(w, err.Error(), http.StatusNotFound)
+		default:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+	json.Write(w, http.StatusCreated, income)
+}
+
+func toUserResponses(users []repo.User) []userResponse {
+	responses := make([]userResponse, 0, len(users))
+	for _, user := range users {
+		responses = append(responses, toUserResponse(user))
+	}
+	return responses
+}
+
+func toUserResponse(user repo.User) userResponse {
+	return userResponse{
+		ID:       user.ID,
+		Username: user.Username,
+	}
+}
