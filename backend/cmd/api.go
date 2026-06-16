@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5"
 	repo "github.com/sikozonpc/ecom/internal/adapters/postgresql/sqlc"
 	"github.com/sikozonpc/ecom/internal/auth"
@@ -15,6 +16,15 @@ import (
 
 func (app *application) mount() http.Handler {
 	r := chi.NewRouter()
+
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://*", "https://*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
 
 	// A good base middleware stack
 	r.Use(middleware.RequestID) // important for rate limiting
