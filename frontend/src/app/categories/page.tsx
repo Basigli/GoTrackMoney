@@ -5,10 +5,12 @@ import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { useData } from '@/hooks/useData';
 import toast, { Toaster } from 'react-hot-toast';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 export default function CategoriesPage() {
   const { token, user, loading, logout } = useAuth();
   const { categories, fetchCategories } = useData(token);
+  const { t } = useLanguage();
   
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('📝');
@@ -37,14 +39,14 @@ export default function CategoriesPage() {
         setName('');
         setEmoji('📝');
         setEditingCategory(null);
-        toast.success(editingCategory ? 'Categoria aggiornata!' : 'Categoria creata!');
+        toast.success(editingCategory ? t('categories.success_update') : t('categories.success_create'));
         fetchCategories();
       } else {
-        toast.error('Errore nel salvataggio');
+        toast.error(t('categories.error_save'));
       }
     } catch (err) { 
       console.error(err);
-      toast.error('Errore nel salvataggio');
+      toast.error(t('categories.error_save'));
     }
   };
 
@@ -70,39 +72,39 @@ export default function CategoriesPage() {
       
       <div style={{ padding: '0 20px', marginBottom: '24px' }}>
         <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '20px' }}>
-          {editingCategory ? 'Modifica Categoria' : 'Nuova Categoria'}
+          {editingCategory ? t('categories.edit') : t('categories.new')}
         </h2>
         <form onSubmit={handleSubmit} style={{ background: 'var(--surface-color)', padding: '24px', borderRadius: '24px', border: '1px solid var(--border-color)' }}>
           
           <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
             <div style={{ flex: '0 0 60px' }}>
-              <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px', color: 'var(--text-color)' }}>Emoji</label>
+              <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px', color: 'var(--text-color)' }}>{t('categories.emoji')}</label>
               <input type="text" value={emoji} onChange={e => setEmoji(e.target.value)} style={{ width: '100%', padding: '16px 0', textAlign: 'center', background: 'var(--input-bg)', border: 'none', borderRadius: '16px', fontSize: '24px' }} required />
             </div>
             <div style={{ flex: '1' }}>
-              <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px', color: 'var(--text-color)' }}>Nome Categoria</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', padding: '16px 20px', background: 'var(--input-bg)', border: 'none', borderRadius: '16px', fontSize: '16px', color: 'var(--text-color)' }} placeholder="Es. Spesa, Stipendio..." required />
+              <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px', color: 'var(--text-color)' }}>{t('categories.name')}</label>
+              <input type="text" value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', padding: '16px 20px', background: 'var(--input-bg)', border: 'none', borderRadius: '16px', fontSize: '16px', color: 'var(--text-color)' }} placeholder={t('categories.name_placeholder')} required />
             </div>
           </div>
 
           <div className="radio-group" style={{ marginBottom: '24px', display: 'flex', gap: '24px' }}>
             <label className="radio-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
               <input type="radio" name="catType" checked={type === 'expense'} onChange={() => setType('expense')} />
-              Spesa
+              {t('categories.type_expense')}
             </label>
             <label className="radio-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
               <input type="radio" name="catType" checked={type === 'income'} onChange={() => setType('income')} />
-              Entrata
+              {t('categories.type_income')}
             </label>
           </div>
 
           <div style={{ display: 'flex', gap: '12px' }}>
             <button type="submit" className="submit-btn" style={{ background: 'var(--primary-color)', color: 'white', flex: 1, padding: '16px', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}>
-              {editingCategory ? 'Salva Modifiche' : 'Aggiungi Categoria'}
+              {editingCategory ? t('categories.save_btn') : t('categories.add_btn')}
             </button>
             {editingCategory && (
               <button type="button" onClick={() => { setEditingCategory(null); setName(''); setEmoji('📝'); }} style={{ background: 'var(--input-bg)', color: 'var(--text-color)', flex: '0 0 auto', padding: '16px 24px', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}>
-                Annulla
+                {t('categories.cancel_btn')}
               </button>
             )}
           </div>
@@ -110,12 +112,12 @@ export default function CategoriesPage() {
       </div>
 
       <div style={{ padding: '0 20px', marginBottom: '40px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '20px' }}>Le Mie Categorie</h2>
+        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '20px' }}>{t('categories.my_categories')}</h2>
         
         <div style={{ marginBottom: '20px' }}>
           <input 
             type="text" 
-            placeholder="Cerca categoria..." 
+            placeholder={t('categories.search')}
             value={filter}
             onChange={e => setFilter(e.target.value)}
             style={{ width: '100%', padding: '16px 20px', background: 'var(--input-bg)', border: 'none', borderRadius: '16px', fontSize: '16px', color: 'var(--text-color)' }}
@@ -124,7 +126,7 @@ export default function CategoriesPage() {
 
         <div style={{ display: 'flex', gap: '20px', flexDirection: 'column' }}>
           <div>
-            <h3 style={{ fontSize: '18px', marginBottom: '12px', color: 'var(--danger-color)' }}>Spese</h3>
+            <h3 style={{ fontSize: '18px', marginBottom: '12px', color: 'var(--danger-color)' }}>{t('categories.expenses_list')}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {expenseCategories.map(c => (
                 <div key={c.id} onClick={() => handleEditClick(c)} style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', cursor: 'pointer' }}>
@@ -132,12 +134,12 @@ export default function CategoriesPage() {
                   <span style={{ fontSize: '16px', fontWeight: 500 }}>{c.name}</span>
                 </div>
               ))}
-              {expenseCategories.length === 0 && <div style={{ color: 'var(--text-muted)' }}>Nessuna categoria.</div>}
+              {expenseCategories.length === 0 && <div style={{ color: 'var(--text-muted)' }}>{t('categories.no_categories')}</div>}
             </div>
           </div>
           
           <div>
-            <h3 style={{ fontSize: '18px', marginBottom: '12px', color: 'var(--success-color)' }}>Entrate</h3>
+            <h3 style={{ fontSize: '18px', marginBottom: '12px', color: 'var(--success-color)' }}>{t('categories.incomes_list')}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {incomeCategories.map(c => (
                 <div key={c.id} onClick={() => handleEditClick(c)} style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', cursor: 'pointer' }}>
@@ -145,7 +147,7 @@ export default function CategoriesPage() {
                   <span style={{ fontSize: '16px', fontWeight: 500 }}>{c.name}</span>
                 </div>
               ))}
-              {incomeCategories.length === 0 && <div style={{ color: 'var(--text-muted)' }}>Nessuna categoria.</div>}
+              {incomeCategories.length === 0 && <div style={{ color: 'var(--text-muted)' }}>{t('categories.no_categories')}</div>}
             </div>
           </div>
         </div>

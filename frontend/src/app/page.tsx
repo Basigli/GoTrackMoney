@@ -6,8 +6,9 @@ import Navbar from '@/components/Navbar';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { it, enUS } from 'date-fns/locale';
 import toast, { Toaster } from 'react-hot-toast';
+import { useLanguage } from '@/i18n/LanguageContext';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -27,6 +28,9 @@ export default function Home() {
   // Filtering state
   const [filterDate, setFilterDate] = useState<Date>(new Date());
   const [filterMode, setFilterMode] = useState<'month' | 'year'>('month');
+
+  const { t, language } = useLanguage();
+  const dateLocale = language === 'it' ? it : enUS;
 
   // Add/Edit modal state
   const [addType, setAddType] = useState<'entrata' | 'spesa'>('spesa');
@@ -139,15 +143,15 @@ export default function Home() {
         setShowAddModal(false);
         if (addType === 'entrata') fetchIncomes();
         else fetchExpenses();
-        toast.success(editingItem ? 'Modifica salvata!' : (addType === 'entrata' ? 'Entrata registrata!' : 'Spesa registrata!'), {
+        toast.success(editingItem ? t('record.success_edit') : (addType === 'entrata' ? t('record.success_income') : t('record.success_expense')), {
           style: { borderRadius: '12px', background: '#333', color: '#fff' }
         });
       } else {
-        toast.error(editingItem ? 'Errore nella modifica' : 'Errore nella registrazione');
+        toast.error(editingItem ? t('record.error_save') : t('record.error_save'));
       }
     } catch (err) { 
       console.error(err); 
-      toast.error('Errore di connessione');
+      toast.error(t('record.error_conn'));
     }
   };
 
@@ -198,7 +202,7 @@ export default function Home() {
       <div className="date-display" onClick={onClick} ref={ref} style={{ cursor: 'pointer' }}>
         <span className="date-icon">📅</span>
         <div className="date-text">
-          <h2>{filterMode === 'month' ? format(filterDate, 'MMM yyyy', { locale: it }) : format(filterDate, 'yyyy')}</h2>
+          <h2>{filterMode === 'month' ? format(filterDate, 'MMM yyyy', { locale: dateLocale }) : format(filterDate, 'yyyy')}</h2>
           <p>Filter by {filterMode}</p>
         </div>
       </div>
@@ -210,7 +214,7 @@ export default function Home() {
         <span className="date-icon">📅</span>
         <div className="date-text">
           <h2>Date & Time</h2>
-          <p>{format(addDate, 'd MMM yyyy, HH:mm', { locale: it })}</p>
+          <p>{format(addDate, 'd MMM yyyy, HH:mm', { locale: dateLocale })}</p>
         </div>
       </div>
     ));
@@ -229,7 +233,7 @@ export default function Home() {
             showYearPicker={filterMode === 'year'}
             dateFormat={filterMode === 'month' ? "MMM yyyy" : "yyyy"}
             customInput={<HeaderDateInput />}
-            locale={it}
+            locale={dateLocale}
             withPortal
           />
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -237,27 +241,27 @@ export default function Home() {
               onClick={() => setFilterMode(m => m === 'month' ? 'year' : 'month')}
               style={{ padding: '10px 16px', borderRadius: '20px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}
             >
-              {filterMode === 'month' ? 'View Year' : 'View Month'}
+              {filterMode === 'month' ? t('dashboard.filter_year') : t('dashboard.filter_month')}
             </button>
             <button className="add-btn" onClick={openAddModal}>+</button>
           </div>
         </div>
 
         <div className="balance-banner">
-          <p className="balance-title">Bilancio</p>
+          <p className="balance-title">{t('dashboard.total_balance')}</p>
           <h1 className="balance-amount">{balance.toFixed(2)} €</h1>
           <div className="balance-stats">
             <div className="stat-item">
               <div className="stat-icon expense">↓</div>
               <div className="stat-details">
-                <p>Uscite</p>
+                <p>{t('dashboard.expenses')}</p>
                 <h4>{totalExpense.toFixed(2)} €</h4>
               </div>
             </div>
             <div className="stat-item">
               <div className="stat-icon income">↑</div>
               <div className="stat-details">
-                <p>Entrate</p>
+                <p>{t('dashboard.incomes')}</p>
                 <h4>{totalIncome.toFixed(2)} €</h4>
               </div>
             </div>
@@ -265,8 +269,8 @@ export default function Home() {
         </div>
 
         <div className="tabs">
-          <div className={`tab ${activeTab === 'uscite' ? 'active' : ''}`} onClick={() => setActiveTab('uscite')}>Uscite</div>
-          <div className={`tab ${activeTab === 'entrate' ? 'active' : ''}`} onClick={() => setActiveTab('entrate')}>Entrate</div>
+          <div className={`tab ${activeTab === 'uscite' ? 'active' : ''}`} onClick={() => setActiveTab('uscite')}>{t('dashboard.expenses')}</div>
+          <div className={`tab ${activeTab === 'entrate' ? 'active' : ''}`} onClick={() => setActiveTab('entrate')}>{t('dashboard.incomes')}</div>
         </div>
 
         <div className="list-container">
@@ -310,41 +314,41 @@ export default function Home() {
                 timeIntervals={15}
                 dateFormat="d MMMM yyyy, HH:mm"
                 customInput={<ModalDateInput />}
-                locale={it}
+                locale={dateLocale}
                 withPortal
               />
 
               <div className="radio-group">
                 <label className="radio-label">
                   <input type="radio" name="type" checked={addType === 'entrata'} onChange={() => setAddType('entrata')} />
-                  Entrata
+                  {t('record.income')}
                 </label>
                 <label className="radio-label">
                   <input type="radio" name="type" checked={addType === 'spesa'} onChange={() => setAddType('spesa')} />
-                  Spesa
+                  {t('record.expense')}
                 </label>
               </div>
 
               <form className="modal-form" onSubmit={handleAddSubmit}>
                 <div className="input-group">
-                  <label className="input-label">Totale (in euro)</label>
-                  <input type="number" step="0.01" className="input-field" placeholder="Inserisci.." value={addAmount} onChange={e => setAddAmount(e.target.value)} required />
+                  <label className="input-label">{t('record.amount')}</label>
+                  <input type="number" step="0.01" className="input-field" placeholder={t('record.amount_placeholder')} value={addAmount} onChange={e => setAddAmount(e.target.value)} required />
                 </div>
                 
                 <div className="input-group">
-                  <label className="input-label">Categoria</label>
+                  <label className="input-label">{t('record.category')}</label>
                   <select className="input-field" value={addCat} onChange={e => setAddCat(e.target.value)} required>
-                    <option value="" disabled>Select...</option>
+                    <option value="" disabled>{t('record.select_category')}</option>
                     {categories.filter(c => c.type === (addType === 'entrata' ? 'income' : 'expense')).map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
                   </select>
                 </div>
 
                 <div className="input-group">
-                  <label className="input-label">Descrizione</label>
-                  <input type="text" className="input-field" placeholder="Inserisci.." value={addDesc} onChange={e => setAddDesc(e.target.value)} />
+                  <label className="input-label">{t('record.description')}</label>
+                  <input type="text" className="input-field" placeholder={t('record.description_placeholder')} value={addDesc} onChange={e => setAddDesc(e.target.value)} />
                 </div>
 
-                <button type="submit" className="submit-btn">✓ Conferma</button>
+                <button type="submit" className="submit-btn">✓ {t('record.save')}</button>
               </form>
             </div>
           </div>
@@ -356,7 +360,7 @@ export default function Home() {
             <div className="modal-content" onClick={e => e.stopPropagation()}>
               <button className="modal-close" onClick={() => setSelectedCategory(null)}>&times;</button>
               <h2 style={{ marginBottom: '24px' }}>
-                {categories.find(c => c.id === selectedCategory)?.name} {activeTab === 'uscite' ? 'Uscite' : 'Entrate'}
+                {t('dashboard.details_for', { category: categories.find(c => c.id === selectedCategory)?.name || '' })}
               </h2>
               <div>
                 {(activeGroups[selectedCategory] || []).map((item: any) => (
@@ -372,7 +376,7 @@ export default function Home() {
                         </div>
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                        {format(new Date(item.spent_on || item.received_on), 'd MMM yyyy, HH:mm', { locale: it })}
+                        {format(new Date(item.spent_on || item.received_on), 'd MMM yyyy, HH:mm', { locale: dateLocale })}
                       </div>
                     </div>
                   </div>
@@ -389,15 +393,15 @@ export default function Home() {
   return (
     <div className="app-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="glass-container">
-        <h1 className="form-title">{isLogin ? 'Welcome Back' : 'Create Account'}</h1>
+        <h1 className="form-title">{isLogin ? t('auth.login') : t('auth.register')}</h1>
         <form onSubmit={handleAuth}>
-          <input className="input-field" type="text" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} required />
-          <input className="input-field" type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required />
-          <button type="submit" className="submit-btn">{isLogin ? 'Sign In' : 'Sign Up'}</button>
+          <input className="input-field" type="text" placeholder={t('auth.username')} value={username} onChange={e => setUsername(e.target.value)} required />
+          <input className="input-field" type="password" placeholder={t('auth.password')} value={password} onChange={e => setPassword(e.target.value)} required />
+          <button type="submit" className="submit-btn">{isLogin ? t('auth.login') : t('auth.register')}</button>
         </form>
         <div style={{ textAlign: 'center', marginTop: '16px' }}>
           <button onClick={() => setIsLogin(!isLogin)} style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer' }}>
-            {isLogin ? 'Sign up here' : 'Sign in here'}
+            {isLogin ? t('auth.no_account') : t('auth.have_account')}
           </button>
         </div>
       </div>
