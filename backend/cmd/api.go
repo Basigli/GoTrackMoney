@@ -53,12 +53,15 @@ func (app *application) mount() http.Handler {
 
 		r.Get("/categories", handler.ListCategories)
 		r.Post("/categories", handler.CreateCategory)
+		r.Put("/categories/{id}", handler.UpdateCategory)
 
 		r.Get("/expenses", handler.ListExpenses)
 		r.Post("/expenses", handler.CreateExpense)
+		r.Put("/expenses/{id}", handler.UpdateExpense)
 
 		r.Get("/incomes", handler.ListIncomes)
 		r.Post("/incomes", handler.CreateIncome)
+		r.Put("/incomes/{id}", handler.UpdateIncome)
 	})
 
 	return r

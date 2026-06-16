@@ -115,3 +115,37 @@ INSERT INTO incomes (
 )
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id, name, description, amount, user_id, created_at, category_id, received_on;
+
+-- name: UpdateCategory :one
+UPDATE categories
+SET
+  name = $2,
+  emoji = $3,
+  type = $4
+WHERE
+  id = $1 AND creator_id = $5
+RETURNING id, name, creator_id, emoji, type;
+
+-- name: UpdateExpense :one
+UPDATE expenses
+SET
+  name = $2,
+  description = $3,
+  amount = $4,
+  category_id = $5,
+  spent_on = $6
+WHERE
+  id = $1 AND user_id = $7
+RETURNING id, name, description, amount, user_id, created_at, category_id, spent_on;
+
+-- name: UpdateIncome :one
+UPDATE incomes
+SET
+  name = $2,
+  description = $3,
+  amount = $4,
+  category_id = $5,
+  received_on = $6
+WHERE
+  id = $1 AND user_id = $7
+RETURNING id, name, description, amount, user_id, created_at, category_id, received_on;

@@ -24,6 +24,9 @@ type Querier interface {
 	ListIncomes(ctx context.Context) ([]Income, error)
 	ListIncomesByUserID(ctx context.Context, userID int64) ([]Income, error)
 	ListUsers(ctx context.Context) ([]User, error)
+	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error)
+	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (Expense, error)
+	UpdateIncome(ctx context.Context, arg UpdateIncomeParams) (Income, error)
 }
 
 var _ Querier = (*Queries)(nil)

@@ -477,3 +477,135 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	}
 	return items, nil
 }
+
+const updateCategory = `-- name: UpdateCategory :one
+UPDATE categories
+SET
+  name = $2,
+  emoji = $3,
+  type = $4
+WHERE
+  id = $1 AND creator_id = $5
+RETURNING id, name, creator_id, emoji, type
+`
+
+type UpdateCategoryParams struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	Emoji     string `json:"emoji"`
+	Type      string `json:"type"`
+	CreatorID int64  `json:"creator_id"`
+}
+
+func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error) {
+	row := q.db.QueryRow(ctx, updateCategory,
+		arg.ID,
+		arg.Name,
+		arg.Emoji,
+		arg.Type,
+		arg.CreatorID,
+	)
+	var i Category
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatorID,
+		&i.Emoji,
+		&i.Type,
+	)
+	return i, err
+}
+
+const updateExpense = `-- name: UpdateExpense :one
+UPDATE expenses
+SET
+  name = $2,
+  description = $3,
+  amount = $4,
+  category_id = $5,
+  spent_on = $6
+WHERE
+  id = $1 AND user_id = $7
+RETURNING id, name, description, amount, user_id, created_at, category_id, spent_on
+`
+
+type UpdateExpenseParams struct {
+	ID          int64              `json:"id"`
+	Name        string             `json:"name"`
+	Description string             `json:"description"`
+	Amount      float64            `json:"amount"`
+	CategoryID  int64              `json:"category_id"`
+	SpentOn     pgtype.Timestamptz `json:"spent_on"`
+	UserID      int64              `json:"user_id"`
+}
+
+func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (Expense, error) {
+	row := q.db.QueryRow(ctx, updateExpense,
+		arg.ID,
+		arg.Name,
+		arg.Description,
+		arg.Amount,
+		arg.CategoryID,
+		arg.SpentOn,
+		arg.UserID,
+	)
+	var i Expense
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Amount,
+		&i.UserID,
+		&i.CreatedAt,
+		&i.CategoryID,
+		&i.SpentOn,
+	)
+	return i, err
+}
+
+const updateIncome = `-- name: UpdateIncome :one
+UPDATE incomes
+SET
+  name = $2,
+  description = $3,
+  amount = $4,
+  category_id = $5,
+  received_on = $6
+WHERE
+  id = $1 AND user_id = $7
+RETURNING id, name, description, amount, user_id, created_at, category_id, received_on
+`
+
+type UpdateIncomeParams struct {
+	ID          int64              `json:"id"`
+	Name        string             `json:"name"`
+	Description string             `json:"description"`
+	Amount      float64            `json:"amount"`
+	CategoryID  int64              `json:"category_id"`
+	ReceivedOn  pgtype.Timestamptz `json:"received_on"`
+	UserID      int64              `json:"user_id"`
+}
+
+func (q *Queries) UpdateIncome(ctx context.Context, arg UpdateIncomeParams) (Income, error) {
+	row := q.db.QueryRow(ctx, updateIncome,
+		arg.ID,
+		arg.Name,
+		arg.Description,
+		arg.Amount,
+		arg.CategoryID,
+		arg.ReceivedOn,
+		arg.UserID,
+	)
+	var i Income
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Amount,
+		&i.UserID,
+		&i.CreatedAt,
+		&i.CategoryID,
+		&i.ReceivedOn,
+	)
+	return i, err
+}

@@ -26,12 +26,15 @@ type Service interface {
 
 	ListCategories(ctx context.Context) ([]repo.Category, error)
 	CreateCategory(ctx context.Context, params createCategoryParams) (repo.Category, error)
+	UpdateCategory(ctx context.Context, params updateCategoryParams) (repo.Category, error)
 
 	ListExpenses(ctx context.Context) ([]repo.Expense, error)
 	CreateExpense(ctx context.Context, params createExpenseParams) (repo.Expense, error)
+	UpdateExpense(ctx context.Context, params updateExpenseParams) (repo.Expense, error)
 
 	ListIncomes(ctx context.Context) ([]repo.Income, error)
 	CreateIncome(ctx context.Context, params createIncomeParams) (repo.Income, error)
+	UpdateIncome(ctx context.Context, params updateIncomeParams) (repo.Income, error)
 }
 
 type svc struct {
@@ -121,6 +124,28 @@ func (s *svc) CreateCategory(ctx context.Context, params createCategoryParams) (
 	})
 }
 
+func (s *svc) UpdateCategory(ctx context.Context, params updateCategoryParams) (repo.Category, error) {
+	if params.ID <= 0 {
+		return repo.Category{}, fmt.Errorf("id is required")
+	}
+	if params.Name == "" {
+		return repo.Category{}, fmt.Errorf("name is required")
+	}
+
+	user, err := currentUser(ctx)
+	if err != nil {
+		return repo.Category{}, err
+	}
+
+	return s.repo.UpdateCategory(ctx, repo.UpdateCategoryParams{
+		ID:        params.ID,
+		Name:      params.Name,
+		Emoji:     params.Emoji,
+		Type:      params.Type,
+		CreatorID: user.ID,
+	})
+}
+
 func (s *svc) ListExpenses(ctx context.Context) ([]repo.Expense, error) {
 	user, err := currentUser(ctx)
 	if err != nil {
@@ -163,6 +188,46 @@ func (s *svc) CreateExpense(ctx context.Context, params createExpenseParams) (re
 	})
 }
 
+func (s *svc) UpdateExpense(ctx context.Context, params updateExpenseParams) (repo.Expense, error) {
+	if params.ID <= 0 {
+		return repo.Expense{}, fmt.Errorf("id is required")
+	}
+	if params.Name == "" {
+		return repo.Expense{}, fmt.Errorf("name is required")
+	}
+	if params.Amount <= 0 {
+		return repo.Expense{}, fmt.Errorf("amount must be greater than zero")
+	}
+	if params.CategoryID <= 0 {
+		return repo.Expense{}, fmt.Errorf("category_id is required")
+	}
+
+	user, err := currentUser(ctx)
+	if err != nil {
+		return repo.Expense{}, err
+	}
+
+	if _, err := s.repo.FindCategoryByIDAndCreatorID(ctx, repo.FindCategoryByIDAndCreatorIDParams{
+		ID:        params.CategoryID,
+		CreatorID: user.ID,
+	}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return repo.Expense{}, ErrCategoryNotFound
+		}
+		return repo.Expense{}, err
+	}
+
+	return s.repo.UpdateExpense(ctx, repo.UpdateExpenseParams{
+		ID:          params.ID,
+		Name:        params.Name,
+		Description: params.Description,
+		Amount:      params.Amount,
+		CategoryID:  params.CategoryID,
+		SpentOn:     timestamptzFromTime(params.SpentOn),
+		UserID:      user.ID,
+	})
+}
+
 func (s *svc) ListIncomes(ctx context.Context) ([]repo.Income, error) {
 	user, err := currentUser(ctx)
 	if err != nil {
@@ -202,6 +267,46 @@ func (s *svc) CreateIncome(ctx context.Context, params createIncomeParams) (repo
 		UserID:      user.ID,
 		CategoryID:  params.CategoryID,
 		ReceivedOn:  timestamptzFromTime(params.ReceivedOn),
+	})
+}
+
+func (s *svc) UpdateIncome(ctx context.Context, params updateIncomeParams) (repo.Income, error) {
+	if params.ID <= 0 {
+		return repo.Income{}, fmt.Errorf("id is required")
+	}
+	if params.Name == "" {
+		return repo.Income{}, fmt.Errorf("name is required")
+	}
+	if params.Amount <= 0 {
+		return repo.Income{}, fmt.Errorf("amount must be greater than zero")
+	}
+	if params.CategoryID <= 0 {
+		return repo.Income{}, fmt.Errorf("category_id is required")
+	}
+
+	user, err := currentUser(ctx)
+	if err != nil {
+		return repo.Income{}, err
+	}
+
+	if _, err := s.repo.FindCategoryByIDAndCreatorID(ctx, repo.FindCategoryByIDAndCreatorIDParams{
+		ID:        params.CategoryID,
+		CreatorID: user.ID,
+	}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return repo.Income{}, ErrCategoryNotFound
+		}
+		return repo.Income{}, err
+	}
+
+	return s.repo.UpdateIncome(ctx, repo.UpdateIncomeParams{
+		ID:          params.ID,
+		Name:        params.Name,
+		Description: params.Description,
+		Amount:      params.Amount,
+		CategoryID:  params.CategoryID,
+		ReceivedOn:  timestamptzFromTime(params.ReceivedOn),
+		UserID:      user.ID,
 	})
 }
 

@@ -14,6 +14,7 @@ export default function CategoriesPage() {
   const [emoji, setEmoji] = useState('📝');
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [filter, setFilter] = useState('');
+  const [editingCategory, setEditingCategory] = useState<any>(null);
 
   useEffect(() => {
     if (token) fetchCategories();
@@ -22,24 +23,37 @@ export default function CategoriesPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!token) return;
+    
+    const endpoint = editingCategory ? `http://localhost:8080/categories/${editingCategory.id}` : `http://localhost:8080/categories`;
+    const method = editingCategory ? 'PUT' : 'POST';
+
     try {
-      const res = await fetch(`http://localhost:8080/categories`, {
-        method: 'POST',
+      const res = await fetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name, emoji, type })
       });
       if (res.ok) {
         setName('');
         setEmoji('📝');
-        toast.success('Categoria creata!');
+        setEditingCategory(null);
+        toast.success(editingCategory ? 'Categoria aggiornata!' : 'Categoria creata!');
         fetchCategories();
       } else {
-        toast.error('Errore nella creazione');
+        toast.error('Errore nel salvataggio');
       }
     } catch (err) { 
       console.error(err);
-      toast.error('Errore nella creazione');
+      toast.error('Errore nel salvataggio');
     }
+  };
+
+  const handleEditClick = (cat: any) => {
+    setEditingCategory(cat);
+    setName(cat.name);
+    setEmoji(cat.emoji || '📝');
+    setType(cat.type || 'expense');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (loading) return null;
@@ -55,7 +69,9 @@ export default function CategoriesPage() {
       <Navbar username={user.username} onLogout={logout} />
       
       <div style={{ padding: '0 20px', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '20px' }}>Nuova Categoria</h2>
+        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '20px' }}>
+          {editingCategory ? 'Modifica Categoria' : 'Nuova Categoria'}
+        </h2>
         <form onSubmit={handleSubmit} style={{ background: 'var(--surface-color)', padding: '24px', borderRadius: '24px', border: '1px solid var(--border-color)' }}>
           
           <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
@@ -80,7 +96,16 @@ export default function CategoriesPage() {
             </label>
           </div>
 
-          <button type="submit" className="submit-btn" style={{ background: 'var(--primary-color)', color: 'white', width: '100%', padding: '16px', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}>Aggiungi Categoria</button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button type="submit" className="submit-btn" style={{ background: 'var(--primary-color)', color: 'white', flex: 1, padding: '16px', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}>
+              {editingCategory ? 'Salva Modifiche' : 'Aggiungi Categoria'}
+            </button>
+            {editingCategory && (
+              <button type="button" onClick={() => { setEditingCategory(null); setName(''); setEmoji('📝'); }} style={{ background: 'var(--input-bg)', color: 'var(--text-color)', flex: '0 0 auto', padding: '16px 24px', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}>
+                Annulla
+              </button>
+            )}
+          </div>
         </form>
       </div>
 
@@ -102,7 +127,7 @@ export default function CategoriesPage() {
             <h3 style={{ fontSize: '18px', marginBottom: '12px', color: 'var(--danger-color)' }}>Spese</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {expenseCategories.map(c => (
-                <div key={c.id} style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+                <div key={c.id} onClick={() => handleEditClick(c)} style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', cursor: 'pointer' }}>
                   <span style={{ fontSize: '24px', marginRight: '16px' }}>{c.emoji || '📝'}</span>
                   <span style={{ fontSize: '16px', fontWeight: 500 }}>{c.name}</span>
                 </div>
@@ -115,7 +140,7 @@ export default function CategoriesPage() {
             <h3 style={{ fontSize: '18px', marginBottom: '12px', color: 'var(--success-color)' }}>Entrate</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {incomeCategories.map(c => (
-                <div key={c.id} style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+                <div key={c.id} onClick={() => handleEditClick(c)} style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', cursor: 'pointer' }}>
                   <span style={{ fontSize: '24px', marginRight: '16px' }}>{c.emoji || '📝'}</span>
                   <span style={{ fontSize: '16px', fontWeight: 500 }}>{c.name}</span>
                 </div>

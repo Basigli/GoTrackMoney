@@ -28,12 +28,13 @@ export default function Home() {
   const [filterDate, setFilterDate] = useState<Date>(new Date());
   const [filterMode, setFilterMode] = useState<'month' | 'year'>('month');
 
-  // Add modal state
+  // Add/Edit modal state
   const [addType, setAddType] = useState<'entrata' | 'spesa'>('spesa');
   const [addAmount, setAddAmount] = useState('');
   const [addCat, setAddCat] = useState('');
   const [addDesc, setAddDesc] = useState('');
   const [addDate, setAddDate] = useState<Date>(new Date());
+  const [editingItem, setEditingItem] = useState<any>(null);
 
   // Category details modal state
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
@@ -90,14 +91,34 @@ export default function Home() {
   };
 
   const openAddModal = () => {
+    setEditingItem(null);
+    setAddAmount(''); setAddCat(''); setAddDesc('');
     setAddDate(new Date());
+    setShowAddModal(true);
+  };
+
+  const openEditModal = (item: any) => {
+    setEditingItem(item);
+    setAddType(activeTab === 'uscite' ? 'spesa' : 'entrata');
+    setAddAmount(item.amount.toString());
+    setAddCat(item.category_id.toString());
+    setAddDesc(item.description);
+    setAddDate(new Date(item.spent_on || item.received_on));
     setShowAddModal(true);
   };
 
   const handleAddSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!token) return;
-    const endpoint = addType === 'entrata' ? '/incomes' : '/expenses';
+    
+    let endpoint = addType === 'entrata' ? '/incomes' : '/expenses';
+    let method = 'POST';
+    
+    if (editingItem) {
+      endpoint = `${endpoint}/${editingItem.id}`;
+      method = 'PUT';
+    }
+
     const payload = {
       name: categories.find(c => c.id === parseInt(addCat))?.name || 'Item',
       description: addDesc,
@@ -108,20 +129,21 @@ export default function Home() {
 
     try {
       const res = await fetch(`${API_BASE}${endpoint}`, {
-        method: 'POST',
+        method,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload)
       });
       if (res.ok) {
         setAddAmount(''); setAddCat(''); setAddDesc('');
+        setEditingItem(null);
         setShowAddModal(false);
         if (addType === 'entrata') fetchIncomes();
         else fetchExpenses();
-        toast.success(addType === 'entrata' ? 'Entrata registrata!' : 'Spesa registrata!', {
+        toast.success(editingItem ? 'Modifica salvata!' : (addType === 'entrata' ? 'Entrata registrata!' : 'Spesa registrata!'), {
           style: { borderRadius: '12px', background: '#333', color: '#fff' }
         });
       } else {
-        toast.error('Errore nella registrazione');
+        toast.error(editingItem ? 'Errore nella modifica' : 'Errore nella registrazione');
       }
     } catch (err) { 
       console.error(err); 
@@ -338,7 +360,10 @@ export default function Home() {
               </h2>
               <div>
                 {(activeGroups[selectedCategory] || []).map((item: any) => (
-                  <div key={item.id} className="list-item" style={{ padding: '12px 0' }}>
+                  <div key={item.id} className="list-item" style={{ padding: '12px 0', cursor: 'pointer' }} onClick={() => {
+                    setSelectedCategory(null);
+                    openEditModal(item);
+                  }}>
                     <div className="item-content">
                       <div className="item-header" style={{ marginBottom: '4px' }}>
                         <div className="item-title">{item.description || item.name}</div>

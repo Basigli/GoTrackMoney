@@ -2,9 +2,11 @@ package ledger
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	repo "github.com/sikozonpc/ecom/internal/adapters/postgresql/sqlc"
 	"github.com/sikozonpc/ecom/internal/auth"
 	"github.com/sikozonpc/ecom/internal/json"
@@ -152,6 +154,37 @@ func (h *handler) CreateCategory(w http.ResponseWriter, r *http.Request) {
 	json.Write(w, http.StatusCreated, category)
 }
 
+func (h *handler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
+	var payload updateCategoryParams
+	if err := json.Read(r, &payload); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		http.Error(w, "missing id", http.StatusBadRequest)
+		return
+	}
+	var id int64
+	fmt.Sscanf(idStr, "%d", &id)
+	payload.ID = id
+
+	category, err := h.service.UpdateCategory(r.Context(), payload)
+	if err != nil {
+		log.Println(err)
+		switch {
+		case errors.Is(err, auth.ErrUnauthorized):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		default:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+	json.Write(w, http.StatusOK, category)
+}
+
 func (h *handler) ListExpenses(w http.ResponseWriter, r *http.Request) {
 	expenses, err := h.service.ListExpenses(r.Context())
 	if err != nil {
@@ -189,6 +222,39 @@ func (h *handler) CreateExpense(w http.ResponseWriter, r *http.Request) {
 	json.Write(w, http.StatusCreated, expense)
 }
 
+func (h *handler) UpdateExpense(w http.ResponseWriter, r *http.Request) {
+	var payload updateExpenseParams
+	if err := json.Read(r, &payload); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		http.Error(w, "missing id", http.StatusBadRequest)
+		return
+	}
+	var id int64
+	fmt.Sscanf(idStr, "%d", &id)
+	payload.ID = id
+
+	expense, err := h.service.UpdateExpense(r.Context(), payload)
+	if err != nil {
+		log.Println(err)
+		switch {
+		case errors.Is(err, auth.ErrUnauthorized):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		case errors.Is(err, ErrCategoryNotFound):
+			http.Error(w, err.Error(), http.StatusNotFound)
+		default:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+	json.Write(w, http.StatusOK, expense)
+}
+
 func (h *handler) ListIncomes(w http.ResponseWriter, r *http.Request) {
 	incomes, err := h.service.ListIncomes(r.Context())
 	if err != nil {
@@ -224,6 +290,39 @@ func (h *handler) CreateIncome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.Write(w, http.StatusCreated, income)
+}
+
+func (h *handler) UpdateIncome(w http.ResponseWriter, r *http.Request) {
+	var payload updateIncomeParams
+	if err := json.Read(r, &payload); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		http.Error(w, "missing id", http.StatusBadRequest)
+		return
+	}
+	var id int64
+	fmt.Sscanf(idStr, "%d", &id)
+	payload.ID = id
+
+	income, err := h.service.UpdateIncome(r.Context(), payload)
+	if err != nil {
+		log.Println(err)
+		switch {
+		case errors.Is(err, auth.ErrUnauthorized):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		case errors.Is(err, ErrCategoryNotFound):
+			http.Error(w, err.Error(), http.StatusNotFound)
+		default:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+	json.Write(w, http.StatusOK, income)
 }
 
 func toUserResponses(users []repo.User) []userResponse {
