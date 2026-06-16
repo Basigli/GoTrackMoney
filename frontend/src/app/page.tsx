@@ -162,19 +162,9 @@ export default function Home() {
     const activeGroups = activeTab === 'uscite' ? groupedExpenses : groupedIncomes;
     const activeTotal = activeTab === 'uscite' ? totalExpense : totalIncome;
 
-    const getIconForCategory = (name: string) => {
-      const n = name.toLowerCase();
-      if (n.includes('abbigliamento')) return '👗';
-      if (n.includes('alimenti')) return '🍴';
-      if (n.includes('assicurazione')) return '🛡️';
-      if (n.includes('carburanti')) return '⛽';
-      if (n.includes('casa')) return '🏠';
-      if (n.includes('cellulari')) return '📱';
-      if (n.includes('igiene')) return '🧼';
-      if (n.includes('tasse')) return '💶';
-      if (n.includes('veicoli') || n.includes('auto')) return '🚗';
-      if (n.includes('stipendio') || n.includes('pensione') || n.includes('paghette')) return '💰';
-      return '📝';
+    const getIconForCategory = (catId: number) => {
+      const category = categories.find(c => c.id === catId);
+      return category?.emoji || '📝';
     };
 
     const getProgressBarColor = (index: number) => {
@@ -266,7 +256,7 @@ export default function Home() {
             
             return (
               <div key={catId} className="list-item" onClick={() => setSelectedCategory(parseInt(catId))}>
-                <div className="item-icon">{getIconForCategory(catName)}</div>
+                <div className="item-icon">{getIconForCategory(parseInt(catId))}</div>
                 <div className="item-content">
                   <div className="item-header">
                     <div className="item-title">{catName}</div>
@@ -323,7 +313,7 @@ export default function Home() {
                   <label className="input-label">Categoria</label>
                   <select className="input-field" value={addCat} onChange={e => setAddCat(e.target.value)} required>
                     <option value="" disabled>Select...</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {categories.filter(c => c.type === (addType === 'entrata' ? 'income' : 'expense')).map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
                   </select>
                 </div>
 

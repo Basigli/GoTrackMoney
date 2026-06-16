@@ -8,7 +8,9 @@ type createUserParams struct {
 }
 
 type createCategoryParams struct {
-	Name string `json:"name"`
+	Name  string `json:"name"`
+	Emoji string `json:"emoji"`
+	Type  string `json:"type"`
 }
 
 type createExpenseParams struct {

@@ -29,7 +29,7 @@ RETURNING id, username, password;
 
 -- name: ListCategories :many
 SELECT
-  id, name, creator_id
+  id, name, creator_id, emoji, type
 FROM
   categories
 ORDER BY
@@ -37,20 +37,20 @@ ORDER BY
 
 -- name: FindCategoryByID :one
 SELECT
-  id, name, creator_id
+  id, name, creator_id, emoji, type
 FROM
   categories
 WHERE
   id = $1;
 
 -- name: CreateCategory :one
-INSERT INTO categories (name, creator_id)
-VALUES ($1, $2)
-RETURNING id, name, creator_id;
+INSERT INTO categories (name, creator_id, emoji, type)
+VALUES ($1, $2, $3, $4)
+RETURNING id, name, creator_id, emoji, type;
 
 -- name: ListCategoriesByCreatorID :many
 SELECT
-  id, name, creator_id
+  id, name, creator_id, emoji, type
 FROM
   categories
 WHERE
@@ -60,7 +60,7 @@ ORDER BY
 
 -- name: FindCategoryByIDAndCreatorID :one
 SELECT
-  id, name, creator_id
+  id, name, creator_id, emoji, type
 FROM
   categories
 WHERE

@@ -102,6 +102,12 @@ func (s *svc) CreateCategory(ctx context.Context, params createCategoryParams) (
 	if params.Name == "" {
 		return repo.Category{}, fmt.Errorf("name is required")
 	}
+	if params.Emoji == "" {
+		params.Emoji = "📝"
+	}
+	if params.Type == "" {
+		params.Type = "expense"
+	}
 
 	user, err := currentUser(ctx)
 	if err != nil {
@@ -110,6 +116,8 @@ func (s *svc) CreateCategory(ctx context.Context, params createCategoryParams) (
 	return s.repo.CreateCategory(ctx, repo.CreateCategoryParams{
 		Name:      params.Name,
 		CreatorID: user.ID,
+		Emoji:     params.Emoji,
+		Type:      params.Type,
 	})
 }
 
