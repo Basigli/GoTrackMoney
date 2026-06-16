@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	repo "github.com/sikozonpc/ecom/internal/adapters/postgresql/sqlc"
 	"github.com/sikozonpc/ecom/internal/auth"
 	"github.com/sikozonpc/ecom/internal/ledger"
@@ -80,7 +80,7 @@ func (app *application) run(h http.Handler) error {
 
 type application struct {
 	config  config
-	db      *pgx.Conn
+	db      *pgxpool.Pool
 	queries *repo.Queries
 	auth    *auth.Manager
 }

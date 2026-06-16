@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	repo "github.com/sikozonpc/ecom/internal/adapters/postgresql/sqlc"
 	"github.com/sikozonpc/ecom/internal/auth"
 	"github.com/sikozonpc/ecom/internal/env"
@@ -30,18 +30,18 @@ func main() {
 	slog.SetDefault(logger)
 
 	// Database
-	conn, err := pgx.Connect(ctx, cfg.db.dsn)
+	pool, err := pgxpool.New(ctx, cfg.db.dsn)
 	if err != nil {
 		panic(err)
 	}
-	defer conn.Close(ctx)
+	defer pool.Close()
 
 	logger.Info("connected to database", "dsn", cfg.db.dsn)
 
 	api := application{
 		config:  cfg,
-		db:      conn,
-		queries: repo.New(conn),
+		db:      pool,
+		queries: repo.New(pool),
 		auth:    auth.NewManager(cfg.auth.tokenSecret, 24*time.Hour),
 	}
 	if err := api.run(api.mount()); err != nil {
