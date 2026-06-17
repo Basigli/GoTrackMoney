@@ -7,6 +7,12 @@ import Navbar from '@/components/Navbar';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { format } from 'date-fns';
 import { it, enUS } from 'date-fns/locale';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+import toast, { Toaster } from 'react-hot-toast';
+import { FormEvent, forwardRef } from 'react';
+
+const API_BASE = 'http://localhost:8080';
 
 export default function SearchPage() {
   const { token, user, loading, logout } = useAuth();
@@ -17,6 +23,72 @@ export default function SearchPage() {
   const [searchType, setSearchType] = useState<'all' | 'expenses' | 'incomes'>('all');
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+
+  // Add/Edit modal state
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addType, setAddType] = useState<'entrata' | 'spesa'>('spesa');
+  const [addAmount, setAddAmount] = useState('');
+  const [addCat, setAddCat] = useState('');
+  const [addDesc, setAddDesc] = useState('');
+  const [addDate, setAddDate] = useState<Date>(new Date());
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [isPeriodic, setIsPeriodic] = useState(false);
+  const [periodInterval, setPeriodInterval] = useState(1);
+  const [periodUnit, setPeriodUnit] = useState('months');
+
+  const openEditModal = (item: any) => {
+    setEditingItem(item);
+    setAddType(item.isExpense ? 'spesa' : 'entrata');
+    setAddAmount(item.amount.toString());
+    setAddCat(item.category_id.toString());
+    setAddDesc(item.description);
+    setAddDate(new Date(item.spent_on || item.received_on));
+    setShowAddModal(true);
+  };
+
+  const handleAddSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    
+    let endpoint = addType === 'entrata' ? '/incomes' : '/expenses';
+    let method = 'POST';
+    
+    if (editingItem) {
+      endpoint = `${endpoint}/${editingItem.id}`;
+      method = 'PUT';
+    }
+
+    let payload: any = {
+      name: categories.find(c => c.id === parseInt(addCat))?.name || t('record.item'),
+      description: addDesc,
+      amount: parseFloat(addAmount),
+      category_id: parseInt(addCat, 10),
+      [addType === 'entrata' ? 'received_on' : 'spent_on']: addDate.toISOString()
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        setAddAmount(''); setAddCat(''); setAddDesc('');
+        setEditingItem(null);
+        setShowAddModal(false);
+        if (addType === 'entrata') fetchIncomes();
+        else fetchExpenses();
+        toast.success(editingItem ? t('record.success_edit') : (addType === 'entrata' ? t('record.success_income') : t('record.success_expense')), {
+          style: { borderRadius: '12px', background: '#333', color: '#fff' }
+        });
+      } else {
+        toast.error(editingItem ? t('record.error_save') : t('record.error_save'));
+      }
+    } catch (err) { 
+      console.error(err); 
+      toast.error(t('record.error_conn'));
+    }
+  };
 
   const loadMore = async () => {
     const nextOffset = offset + 100;
@@ -74,8 +146,20 @@ export default function SearchPage() {
     return textMatch || amountMatch;
   });
 
+  const ModalDateInput = forwardRef(({ value, onClick }: any, ref: any) => (
+    <div className="modal-header" onClick={onClick} ref={ref} style={{ cursor: 'pointer' }}>
+      <span className="date-icon">📅</span>
+      <div className="date-text">
+        <h2>{t('record.date_time')}</h2>
+        <p>{format(addDate, 'd MMM yyyy, HH:mm', { locale: dateLocale })}</p>
+      </div>
+    </div>
+  ));
+  ModalDateInput.displayName = 'ModalDateInput';
+
   return (
     <div className="app-container">
+      <Toaster position="bottom-center" />
       <Navbar username={user.username} onLogout={logout} />
       
       <div style={{ padding: '0 20px', marginBottom: '24px' }}>
@@ -104,7 +188,7 @@ export default function SearchPage() {
         
         <div className="list-container">
           {matches.map(item => (
-            <div key={`${item.isExpense ? 'exp' : 'inc'}-${item.id}`} className="list-item" style={{ padding: '16px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center' }}>
+            <div key={`${item.isExpense ? 'exp' : 'inc'}-${item.id}`} className="list-item" onClick={() => openEditModal(item)} style={{ padding: '16px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
               <div className="item-icon" style={{ fontSize: '24px', marginRight: '16px' }}>{getIconForCategory(item.category_id)}</div>
               <div className="item-content" style={{ flex: 1 }}>
                 <div className="item-header" style={{ marginBottom: '4px', display: 'flex', justifyContent: 'space-between' }}>
@@ -132,6 +216,59 @@ export default function SearchPage() {
           )}
         </div>
       </div>
+
+      {showAddModal && (
+        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowAddModal(false)}>&times;</button>
+            
+            <DatePicker
+              selected={addDate}
+              onChange={(date: Date | null) => date && setAddDate(date)}
+              showTimeSelect
+              timeFormat="HH:mm"
+              timeIntervals={15}
+              dateFormat="d MMMM yyyy, HH:mm"
+              customInput={<ModalDateInput />}
+              locale={dateLocale}
+              withPortal
+            />
+
+            <div className="radio-group">
+              <label className="radio-label">
+                <input type="radio" name="type" checked={addType === 'entrata'} onChange={() => setAddType('entrata')} disabled={!!editingItem} />
+                {t('record.income')}
+              </label>
+              <label className="radio-label">
+                <input type="radio" name="type" checked={addType === 'spesa'} onChange={() => setAddType('spesa')} disabled={!!editingItem} />
+                {t('record.expense')}
+              </label>
+            </div>
+
+            <form className="modal-form" onSubmit={handleAddSubmit}>
+              <div className="input-group">
+                <label className="input-label">{t('record.amount')}</label>
+                <input type="number" step="0.01" className="input-field" placeholder={t('record.amount_placeholder')} value={addAmount} onChange={e => setAddAmount(e.target.value)} required />
+              </div>
+              
+              <div className="input-group">
+                <label className="input-label">{t('record.category')}</label>
+                <select className="input-field" value={addCat} onChange={e => setAddCat(e.target.value)} required>
+                  <option value="" disabled>{t('record.select_category')}</option>
+                  {categories.filter(c => c.type === (addType === 'entrata' ? 'income' : 'expense')).map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
+                </select>
+              </div>
+
+              <div className="input-group">
+                <label className="input-label">{t('record.description')}</label>
+                <input type="text" className="input-field" placeholder={t('record.description_placeholder')} value={addDesc} onChange={e => setAddDesc(e.target.value)} />
+              </div>
+
+              <button type="submit" className="submit-btn">✓ {t('record.save')}</button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
