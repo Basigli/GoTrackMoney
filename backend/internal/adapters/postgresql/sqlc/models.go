@@ -38,6 +38,21 @@ type Income struct {
 	ReceivedOn  pgtype.Timestamptz `json:"received_on"`
 }
 
+type PeriodicExpense struct {
+	ID                int64              `json:"id"`
+	Name              string             `json:"name"`
+	Description       string             `json:"description"`
+	Amount            float64            `json:"amount"`
+	UserID            int64              `json:"user_id"`
+	CategoryID        int64              `json:"category_id"`
+	PeriodInterval    int32              `json:"period_interval"`
+	PeriodUnit        string             `json:"period_unit"`
+	StartDate         pgtype.Timestamptz `json:"start_date"`
+	LastGeneratedDate pgtype.Timestamptz `json:"last_generated_date"`
+	NextDueDate       pgtype.Timestamptz `json:"next_due_date"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+}
+
 type User struct {
 	ID       int64  `json:"id"`
 	Username string `json:"username"`

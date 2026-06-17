@@ -62,6 +62,10 @@ func (app *application) mount() http.Handler {
 		r.Get("/incomes", handler.ListIncomes)
 		r.Post("/incomes", handler.CreateIncome)
 		r.Put("/incomes/{id}", handler.UpdateIncome)
+
+		r.Get("/periodic-expenses", handler.ListPeriodicExpenses)
+		r.Post("/periodic-expenses", handler.CreatePeriodicExpense)
+		r.Delete("/periodic-expenses/{id}", handler.DeletePeriodicExpense)
 	})
 
 	return r

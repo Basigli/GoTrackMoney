@@ -40,6 +40,11 @@ export default function Home() {
   const [addDate, setAddDate] = useState<Date>(new Date());
   const [editingItem, setEditingItem] = useState<any>(null);
 
+  // Periodic expenses state
+  const [isPeriodic, setIsPeriodic] = useState(false);
+  const [periodInterval, setPeriodInterval] = useState(1);
+  const [periodUnit, setPeriodUnit] = useState('months');
+
   // Category details modal state
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
 
@@ -98,6 +103,9 @@ export default function Home() {
     setEditingItem(null);
     setAddAmount(''); setAddCat(''); setAddDesc('');
     setAddDate(new Date());
+    setIsPeriodic(false);
+    setPeriodInterval(1);
+    setPeriodUnit('months');
     setShowAddModal(true);
   };
 
@@ -123,13 +131,26 @@ export default function Home() {
       method = 'PUT';
     }
 
-    const payload = {
-      name: categories.find(c => c.id === parseInt(addCat))?.name || 'Item',
+    let payload: any = {
+      name: categories.find(c => c.id === parseInt(addCat))?.name || t('record.item'),
       description: addDesc,
       amount: parseFloat(addAmount),
       category_id: parseInt(addCat, 10),
       [addType === 'entrata' ? 'received_on' : 'spent_on']: addDate.toISOString()
     };
+
+    if (isPeriodic && addType === 'spesa' && !editingItem) {
+      endpoint = '/periodic-expenses';
+      payload = {
+        name: payload.name,
+        description: payload.description,
+        amount: payload.amount,
+        category_id: payload.category_id,
+        period_interval: parseInt(periodInterval.toString(), 10),
+        period_unit: periodUnit,
+        start_date: addDate.toISOString()
+      };
+    }
 
     try {
       const res = await fetch(`${API_BASE}${endpoint}`, {
@@ -203,7 +224,7 @@ export default function Home() {
         <span className="date-icon">📅</span>
         <div className="date-text">
           <h2>{filterMode === 'month' ? format(filterDate, 'MMM yyyy', { locale: dateLocale }) : format(filterDate, 'yyyy')}</h2>
-          <p>Filter by {filterMode}</p>
+          <p>{t('dashboard.filter_by')} {filterMode === 'month' ? t('dashboard.filter_month').toLowerCase() : t('dashboard.filter_year').toLowerCase()}</p>
         </div>
       </div>
     ));
@@ -213,7 +234,7 @@ export default function Home() {
       <div className="modal-header" onClick={onClick} ref={ref} style={{ cursor: 'pointer' }}>
         <span className="date-icon">📅</span>
         <div className="date-text">
-          <h2>Date & Time</h2>
+          <h2>{t('record.date_time')}</h2>
           <p>{format(addDate, 'd MMM yyyy, HH:mm', { locale: dateLocale })}</p>
         </div>
       </div>
@@ -278,7 +299,7 @@ export default function Home() {
             const category = categories.find(c => c.id === parseInt(catId));
             const catTotal = (items as any[]).reduce((sum: number, i: any) => sum + i.amount, 0);
             const percentage = activeTotal > 0 ? (catTotal / activeTotal) * 100 : 0;
-            const catName = category?.name || 'Unknown';
+            const catName = category?.name || t('dashboard.unknown');
             
             return (
               <div key={catId} className="list-item" onClick={() => setSelectedCategory(parseInt(catId))}>
@@ -292,7 +313,7 @@ export default function Home() {
                     <div className="progress-bar-bg">
                       <div className="progress-bar-fill" style={{ width: `${percentage}%`, backgroundColor: getProgressBarColor(index) }}></div>
                     </div>
-                    <div className="progress-text">{percentage.toFixed(2)} % del totale</div>
+                    <div className="progress-text">{percentage.toFixed(2)} {t('dashboard.percentage_total')}</div>
                   </div>
                 </div>
               </div>
@@ -347,6 +368,26 @@ export default function Home() {
                   <label className="input-label">{t('record.description')}</label>
                   <input type="text" className="input-field" placeholder={t('record.description_placeholder')} value={addDesc} onChange={e => setAddDesc(e.target.value)} />
                 </div>
+
+                {addType === 'spesa' && !editingItem && (
+                  <div className="input-group" style={{ marginBottom: '16px' }}>
+                    <label className="radio-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input type="checkbox" checked={isPeriodic} onChange={e => setIsPeriodic(e.target.checked)} />
+                      {t('record.periodic')}
+                    </label>
+                    {isPeriodic && (
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                        <input type="number" min="1" className="input-field" style={{ flex: 1 }} value={periodInterval} onChange={e => setPeriodInterval(parseInt(e.target.value) || 1)} />
+                        <select className="input-field" style={{ flex: 2 }} value={periodUnit} onChange={e => setPeriodUnit(e.target.value)}>
+                          <option value="days">{t('record.days')}</option>
+                          <option value="weeks">{t('record.weeks')}</option>
+                          <option value="months">{t('record.months')}</option>
+                          <option value="years">{t('record.years')}</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <button type="submit" className="submit-btn">✓ {t('record.save')}</button>
               </form>

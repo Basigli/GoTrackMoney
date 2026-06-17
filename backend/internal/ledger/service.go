@@ -35,6 +35,10 @@ type Service interface {
 	ListIncomes(ctx context.Context) ([]repo.Income, error)
 	CreateIncome(ctx context.Context, params createIncomeParams) (repo.Income, error)
 	UpdateIncome(ctx context.Context, params updateIncomeParams) (repo.Income, error)
+
+	ListPeriodicExpenses(ctx context.Context) ([]repo.PeriodicExpense, error)
+	CreatePeriodicExpense(ctx context.Context, params createPeriodicExpenseParams) (repo.PeriodicExpense, error)
+	DeletePeriodicExpense(ctx context.Context, id int64) error
 }
 
 type svc struct {
@@ -151,6 +155,7 @@ func (s *svc) ListExpenses(ctx context.Context) ([]repo.Expense, error) {
 	if err != nil {
 		return nil, err
 	}
+	s.checkAndGeneratePeriodicExpenses(ctx, user.ID)
 	return s.repo.ListExpensesByUserID(ctx, user.ID)
 }
 
@@ -324,4 +329,120 @@ func currentUser(ctx context.Context) (auth.User, error) {
 	}
 
 	return user, nil
+}
+
+func (s *svc) checkAndGeneratePeriodicExpenses(ctx context.Context, userID int64) error {
+	dueExpenses, err := s.repo.FindDuePeriodicExpensesByUserID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	
+	now := time.Now()
+	for _, pe := range dueExpenses {
+		// generate the expense
+		_, err := s.repo.CreateExpense(ctx, repo.CreateExpenseParams{
+			Name:        pe.Name,
+			Description: pe.Description,
+			Amount:      pe.Amount,
+			UserID:      pe.UserID,
+			CategoryID:  pe.CategoryID,
+			SpentOn:     pgtype.Timestamptz{Time: pe.NextDueDate.Time, Valid: true},
+		})
+		if err != nil {
+			return err
+		}
+		
+		// calculate next due date
+		nextDue := pe.NextDueDate.Time
+		switch pe.PeriodUnit {
+		case "days":
+			nextDue = nextDue.AddDate(0, 0, int(pe.PeriodInterval))
+		case "weeks":
+			nextDue = nextDue.AddDate(0, 0, int(pe.PeriodInterval)*7)
+		case "months":
+			nextDue = nextDue.AddDate(0, int(pe.PeriodInterval), 0)
+		case "years":
+			nextDue = nextDue.AddDate(int(pe.PeriodInterval), 0, 0)
+		}
+		
+		err = s.repo.UpdatePeriodicExpenseNextDueDate(ctx, repo.UpdatePeriodicExpenseNextDueDateParams{
+			ID:                pe.ID,
+			LastGeneratedDate: pgtype.Timestamptz{Time: now, Valid: true},
+			NextDueDate:       pgtype.Timestamptz{Time: nextDue, Valid: true},
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *svc) ListPeriodicExpenses(ctx context.Context) ([]repo.PeriodicExpense, error) {
+	user, err := currentUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.ListPeriodicExpensesByUserID(ctx, user.ID)
+}
+
+func (s *svc) CreatePeriodicExpense(ctx context.Context, params createPeriodicExpenseParams) (repo.PeriodicExpense, error) {
+	if params.Name == "" {
+		return repo.PeriodicExpense{}, fmt.Errorf("name is required")
+	}
+	if params.Amount <= 0 {
+		return repo.PeriodicExpense{}, fmt.Errorf("amount must be greater than zero")
+	}
+	if params.CategoryID <= 0 {
+		return repo.PeriodicExpense{}, fmt.Errorf("category_id is required")
+	}
+	if params.PeriodInterval <= 0 {
+		params.PeriodInterval = 1
+	}
+	if params.PeriodUnit == "" {
+		params.PeriodUnit = "months"
+	}
+
+	user, err := currentUser(ctx)
+	if err != nil {
+		return repo.PeriodicExpense{}, err
+	}
+	
+	if _, err := s.repo.FindCategoryByIDAndCreatorID(ctx, repo.FindCategoryByIDAndCreatorIDParams{
+		ID:        params.CategoryID,
+		CreatorID: user.ID,
+	}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return repo.PeriodicExpense{}, ErrCategoryNotFound
+		}
+		return repo.PeriodicExpense{}, err
+	}
+
+	startDate := time.Now()
+	if params.StartDate != nil {
+		startDate = *params.StartDate
+	}
+	nextDueDate := startDate
+
+	return s.repo.CreatePeriodicExpense(ctx, repo.CreatePeriodicExpenseParams{
+		Name:           params.Name,
+		Description:    params.Description,
+		Amount:         params.Amount,
+		UserID:         user.ID,
+		CategoryID:     params.CategoryID,
+		PeriodInterval: params.PeriodInterval,
+		PeriodUnit:     params.PeriodUnit,
+		StartDate:      pgtype.Timestamptz{Time: startDate, Valid: true},
+		NextDueDate:    pgtype.Timestamptz{Time: nextDueDate, Valid: true},
+	})
+}
+
+func (s *svc) DeletePeriodicExpense(ctx context.Context, id int64) error {
+	user, err := currentUser(ctx)
+	if err != nil {
+		return err
+	}
+	return s.repo.DeletePeriodicExpense(ctx, repo.DeletePeriodicExpenseParams{
+		ID:     id,
+		UserID: user.ID,
+	})
 }

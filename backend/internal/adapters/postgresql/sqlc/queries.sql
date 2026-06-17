@@ -149,3 +149,40 @@ SET
 WHERE
   id = $1 AND user_id = $7
 RETURNING id, name, description, amount, user_id, created_at, category_id, received_on;
+
+-- name: ListPeriodicExpensesByUserID :many
+SELECT
+  id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at
+FROM
+  periodic_expenses
+WHERE
+  user_id = $1
+ORDER BY
+  created_at DESC, id DESC;
+
+-- name: CreatePeriodicExpense :one
+INSERT INTO periodic_expenses (
+  name, description, amount, user_id, category_id, period_interval, period_unit, start_date, next_due_date
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at;
+
+-- name: FindDuePeriodicExpensesByUserID :many
+SELECT
+  id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at
+FROM
+  periodic_expenses
+WHERE
+  user_id = $1 AND next_due_date <= now();
+
+-- name: UpdatePeriodicExpenseNextDueDate :exec
+UPDATE periodic_expenses
+SET
+  last_generated_date = $2,
+  next_due_date = $3
+WHERE
+  id = $1;
+
+-- name: DeletePeriodicExpense :exec
+DELETE FROM periodic_expenses
+WHERE id = $1 AND user_id = $2;

@@ -339,3 +339,57 @@ func toUserResponse(user repo.User) userResponse {
 		Username: user.Username,
 	}
 }
+
+func (h *handler) ListPeriodicExpenses(w http.ResponseWriter, r *http.Request) {
+	expenses, err := h.service.ListPeriodicExpenses(r.Context())
+	if err != nil {
+		log.Println(err)
+		if errors.Is(err, auth.ErrUnauthorized) {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.Write(w, http.StatusOK, expenses)
+}
+
+func (h *handler) CreatePeriodicExpense(w http.ResponseWriter, r *http.Request) {
+	var payload createPeriodicExpenseParams
+	if err := json.Read(r, &payload); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	expense, err := h.service.CreatePeriodicExpense(r.Context(), payload)
+	if err != nil {
+		log.Println(err)
+		switch {
+		case errors.Is(err, auth.ErrUnauthorized):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		case errors.Is(err, ErrCategoryNotFound):
+			http.Error(w, err.Error(), http.StatusNotFound)
+		default:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+	json.Write(w, http.StatusCreated, expense)
+}
+
+func (h *handler) DeletePeriodicExpense(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		http.Error(w, "missing id", http.StatusBadRequest)
+		return
+	}
+	var id int64
+	fmt.Sscanf(idStr, "%d", &id)
+
+	if err := h.service.DeletePeriodicExpense(r.Context(), id); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.Write(w, http.StatusOK, map[string]string{"status": "ok"})
+}

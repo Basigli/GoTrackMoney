@@ -122,6 +122,56 @@ func (q *Queries) CreateIncome(ctx context.Context, arg CreateIncomeParams) (Inc
 	return i, err
 }
 
+const createPeriodicExpense = `-- name: CreatePeriodicExpense :one
+INSERT INTO periodic_expenses (
+  name, description, amount, user_id, category_id, period_interval, period_unit, start_date, next_due_date
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at
+`
+
+type CreatePeriodicExpenseParams struct {
+	Name           string             `json:"name"`
+	Description    string             `json:"description"`
+	Amount         float64            `json:"amount"`
+	UserID         int64              `json:"user_id"`
+	CategoryID     int64              `json:"category_id"`
+	PeriodInterval int32              `json:"period_interval"`
+	PeriodUnit     string             `json:"period_unit"`
+	StartDate      pgtype.Timestamptz `json:"start_date"`
+	NextDueDate    pgtype.Timestamptz `json:"next_due_date"`
+}
+
+func (q *Queries) CreatePeriodicExpense(ctx context.Context, arg CreatePeriodicExpenseParams) (PeriodicExpense, error) {
+	row := q.db.QueryRow(ctx, createPeriodicExpense,
+		arg.Name,
+		arg.Description,
+		arg.Amount,
+		arg.UserID,
+		arg.CategoryID,
+		arg.PeriodInterval,
+		arg.PeriodUnit,
+		arg.StartDate,
+		arg.NextDueDate,
+	)
+	var i PeriodicExpense
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Amount,
+		&i.UserID,
+		&i.CategoryID,
+		&i.PeriodInterval,
+		&i.PeriodUnit,
+		&i.StartDate,
+		&i.LastGeneratedDate,
+		&i.NextDueDate,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (username, password)
 VALUES ($1, $2)
@@ -138,6 +188,21 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	var i User
 	err := row.Scan(&i.ID, &i.Username, &i.Password)
 	return i, err
+}
+
+const deletePeriodicExpense = `-- name: DeletePeriodicExpense :exec
+DELETE FROM periodic_expenses
+WHERE id = $1 AND user_id = $2
+`
+
+type DeletePeriodicExpenseParams struct {
+	ID     int64 `json:"id"`
+	UserID int64 `json:"user_id"`
+}
+
+func (q *Queries) DeletePeriodicExpense(ctx context.Context, arg DeletePeriodicExpenseParams) error {
+	_, err := q.db.Exec(ctx, deletePeriodicExpense, arg.ID, arg.UserID)
+	return err
 }
 
 const findCategoryByID = `-- name: FindCategoryByID :one
@@ -187,6 +252,48 @@ func (q *Queries) FindCategoryByIDAndCreatorID(ctx context.Context, arg FindCate
 		&i.Type,
 	)
 	return i, err
+}
+
+const findDuePeriodicExpensesByUserID = `-- name: FindDuePeriodicExpensesByUserID :many
+SELECT
+  id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at
+FROM
+  periodic_expenses
+WHERE
+  user_id = $1 AND next_due_date <= now()
+`
+
+func (q *Queries) FindDuePeriodicExpensesByUserID(ctx context.Context, userID int64) ([]PeriodicExpense, error) {
+	rows, err := q.db.Query(ctx, findDuePeriodicExpensesByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PeriodicExpense
+	for rows.Next() {
+		var i PeriodicExpense
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Amount,
+			&i.UserID,
+			&i.CategoryID,
+			&i.PeriodInterval,
+			&i.PeriodUnit,
+			&i.StartDate,
+			&i.LastGeneratedDate,
+			&i.NextDueDate,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const findUserByID = `-- name: FindUserByID :one
@@ -449,6 +556,50 @@ func (q *Queries) ListIncomesByUserID(ctx context.Context, userID int64) ([]Inco
 	return items, nil
 }
 
+const listPeriodicExpensesByUserID = `-- name: ListPeriodicExpensesByUserID :many
+SELECT
+  id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at
+FROM
+  periodic_expenses
+WHERE
+  user_id = $1
+ORDER BY
+  created_at DESC, id DESC
+`
+
+func (q *Queries) ListPeriodicExpensesByUserID(ctx context.Context, userID int64) ([]PeriodicExpense, error) {
+	rows, err := q.db.Query(ctx, listPeriodicExpensesByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PeriodicExpense
+	for rows.Next() {
+		var i PeriodicExpense
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Amount,
+			&i.UserID,
+			&i.CategoryID,
+			&i.PeriodInterval,
+			&i.PeriodUnit,
+			&i.StartDate,
+			&i.LastGeneratedDate,
+			&i.NextDueDate,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUsers = `-- name: ListUsers :many
 SELECT
   id, username, password
@@ -608,4 +759,24 @@ func (q *Queries) UpdateIncome(ctx context.Context, arg UpdateIncomeParams) (Inc
 		&i.ReceivedOn,
 	)
 	return i, err
+}
+
+const updatePeriodicExpenseNextDueDate = `-- name: UpdatePeriodicExpenseNextDueDate :exec
+UPDATE periodic_expenses
+SET
+  last_generated_date = $2,
+  next_due_date = $3
+WHERE
+  id = $1
+`
+
+type UpdatePeriodicExpenseNextDueDateParams struct {
+	ID                int64              `json:"id"`
+	LastGeneratedDate pgtype.Timestamptz `json:"last_generated_date"`
+	NextDueDate       pgtype.Timestamptz `json:"next_due_date"`
+}
+
+func (q *Queries) UpdatePeriodicExpenseNextDueDate(ctx context.Context, arg UpdatePeriodicExpenseNextDueDateParams) error {
+	_, err := q.db.Exec(ctx, updatePeriodicExpenseNextDueDate, arg.ID, arg.LastGeneratedDate, arg.NextDueDate)
+	return err
 }

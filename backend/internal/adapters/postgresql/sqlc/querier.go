@@ -12,9 +12,12 @@ type Querier interface {
 	CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error)
 	CreateExpense(ctx context.Context, arg CreateExpenseParams) (Expense, error)
 	CreateIncome(ctx context.Context, arg CreateIncomeParams) (Income, error)
+	CreatePeriodicExpense(ctx context.Context, arg CreatePeriodicExpenseParams) (PeriodicExpense, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeletePeriodicExpense(ctx context.Context, arg DeletePeriodicExpenseParams) error
 	FindCategoryByID(ctx context.Context, id int64) (Category, error)
 	FindCategoryByIDAndCreatorID(ctx context.Context, arg FindCategoryByIDAndCreatorIDParams) (Category, error)
+	FindDuePeriodicExpensesByUserID(ctx context.Context, userID int64) ([]PeriodicExpense, error)
 	FindUserByID(ctx context.Context, id int64) (User, error)
 	FindUserByUsername(ctx context.Context, username string) (User, error)
 	ListCategories(ctx context.Context) ([]Category, error)
@@ -23,10 +26,12 @@ type Querier interface {
 	ListExpensesByUserID(ctx context.Context, userID int64) ([]Expense, error)
 	ListIncomes(ctx context.Context) ([]Income, error)
 	ListIncomesByUserID(ctx context.Context, userID int64) ([]Income, error)
+	ListPeriodicExpensesByUserID(ctx context.Context, userID int64) ([]PeriodicExpense, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error)
 	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (Expense, error)
 	UpdateIncome(ctx context.Context, arg UpdateIncomeParams) (Income, error)
+	UpdatePeriodicExpenseNextDueDate(ctx context.Context, arg UpdatePeriodicExpenseNextDueDateParams) error
 }
 
 var _ Querier = (*Queries)(nil)

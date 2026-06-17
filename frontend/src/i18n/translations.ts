@@ -55,6 +55,16 @@ export const translations = {
     'record.success_edit': 'Modifica salvata!',
     'record.error_save': 'Errore nel salvataggio',
     'record.error_conn': 'Errore di connessione',
+    'record.periodic': 'Spesa Periodica?',
+    'record.days': 'Giorni',
+    'record.weeks': 'Settimane',
+    'record.months': 'Mesi',
+    'record.years': 'Anni',
+    'record.item': 'Elemento',
+    'record.date_time': 'Data e Ora',
+    'dashboard.unknown': 'Sconosciuto',
+    'dashboard.percentage_total': '% del totale',
+    'dashboard.filter_by': 'Filtra per',
 
     // Auth
     'auth.login': 'Accedi',
@@ -120,6 +130,16 @@ export const translations = {
     'record.success_edit': 'Changes saved!',
     'record.error_save': 'Error saving',
     'record.error_conn': 'Connection error',
+    'record.periodic': 'Periodic Expense?',
+    'record.days': 'Days',
+    'record.weeks': 'Weeks',
+    'record.months': 'Months',
+    'record.years': 'Years',
+    'record.item': 'Item',
+    'record.date_time': 'Date & Time',
+    'dashboard.unknown': 'Unknown',
+    'dashboard.percentage_total': '% of total',
+    'dashboard.filter_by': 'Filter by',
 
     // Auth
     'auth.login': 'Login',
