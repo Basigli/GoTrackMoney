@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	repo "github.com/sikozonpc/ecom/internal/adapters/postgresql/sqlc"
@@ -185,8 +186,27 @@ func (h *handler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
 	json.Write(w, http.StatusOK, category)
 }
 
+func parsePagination(r *http.Request) (int32, int32) {
+	limitStr := r.URL.Query().Get("limit")
+	offsetStr := r.URL.Query().Get("offset")
+
+	var limit, offset int32 = 100, 0
+	if limitStr != "" {
+		if l, err := strconv.ParseInt(limitStr, 10, 32); err == nil {
+			limit = int32(l)
+		}
+	}
+	if offsetStr != "" {
+		if o, err := strconv.ParseInt(offsetStr, 10, 32); err == nil {
+			offset = int32(o)
+		}
+	}
+	return limit, offset
+}
+
 func (h *handler) ListExpenses(w http.ResponseWriter, r *http.Request) {
-	expenses, err := h.service.ListExpenses(r.Context())
+	limit, offset := parsePagination(r)
+	expenses, err := h.service.ListExpenses(r.Context(), limit, offset)
 	if err != nil {
 		log.Println(err)
 		if errors.Is(err, auth.ErrUnauthorized) {
@@ -256,7 +276,8 @@ func (h *handler) UpdateExpense(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) ListIncomes(w http.ResponseWriter, r *http.Request) {
-	incomes, err := h.service.ListIncomes(r.Context())
+	limit, offset := parsePagination(r)
+	incomes, err := h.service.ListIncomes(r.Context(), limit, offset)
 	if err != nil {
 		log.Println(err)
 		if errors.Is(err, auth.ErrUnauthorized) {

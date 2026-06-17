@@ -82,7 +82,8 @@ FROM
 WHERE
   user_id = $1
 ORDER BY
-  created_at DESC, id DESC;
+  created_at DESC, id DESC
+LIMIT $2 OFFSET $3;
 
 -- name: CreateExpense :one
 INSERT INTO expenses (
@@ -107,7 +108,8 @@ FROM
 WHERE
   user_id = $1
 ORDER BY
-  created_at DESC, id DESC;
+  created_at DESC, id DESC
+LIMIT $2 OFFSET $3;
 
 -- name: CreateIncome :one
 INSERT INTO incomes (

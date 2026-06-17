@@ -1,8 +1,8 @@
 export const translations = {
   it: {
-    // Navigation
     'nav.dashboard': 'Dashboard',
     'nav.categories': 'Categorie',
+    'nav.search': 'Cerca',
     'nav.logout': 'Esci',
 
     // Dashboard
@@ -15,6 +15,10 @@ export const translations = {
     'dashboard.filter_month': 'Mese',
     'dashboard.filter_year': 'Anno',
     'dashboard.details_for': 'Dettagli per {category}',
+    'dashboard.search': 'Cerca spesa o entrata...',
+    'search.results_count': '{count} risultati trovati',
+    'search.load_more': 'Carica i prossimi 100 elementi',
+    'search.all': 'Tutti',
 
     // Categories Page
     'categories.new': 'Nuova Categoria',
@@ -75,9 +79,9 @@ export const translations = {
     'auth.have_account': 'Hai già un account?',
   },
   en: {
-    // Navigation
     'nav.dashboard': 'Dashboard',
     'nav.categories': 'Categories',
+    'nav.search': 'Search',
     'nav.logout': 'Logout',
 
     // Dashboard
@@ -90,6 +94,10 @@ export const translations = {
     'dashboard.filter_month': 'Month',
     'dashboard.filter_year': 'Year',
     'dashboard.details_for': 'Details for {category}',
+    'dashboard.search': 'Search expense or income...',
+    'search.results_count': '{count} results found',
+    'search.load_more': 'Load 100 more items',
+    'search.all': 'All',
 
     // Categories Page
     'categories.new': 'New Category',

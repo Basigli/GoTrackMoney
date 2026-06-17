@@ -28,11 +28,11 @@ type Service interface {
 	CreateCategory(ctx context.Context, params createCategoryParams) (repo.Category, error)
 	UpdateCategory(ctx context.Context, params updateCategoryParams) (repo.Category, error)
 
-	ListExpenses(ctx context.Context) ([]repo.Expense, error)
+	ListExpenses(ctx context.Context, limit, offset int32) ([]repo.Expense, error)
 	CreateExpense(ctx context.Context, params createExpenseParams) (repo.Expense, error)
 	UpdateExpense(ctx context.Context, params updateExpenseParams) (repo.Expense, error)
 
-	ListIncomes(ctx context.Context) ([]repo.Income, error)
+	ListIncomes(ctx context.Context, limit, offset int32) ([]repo.Income, error)
 	CreateIncome(ctx context.Context, params createIncomeParams) (repo.Income, error)
 	UpdateIncome(ctx context.Context, params updateIncomeParams) (repo.Income, error)
 
@@ -150,13 +150,17 @@ func (s *svc) UpdateCategory(ctx context.Context, params updateCategoryParams) (
 	})
 }
 
-func (s *svc) ListExpenses(ctx context.Context) ([]repo.Expense, error) {
+func (s *svc) ListExpenses(ctx context.Context, limit, offset int32) ([]repo.Expense, error) {
 	user, err := currentUser(ctx)
 	if err != nil {
 		return nil, err
 	}
 	s.checkAndGeneratePeriodicExpenses(ctx, user.ID)
-	return s.repo.ListExpensesByUserID(ctx, user.ID)
+	return s.repo.ListExpensesByUserID(ctx, repo.ListExpensesByUserIDParams{
+		UserID: user.ID,
+		Limit:  limit,
+		Offset: offset,
+	})
 }
 
 func (s *svc) CreateExpense(ctx context.Context, params createExpenseParams) (repo.Expense, error) {
@@ -233,12 +237,16 @@ func (s *svc) UpdateExpense(ctx context.Context, params updateExpenseParams) (re
 	})
 }
 
-func (s *svc) ListIncomes(ctx context.Context) ([]repo.Income, error) {
+func (s *svc) ListIncomes(ctx context.Context, limit, offset int32) ([]repo.Income, error) {
 	user, err := currentUser(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return s.repo.ListIncomesByUserID(ctx, user.ID)
+	return s.repo.ListIncomesByUserID(ctx, repo.ListIncomesByUserIDParams{
+		UserID: user.ID,
+		Limit:  limit,
+		Offset: offset,
+	})
 }
 
 func (s *svc) CreateIncome(ctx context.Context, params createIncomeParams) (repo.Income, error) {

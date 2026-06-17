@@ -13,6 +13,7 @@ export default function Navbar({ username, onLogout }: { username: string, onLog
       <div style={{ display: 'flex', gap: '16px' }}>
         <Link href="/" className={`nav-link ${pathname === '/' ? 'active' : ''}`}>{t('nav.dashboard')}</Link>
         <Link href="/categories" className={`nav-link ${pathname === '/categories' ? 'active' : ''}`}>{t('nav.categories')}</Link>
+        <Link href="/search" className={`nav-link ${pathname === '/search' ? 'active' : ''}`}>{t('nav.search')}</Link>
       </div>
       <div className="nav-right" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <div className="lang-switcher" style={{ display: 'flex', background: 'var(--input-bg)', borderRadius: '16px', padding: '4px' }}>

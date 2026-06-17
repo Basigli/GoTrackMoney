@@ -19,16 +19,28 @@ export function useData(token: string | null) {
     if (res.ok) setCategories(await res.json() || []);
   }, [token]);
 
-  const fetchIncomes = useCallback(async () => {
+  const fetchIncomes = useCallback(async (offset = 0) => {
     if (!token) return;
-    const res = await fetch(`${API_BASE}/incomes`, { headers: { Authorization: `Bearer ${token}` } });
-    if (res.ok) setIncomes(await res.json() || []);
+    const res = await fetch(`${API_BASE}/incomes?limit=100&offset=${offset}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) {
+      const data = await res.json() || [];
+      if (offset === 0) setIncomes(data);
+      else setIncomes(prev => [...prev, ...data]);
+      return data;
+    }
+    return [];
   }, [token]);
 
-  const fetchExpenses = useCallback(async () => {
+  const fetchExpenses = useCallback(async (offset = 0) => {
     if (!token) return;
-    const res = await fetch(`${API_BASE}/expenses`, { headers: { Authorization: `Bearer ${token}` } });
-    if (res.ok) setExpenses(await res.json() || []);
+    const res = await fetch(`${API_BASE}/expenses?limit=100&offset=${offset}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) {
+      const data = await res.json() || [];
+      if (offset === 0) setExpenses(data);
+      else setExpenses(prev => [...prev, ...data]);
+      return data;
+    }
+    return [];
   }, [token]);
 
   const fetchPeriodicExpenses = useCallback(async () => {

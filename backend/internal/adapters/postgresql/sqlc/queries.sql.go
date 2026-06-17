@@ -447,10 +447,17 @@ WHERE
   user_id = $1
 ORDER BY
   created_at DESC, id DESC
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) ListExpensesByUserID(ctx context.Context, userID int64) ([]Expense, error) {
-	rows, err := q.db.Query(ctx, listExpensesByUserID, userID)
+type ListExpensesByUserIDParams struct {
+	UserID int64 `json:"user_id"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) ListExpensesByUserID(ctx context.Context, arg ListExpensesByUserIDParams) ([]Expense, error) {
+	rows, err := q.db.Query(ctx, listExpensesByUserID, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -525,10 +532,17 @@ WHERE
   user_id = $1
 ORDER BY
   created_at DESC, id DESC
+LIMIT $2 OFFSET $3
 `
 
-func (q *Queries) ListIncomesByUserID(ctx context.Context, userID int64) ([]Income, error) {
-	rows, err := q.db.Query(ctx, listIncomesByUserID, userID)
+type ListIncomesByUserIDParams struct {
+	UserID int64 `json:"user_id"`
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) ListIncomesByUserID(ctx context.Context, arg ListIncomesByUserIDParams) ([]Income, error) {
+	rows, err := q.db.Query(ctx, listIncomesByUserID, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
