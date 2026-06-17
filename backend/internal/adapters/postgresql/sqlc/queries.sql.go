@@ -175,7 +175,7 @@ func (q *Queries) CreatePeriodicExpense(ctx context.Context, arg CreatePeriodicE
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (username, password)
 VALUES ($1, $2)
-RETURNING id, username, password
+RETURNING id, username, password, session_duration_hours
 `
 
 type CreateUserParams struct {
@@ -186,7 +186,12 @@ type CreateUserParams struct {
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, createUser, arg.Username, arg.Password)
 	var i User
-	err := row.Scan(&i.ID, &i.Username, &i.Password)
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Password,
+		&i.SessionDurationHours,
+	)
 	return i, err
 }
 
@@ -298,7 +303,7 @@ func (q *Queries) FindDuePeriodicExpensesByUserID(ctx context.Context, userID in
 
 const findUserByID = `-- name: FindUserByID :one
 SELECT
-  id, username, password
+  id, username, password, session_duration_hours
 FROM
   users
 WHERE
@@ -308,13 +313,18 @@ WHERE
 func (q *Queries) FindUserByID(ctx context.Context, id int64) (User, error) {
 	row := q.db.QueryRow(ctx, findUserByID, id)
 	var i User
-	err := row.Scan(&i.ID, &i.Username, &i.Password)
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Password,
+		&i.SessionDurationHours,
+	)
 	return i, err
 }
 
 const findUserByUsername = `-- name: FindUserByUsername :one
 SELECT
-  id, username, password
+  id, username, password, session_duration_hours
 FROM
   users
 WHERE
@@ -324,7 +334,12 @@ WHERE
 func (q *Queries) FindUserByUsername(ctx context.Context, username string) (User, error) {
 	row := q.db.QueryRow(ctx, findUserByUsername, username)
 	var i User
-	err := row.Scan(&i.ID, &i.Username, &i.Password)
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Password,
+		&i.SessionDurationHours,
+	)
 	return i, err
 }
 
@@ -616,7 +631,7 @@ func (q *Queries) ListPeriodicExpensesByUserID(ctx context.Context, userID int64
 
 const listUsers = `-- name: ListUsers :many
 SELECT
-  id, username, password
+  id, username, password, session_duration_hours
 FROM
   users
 ORDER BY
@@ -632,7 +647,12 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	var items []User
 	for rows.Next() {
 		var i User
-		if err := rows.Scan(&i.ID, &i.Username, &i.Password); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.Password,
+			&i.SessionDurationHours,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -798,20 +818,32 @@ func (q *Queries) UpdatePeriodicExpenseNextDueDate(ctx context.Context, arg Upda
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET username = COALESCE(NULLIF($2, ''), username),
-    password = COALESCE(NULLIF($3, ''), password)
+    password = COALESCE(NULLIF($3, ''), password),
+    session_duration_hours = COALESCE(NULLIF($4::int, 0), session_duration_hours)
 WHERE id = $1
-RETURNING id, username, password
+RETURNING id, username, password, session_duration_hours
 `
 
 type UpdateUserParams struct {
 	ID      int64       `json:"id"`
 	Column2 interface{} `json:"column_2"`
 	Column3 interface{} `json:"column_3"`
+	Column4 int32       `json:"column_4"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, updateUser, arg.ID, arg.Column2, arg.Column3)
+	row := q.db.QueryRow(ctx, updateUser,
+		arg.ID,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+	)
 	var i User
-	err := row.Scan(&i.ID, &i.Username, &i.Password)
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Password,
+		&i.SessionDurationHours,
+	)
 	return i, err
 }

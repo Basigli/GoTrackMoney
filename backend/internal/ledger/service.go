@@ -79,8 +79,9 @@ func (s *svc) CreateUser(ctx context.Context, params createUserParams) (repo.Use
 }
 
 type updateUserParams struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username             string `json:"username"`
+	Password             string `json:"password"`
+	SessionDurationHours int32  `json:"session_duration_hours"`
 }
 
 func (s *svc) UpdateUser(ctx context.Context, id int64, params updateUserParams) (repo.User, error) {
@@ -101,9 +102,10 @@ func (s *svc) UpdateUser(ctx context.Context, id int64, params updateUserParams)
 	}
 
 	return s.repo.UpdateUser(ctx, repo.UpdateUserParams{
-		ID:       id,
+		ID:      id,
 		Column2: params.Username,
 		Column3: hashStr,
+		Column4: params.SessionDurationHours,
 	})
 }
 

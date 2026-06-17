@@ -71,6 +71,7 @@ export const translations = {
     'analytics.expenses_by_category': 'Spese per Categoria',
     'analytics.income_vs_expense': 'Entrate vs Uscite (Ultimi 6 Mesi)',
     'analytics.no_data': 'Dati insufficienti',
+    'analytics.export_csv': 'Esporta CSV',
 
     'record.item': 'Elemento',
     'record.date_time': 'Data e Ora',
@@ -92,6 +93,7 @@ export const translations = {
     'auth.update_success': 'Profilo aggiornato',
     'auth.profile': 'Profilo',
     'auth.save_profile': 'Salva Profilo',
+    'auth.session_duration': 'Durata Sessione',
   },
   en: {
     'nav.dashboard': 'Dashboard',
@@ -165,6 +167,7 @@ export const translations = {
     'analytics.expenses_by_category': 'Expenses by Category',
     'analytics.income_vs_expense': 'Income vs Expense (Last 6 Months)',
     'analytics.no_data': 'Not enough data',
+    'analytics.export_csv': 'Export CSV',
 
     'record.item': 'Item',
     'record.date_time': 'Date & Time',
@@ -186,6 +189,7 @@ export const translations = {
     'auth.update_success': 'Profile updated',
     'auth.profile': 'Profile',
     'auth.save_profile': 'Save Profile',
+    'auth.session_duration': 'Session Duration',
   }
 };
 

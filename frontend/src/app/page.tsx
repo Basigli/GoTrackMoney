@@ -14,7 +14,7 @@ const API_BASE = 'http://localhost:8080';
 
 export default function Home() {
   const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<{id: number, username: string} | null>(null);
+  const [user, setUser] = useState<{id: number, username: string, session_duration_hours: number} | null>(null);
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

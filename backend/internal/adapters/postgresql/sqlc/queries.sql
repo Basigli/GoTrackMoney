@@ -1,6 +1,6 @@
 -- name: ListUsers :many
 SELECT
-  id, username, password
+  id, username, password, session_duration_hours
 FROM
   users
 ORDER BY
@@ -8,7 +8,7 @@ ORDER BY
 
 -- name: FindUserByUsername :one
 SELECT
-  id, username, password
+  id, username, password, session_duration_hours
 FROM
   users
 WHERE
@@ -16,7 +16,7 @@ WHERE
 
 -- name: FindUserByID :one
 SELECT
-  id, username, password
+  id, username, password, session_duration_hours
 FROM
   users
 WHERE
@@ -25,14 +25,15 @@ WHERE
 -- name: CreateUser :one
 INSERT INTO users (username, password)
 VALUES ($1, $2)
-RETURNING id, username, password;
+RETURNING id, username, password, session_duration_hours;
 
 -- name: UpdateUser :one
 UPDATE users
 SET username = COALESCE(NULLIF($2, ''), username),
-    password = COALESCE(NULLIF($3, ''), password)
+    password = COALESCE(NULLIF($3, ''), password),
+    session_duration_hours = COALESCE(NULLIF($4::int, 0), session_duration_hours)
 WHERE id = $1
-RETURNING id, username, password;
+RETURNING id, username, password, session_duration_hours;
 
 -- name: ListCategories :many
 SELECT

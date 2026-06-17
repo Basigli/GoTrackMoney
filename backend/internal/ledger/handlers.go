@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	repo "github.com/sikozonpc/ecom/internal/adapters/postgresql/sqlc"
@@ -19,8 +20,9 @@ type handler struct {
 }
 
 type userResponse struct {
-	ID       int64  `json:"id"`
-	Username string `json:"username"`
+	ID                   int64  `json:"id"`
+	Username             string `json:"username"`
+	SessionDurationHours int32  `json:"session_duration_hours"`
 }
 
 type authResponse struct {
@@ -60,7 +62,8 @@ func (h *handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	token, err := h.auth.Issue(user.ID)
+	ttl := time.Duration(user.SessionDurationHours) * time.Hour
+	token, err := h.auth.Issue(user.ID, ttl)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -94,7 +97,8 @@ func (h *handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.auth.Issue(user.ID)
+	ttl := time.Duration(user.SessionDurationHours) * time.Hour
+	token, err := h.auth.Issue(user.ID, ttl)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -385,8 +389,9 @@ func toUserResponses(users []repo.User) []userResponse {
 
 func toUserResponse(user repo.User) userResponse {
 	return userResponse{
-		ID:       user.ID,
-		Username: user.Username,
+		ID:                   user.ID,
+		Username:             user.Username,
+		SessionDurationHours: user.SessionDurationHours,
 	}
 }
 

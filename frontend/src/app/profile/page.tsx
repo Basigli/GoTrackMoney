@@ -14,10 +14,12 @@ export default function ProfilePage() {
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [sessionDurationHours, setSessionDurationHours] = useState<number>(24);
 
   useEffect(() => {
     if (user) {
       setUsername(user.username);
+      setSessionDurationHours(user.session_duration_hours || 24);
     }
   }, [user]);
 
@@ -32,7 +34,7 @@ export default function ProfilePage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password, session_duration_hours: Number(sessionDurationHours) })
       });
 
       if (res.ok) {
@@ -88,6 +90,19 @@ export default function ProfilePage() {
                 value={password} 
                 onChange={e => setPassword(e.target.value)} 
                 placeholder="Nuova password..."
+              />
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>{t('auth.session_duration')} (Ore / Hours)</label>
+              <input 
+                className="input-field" 
+                type="number" 
+                min="1"
+                max="8760"
+                value={sessionDurationHours} 
+                onChange={e => setSessionDurationHours(parseInt(e.target.value) || 24)} 
+                required
               />
             </div>
 

@@ -44,10 +44,13 @@ func NewManager(secret string, ttl time.Duration) *Manager {
 	}
 }
 
-func (m *Manager) Issue(userID int64) (string, error) {
+func (m *Manager) Issue(userID int64, ttl time.Duration) (string, error) {
+	if ttl == 0 {
+		ttl = m.ttl
+	}
 	payload, err := json.Marshal(claims{
 		UserID:    userID,
-		ExpiresAt: time.Now().UTC().Add(m.ttl).Unix(),
+		ExpiresAt: time.Now().UTC().Add(ttl).Unix(),
 	})
 	if err != nil {
 		return "", err

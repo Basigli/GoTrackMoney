@@ -73,12 +73,53 @@ export default function AnalyticsPage() {
     };
   });
 
+  const exportToCSV = () => {
+    // Header
+    const rows = [
+      ['Tipo/Type', 'Data/Date', 'Categoria/Category', 'Importo/Amount', 'Descrizione/Description']
+    ];
+
+    // Combine incomes and expenses
+    const combined = [
+      ...incomes.map(i => ({ type: t('record.income'), date: new Date(i.received_on), item: i })),
+      ...expenses.map(e => ({ type: t('record.expense'), date: new Date(e.spent_on), item: e }))
+    ].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    for (const row of combined) {
+      const cat = categories.find(c => c.id === row.item.category_id);
+      const catName = cat ? cat.name : t('dashboard.unknown');
+      // Format row, escaping quotes for CSV
+      rows.push([
+        row.type,
+        format(row.date, 'yyyy-MM-dd HH:mm'),
+        `"${catName.replace(/"/g, '""')}"`,
+        row.item.amount.toString(),
+        `"${row.item.description.replace(/"/g, '""')}"`
+      ]);
+    }
+
+    const csvContent = rows.map(e => e.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `GoTrackMoney_Export_${format(new Date(), 'yyyyMMdd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="app-container">
       <Navbar username={user.username} onLogout={logout} />
       
       <div style={{ padding: '24px 20px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '24px' }}>{t('analytics.title')}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 700 }}>{t('analytics.title')}</h1>
+          <button onClick={exportToCSV} className="submit-btn" style={{ margin: 0, padding: '8px 16px', width: 'auto', fontSize: '14px', borderRadius: '12px' }}>
+            {t('analytics.export_csv')}
+          </button>
+        </div>
 
         <div className="analytics-grid">
           {/* Expenses by Category (Pie Chart) */}
