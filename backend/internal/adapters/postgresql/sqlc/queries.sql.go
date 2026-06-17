@@ -794,3 +794,24 @@ func (q *Queries) UpdatePeriodicExpenseNextDueDate(ctx context.Context, arg Upda
 	_, err := q.db.Exec(ctx, updatePeriodicExpenseNextDueDate, arg.ID, arg.LastGeneratedDate, arg.NextDueDate)
 	return err
 }
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users
+SET username = COALESCE(NULLIF($2, ''), username),
+    password = COALESCE(NULLIF($3, ''), password)
+WHERE id = $1
+RETURNING id, username, password
+`
+
+type UpdateUserParams struct {
+	ID      int64       `json:"id"`
+	Column2 interface{} `json:"column_2"`
+	Column3 interface{} `json:"column_3"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUser, arg.ID, arg.Column2, arg.Column3)
+	var i User
+	err := row.Scan(&i.ID, &i.Username, &i.Password)
+	return i, err
+}

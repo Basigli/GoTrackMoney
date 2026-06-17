@@ -22,6 +22,7 @@ var (
 type Service interface {
 	ListUsers(ctx context.Context) ([]repo.User, error)
 	CreateUser(ctx context.Context, params createUserParams) (repo.User, error)
+	UpdateUser(ctx context.Context, id int64, params updateUserParams) (repo.User, error)
 	AuthenticateUser(ctx context.Context, params loginParams) (repo.User, error)
 
 	ListCategories(ctx context.Context) ([]repo.Category, error)
@@ -74,6 +75,35 @@ func (s *svc) CreateUser(ctx context.Context, params createUserParams) (repo.Use
 	return s.repo.CreateUser(ctx, repo.CreateUserParams{
 		Username: params.Username,
 		Password: string(hash),
+	})
+}
+
+type updateUserParams struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func (s *svc) UpdateUser(ctx context.Context, id int64, params updateUserParams) (repo.User, error) {
+	var hashStr string
+	if params.Password != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(params.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return repo.User{}, err
+		}
+		hashStr = string(hash)
+	}
+
+	if params.Username != "" {
+		existing, err := s.repo.FindUserByUsername(ctx, params.Username)
+		if err == nil && existing.ID != id {
+			return repo.User{}, ErrUsernameTaken
+		}
+	}
+
+	return s.repo.UpdateUser(ctx, repo.UpdateUserParams{
+		ID:       id,
+		Column2: params.Username,
+		Column3: hashStr,
 	})
 }
 

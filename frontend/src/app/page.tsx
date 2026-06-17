@@ -89,8 +89,21 @@ export default function Home() {
         localStorage.setItem('auth_token', data.token);
         setToken(data.token);
         setUser(data.user);
+        toast.success(isLogin ? t('auth.login_success') : t('auth.register_success'));
+      } else {
+        const text = await res.text();
+        if (res.status === 401) {
+          toast.error(t('auth.invalid_credentials'));
+        } else if (res.status === 409) {
+          toast.error(t('auth.username_taken'));
+        } else {
+          toast.error(text || t('record.error_conn'));
+        }
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+      console.error(err);
+      toast.error(t('record.error_conn'));
+    }
   };
 
   const logout = () => {
@@ -433,6 +446,7 @@ export default function Home() {
   // Login UI
   return (
     <div className="app-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Toaster position="bottom-center" />
       <div className="glass-container">
         <h1 className="form-title">{isLogin ? t('auth.login') : t('auth.register')}</h1>
         <form onSubmit={handleAuth}>

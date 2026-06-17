@@ -107,6 +107,35 @@ func (h *handler) Login(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var payload updateUserParams
+	if err := json.Read(r, &payload); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.service.UpdateUser(r.Context(), userID, payload)
+	if err != nil {
+		log.Println(err)
+		switch {
+		case errors.Is(err, ErrUsernameTaken):
+			http.Error(w, err.Error(), http.StatusConflict)
+		default:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+
+	json.Write(w, http.StatusOK, toUserResponse(user))
+}
+
 func (h *handler) Me(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.CurrentUser(r.Context())
 	if !ok {

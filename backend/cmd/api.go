@@ -50,6 +50,7 @@ func (app *application) mount() http.Handler {
 	r.With(app.auth.Middleware(app.queries)).Group(func(r chi.Router) {
 		r.Get("/users", handler.ListUsers)
 		r.Get("/auth/me", handler.Me)
+		r.Put("/users/me", handler.UpdateUser)
 
 		r.Get("/categories", handler.ListCategories)
 		r.Post("/categories", handler.CreateCategory)

@@ -85,6 +85,13 @@ export const translations = {
     'auth.password': 'Password',
     'auth.no_account': 'Non hai un account?',
     'auth.have_account': 'Hai già un account?',
+    'auth.login_success': 'Accesso effettuato con successo',
+    'auth.register_success': 'Registrazione completata',
+    'auth.invalid_credentials': 'Username o password errati',
+    'auth.username_taken': 'Username già in uso',
+    'auth.update_success': 'Profilo aggiornato',
+    'auth.profile': 'Profilo',
+    'auth.save_profile': 'Salva Profilo',
   },
   en: {
     'nav.dashboard': 'Dashboard',
@@ -172,6 +179,13 @@ export const translations = {
     'auth.password': 'Password',
     'auth.no_account': 'Don\'t have an account?',
     'auth.have_account': 'Already have an account?',
+    'auth.login_success': 'Successfully logged in',
+    'auth.register_success': 'Successfully registered',
+    'auth.invalid_credentials': 'Invalid username or password',
+    'auth.username_taken': 'Username is already taken',
+    'auth.update_success': 'Profile updated',
+    'auth.profile': 'Profile',
+    'auth.save_profile': 'Save Profile',
   }
 };
 

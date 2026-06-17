@@ -21,7 +21,7 @@ export default function Navbar({ username, onLogout }: { username: string, onLog
           <button onClick={() => setLanguage('it')} style={{ padding: '4px 8px', border: 'none', background: language === 'it' ? 'var(--surface-color)' : 'transparent', borderRadius: '12px', cursor: 'pointer', color: 'var(--text-color)', fontWeight: language === 'it' ? 'bold' : 'normal' }}>IT</button>
           <button onClick={() => setLanguage('en')} style={{ padding: '4px 8px', border: 'none', background: language === 'en' ? 'var(--surface-color)' : 'transparent', borderRadius: '12px', cursor: 'pointer', color: 'var(--text-color)', fontWeight: language === 'en' ? 'bold' : 'normal' }}>EN</button>
         </div>
-        <span style={{ color: '#94a3b8' }}>{username}</span>
+        <Link href="/profile" style={{ color: '#94a3b8', textDecoration: 'none', fontWeight: 600 }}>{username}</Link>
         <button onClick={onLogout} className="logout-btn">{t('nav.logout')}</button>
       </div>
     </div>

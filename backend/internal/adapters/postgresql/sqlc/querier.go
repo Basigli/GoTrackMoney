@@ -32,6 +32,7 @@ type Querier interface {
 	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (Expense, error)
 	UpdateIncome(ctx context.Context, arg UpdateIncomeParams) (Income, error)
 	UpdatePeriodicExpenseNextDueDate(ctx context.Context, arg UpdatePeriodicExpenseNextDueDateParams) error
+	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }
 
 var _ Querier = (*Queries)(nil)

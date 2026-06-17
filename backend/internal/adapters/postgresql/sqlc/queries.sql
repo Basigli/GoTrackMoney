@@ -27,6 +27,13 @@ INSERT INTO users (username, password)
 VALUES ($1, $2)
 RETURNING id, username, password;
 
+-- name: UpdateUser :one
+UPDATE users
+SET username = COALESCE(NULLIF($2, ''), username),
+    password = COALESCE(NULLIF($3, ''), password)
+WHERE id = $1
+RETURNING id, username, password;
+
 -- name: ListCategories :many
 SELECT
   id, name, creator_id, emoji, type
