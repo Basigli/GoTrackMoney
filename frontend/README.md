@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GoTrackMoney Frontend
+
+This is the frontend application for **GoTrackMoney**, built with [Next.js](https://nextjs.org). It provides a responsive, beautiful UI to manage your finances, incomes, and expenses.
+
+## Features
+
+- **Dashboard**: Get an overview of your total balance, expenses, and incomes.
+- **Categories Management**: Create custom categories with specific emojis to better organize your transactions.
+- **Periodic Expenses**: Schedule recurring expenses (e.g., daily, weekly, monthly, yearly) and the system will automatically generate them when they are due!
+- **Internationalization (i18n)**: Fully localized in both English and Italian. Switch seamlessly using the navigation bar.
 
 ## Getting Started
 
-First, run the development server:
+First, install dependencies and run the development server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Running Tests (Python Environment)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+We provide comprehensive End-to-End (E2E) and Stress tests written in Python to ensure the entire application works flawlessly under different conditions. The test scripts are located in the `tests/` directory at the root of the repository.
 
-## Learn More
+### Prerequisites
+Make sure you have Python 3 installed. It is recommended to use a Python virtual environment to isolate the test dependencies.
 
-To learn more about Next.js, take a look at the following resources:
+1. **Create a virtual environment**:
+   ```bash
+   python -m venv venv
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. **Activate the virtual environment**:
+   - On **macOS/Linux**:
+     ```bash
+     source venv/bin/activate
+     ```
+   - On **Windows**:
+     ```bash
+     .\venv\Scripts\activate
+     ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. **Install the required dependencies**:
+   ```bash
+   pip install requests
+   ```
 
-## Deploy on Vercel
+*(Note: Ensure your Go backend server is running on `localhost:8080` before executing these tests!)*
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### End-to-End (E2E) Test
+This script runs a complete user journey against the live API: registering a user, logging in, creating categories, creating standard expenses, and creating periodic expenses to ensure the generation logic works.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Run this from the root of the project:
+```bash
+python tests/e2e_test.py
+```
+
+### Stress Test
+This script blasts the backend API with 1,000 requests using 50 concurrent threads to measure latency and verify the system's stability under heavy load.
+
+Run this from the root of the project:
+```bash
+python tests/stress_test.py
+```
