@@ -403,7 +403,7 @@ export default function Home() {
               <h2 style={{ marginBottom: '24px' }}>
                 {t('dashboard.details_for', { category: categories.find(c => c.id === selectedCategory)?.name || '' })}
               </h2>
-              <div>
+              <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '8px' }}>
                 {(activeGroups[selectedCategory] || []).map((item: any) => (
                   <div key={item.id} className="list-item" style={{ padding: '12px 0', cursor: 'pointer' }} onClick={() => {
                     setSelectedCategory(null);
