@@ -405,7 +405,7 @@ export default function Home() {
               </h2>
               <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '8px' }}>
                 {(activeGroups[selectedCategory] || []).map((item: any) => (
-                  <div key={item.id} className="list-item" style={{ padding: '12px 0', cursor: 'pointer' }} onClick={() => {
+                  <div key={item.id} className="list-item" style={{ padding: '12px 16px', cursor: 'pointer', marginBottom: '8px', borderRadius: '12px' }} onClick={() => {
                     setSelectedCategory(null);
                     openEditModal(item);
                   }}>

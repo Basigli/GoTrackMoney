@@ -127,27 +127,27 @@ export default function CategoriesPage() {
         <div style={{ display: 'flex', gap: '20px', flexDirection: 'column' }}>
           <div>
             <h3 style={{ fontSize: '18px', marginBottom: '12px', color: 'var(--danger-color)' }}>{t('categories.expenses_list')}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="list-container">
               {expenseCategories.map(c => (
-                <div key={c.id} onClick={() => handleEditClick(c)} style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', cursor: 'pointer' }}>
+                <div key={c.id} className="list-item" onClick={() => handleEditClick(c)} style={{ padding: '16px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                   <span style={{ fontSize: '24px', marginRight: '16px' }}>{c.emoji || '📝'}</span>
                   <span style={{ fontSize: '16px', fontWeight: 500 }}>{c.name}</span>
                 </div>
               ))}
-              {expenseCategories.length === 0 && <div style={{ color: 'var(--text-muted)' }}>{t('categories.no_categories')}</div>}
+              {expenseCategories.length === 0 && <div style={{ color: 'var(--text-muted)', gridColumn: '1 / -1' }}>{t('categories.no_categories')}</div>}
             </div>
           </div>
           
           <div>
             <h3 style={{ fontSize: '18px', marginBottom: '12px', color: 'var(--success-color)' }}>{t('categories.incomes_list')}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="list-container">
               {incomeCategories.map(c => (
-                <div key={c.id} onClick={() => handleEditClick(c)} style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', cursor: 'pointer' }}>
+                <div key={c.id} className="list-item" onClick={() => handleEditClick(c)} style={{ padding: '16px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                   <span style={{ fontSize: '24px', marginRight: '16px' }}>{c.emoji || '📝'}</span>
                   <span style={{ fontSize: '16px', fontWeight: 500 }}>{c.name}</span>
                 </div>
               ))}
-              {incomeCategories.length === 0 && <div style={{ color: 'var(--text-muted)' }}>{t('categories.no_categories')}</div>}
+              {incomeCategories.length === 0 && <div style={{ color: 'var(--text-muted)', gridColumn: '1 / -1' }}>{t('categories.no_categories')}</div>}
             </div>
           </div>
         </div>

@@ -102,7 +102,7 @@ export default function SearchPage() {
           {t('search.results_count').replace('{count}', matches.length.toString())}
         </p>
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div className="list-container">
           {matches.map(item => (
             <div key={`${item.isExpense ? 'exp' : 'inc'}-${item.id}`} className="list-item" style={{ padding: '16px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center' }}>
               <div className="item-icon" style={{ fontSize: '24px', marginRight: '16px' }}>{getIconForCategory(item.category_id)}</div>
@@ -125,7 +125,7 @@ export default function SearchPage() {
           {hasMore && matches.length >= 100 && (
             <button 
               onClick={loadMore} 
-              style={{ width: '100%', padding: '16px', marginTop: '16px', background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}
+              style={{ gridColumn: '1 / -1', width: '100%', padding: '16px', marginTop: '16px', background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}
             >
               {t('search.load_more')}
             </button>
