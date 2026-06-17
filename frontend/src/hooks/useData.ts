@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 
-const API_BASE = 'http://localhost:8080';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export interface Category { id: number; name: string; emoji: string; type: string; }
 export interface Income { id: number; name: string; amount: number; description: string; category_id: number; received_on: string; }

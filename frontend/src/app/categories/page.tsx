@@ -26,7 +26,8 @@ export default function CategoriesPage() {
     e.preventDefault();
     if (!token) return;
     
-    const endpoint = editingCategory ? `http://localhost:8080/categories/${editingCategory.id}` : `http://localhost:8080/categories`;
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+    const endpoint = editingCategory ? `${API_BASE}/categories/${editingCategory.id}` : `${API_BASE}/categories`;
     const method = editingCategory ? 'PUT' : 'POST';
 
     try {

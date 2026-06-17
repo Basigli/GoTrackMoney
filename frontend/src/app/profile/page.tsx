@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar';
 import { useLanguage } from '@/i18n/LanguageContext';
 import toast, { Toaster } from 'react-hot-toast';
 
-const API_BASE = 'http://localhost:8080';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export default function ProfilePage() {
   const { token, user, loading, logout } = useAuth();
