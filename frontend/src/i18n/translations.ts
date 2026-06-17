@@ -3,6 +3,7 @@ export const translations = {
     'nav.dashboard': 'Dashboard',
     'nav.categories': 'Categorie',
     'nav.search': 'Cerca',
+    'nav.analytics': 'Analisi',
     'nav.logout': 'Esci',
 
     // Dashboard
@@ -64,6 +65,13 @@ export const translations = {
     'record.weeks': 'Settimane',
     'record.months': 'Mesi',
     'record.years': 'Anni',
+
+    // Analytics Page
+    'analytics.title': 'Analisi',
+    'analytics.expenses_by_category': 'Spese per Categoria',
+    'analytics.income_vs_expense': 'Entrate vs Uscite (Ultimi 6 Mesi)',
+    'analytics.no_data': 'Dati insufficienti',
+
     'record.item': 'Elemento',
     'record.date_time': 'Data e Ora',
     'dashboard.unknown': 'Sconosciuto',
@@ -82,6 +90,7 @@ export const translations = {
     'nav.dashboard': 'Dashboard',
     'nav.categories': 'Categories',
     'nav.search': 'Search',
+    'nav.analytics': 'Analytics',
     'nav.logout': 'Logout',
 
     // Dashboard
@@ -143,6 +152,13 @@ export const translations = {
     'record.weeks': 'Weeks',
     'record.months': 'Months',
     'record.years': 'Years',
+
+    // Analytics Page
+    'analytics.title': 'Analytics',
+    'analytics.expenses_by_category': 'Expenses by Category',
+    'analytics.income_vs_expense': 'Income vs Expense (Last 6 Months)',
+    'analytics.no_data': 'Not enough data',
+
     'record.item': 'Item',
     'record.date_time': 'Date & Time',
     'dashboard.unknown': 'Unknown',
