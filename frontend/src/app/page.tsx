@@ -18,6 +18,7 @@ export default function Home() {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(true);
 
   const { categories, fetchCategories, incomes, fetchIncomes, expenses, fetchExpenses } = useData(token);
@@ -77,6 +78,12 @@ export default function Home() {
 
   const handleAuth = async (e: FormEvent) => {
     e.preventDefault();
+    
+    if (!isLogin && password !== confirmPassword) {
+      toast.error(t('auth.passwords_do_not_match'));
+      return;
+    }
+
     const endpoint = isLogin ? '/auth/login' : '/users';
     try {
       const res = await fetch(`${API_BASE}${endpoint}`, {
@@ -452,6 +459,9 @@ export default function Home() {
         <form onSubmit={handleAuth}>
           <input className="input-field" type="text" placeholder={t('auth.username')} value={username} onChange={e => setUsername(e.target.value)} required />
           <input className="input-field" type="password" placeholder={t('auth.password')} value={password} onChange={e => setPassword(e.target.value)} required />
+          {!isLogin && (
+            <input className="input-field" type="password" placeholder={t('auth.confirm_password')} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+          )}
           <button type="submit" className="submit-btn">{isLogin ? t('auth.login') : t('auth.register')}</button>
         </form>
         <div style={{ textAlign: 'center', marginTop: '16px' }}>

@@ -94,6 +94,8 @@ export const translations = {
     'auth.profile': 'Profilo',
     'auth.save_profile': 'Salva Profilo',
     'auth.session_duration': 'Durata Sessione',
+    'auth.confirm_password': 'Conferma Password',
+    'auth.passwords_do_not_match': 'Le password non coincidono',
   },
   en: {
     'nav.dashboard': 'Dashboard',
@@ -190,6 +192,8 @@ export const translations = {
     'auth.profile': 'Profile',
     'auth.save_profile': 'Save Profile',
     'auth.session_duration': 'Session Duration',
+    'auth.confirm_password': 'Confirm Password',
+    'auth.passwords_do_not_match': 'Passwords do not match',
   }
 };
 
