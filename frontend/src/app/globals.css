@@ -404,49 +404,105 @@ body {
   cursor: pointer;
 }
 
-/* Category management specific */
+.auth-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(135deg, var(--bg-color) 0%, var(--primary-color) 100%);
+  padding: 20px;
+}
+
 .glass-container {
-  background: white;
-  padding: 32px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 40px 32px;
   border-radius: 24px;
+  width: 100%;
   max-width: 400px;
-  margin: 40px auto;
-  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255,255,255,0.5);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-container:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 30px 60px rgba(0,0,0,0.12), inset 0 0 0 1px rgba(255,255,255,0.6);
 }
 
 .form-title {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 28px;
+  font-weight: 800;
   text-align: center;
   margin-bottom: 8px;
+  background: linear-gradient(90deg, var(--text-color), var(--primary-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .form-subtitle {
   text-align: center;
   color: var(--text-muted);
-  margin-bottom: 24px;
-  font-size: 14px;
+  margin-bottom: 32px;
+  font-size: 15px;
 }
 
 .input-field {
   width: 100%;
-  padding: 12px 16px;
-  border: 1px solid var(--border-color);
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0,0,0,0.1);
   border-radius: 12px;
   font-size: 16px;
   margin-bottom: 16px;
+  transition: all 0.2s ease;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(167, 177, 249, 0.2);
 }
 
 .submit-btn {
   width: 100%;
-  padding: 14px;
+  padding: 16px;
   background: var(--primary-color);
   color: white;
   border: none;
   border-radius: 12px;
   font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+  box-shadow: 0 4px 12px rgba(167, 177, 249, 0.3);
+}
+
+.submit-btn:hover {
+  background: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(167, 177, 249, 0.4);
+}
+
+.submit-btn:active {
+  transform: translateY(0);
+}
+
+.toggle-auth-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
   font-weight: 600;
   cursor: pointer;
+  font-size: 14px;
+  transition: color 0.2s;
+  padding: 8px 16px;
+}
+
+.toggle-auth-btn:hover {
+  color: var(--primary-color);
 }
 
 /* Custom DatePicker Styles */

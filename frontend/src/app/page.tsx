@@ -454,10 +454,13 @@ export default function Home() {
 
   // Login UI
   return (
-    <div className="app-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div className="auth-wrapper">
       <Toaster position="bottom-center" />
       <div className="glass-container">
         <h1 className="form-title">{isLogin ? t('auth.login') : t('auth.register')}</h1>
+        <p className="form-subtitle">
+          {isLogin ? t('auth.login_subtitle') || 'Bentornato! Accedi per continuare.' : t('auth.register_subtitle') || 'Crea un account per iniziare!'}
+        </p>
         <form onSubmit={handleAuth}>
           <input className="input-field" type="text" placeholder={t('auth.username')} value={username} onChange={e => setUsername(e.target.value)} required />
           <div style={{ position: 'relative' }}>
@@ -476,8 +479,8 @@ export default function Home() {
           )}
           <button type="submit" className="submit-btn">{isLogin ? t('auth.login') : t('auth.register')}</button>
         </form>
-        <div style={{ textAlign: 'center', marginTop: '16px' }}>
-          <button onClick={() => setIsLogin(!isLogin)} style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer' }}>
+        <div style={{ textAlign: 'center', marginTop: '24px' }}>
+          <button onClick={() => setIsLogin(!isLogin)} className="toggle-auth-btn">
             {isLogin ? t('auth.no_account') : t('auth.have_account')}
           </button>
         </div>

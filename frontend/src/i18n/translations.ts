@@ -102,6 +102,8 @@ export const translations = {
     'auth.delete_success': 'Account eliminato con successo',
     'auth.cancel': 'Annulla',
     'auth.delete_warning': 'Attenzione: Questa azione è irreversibile e cancellerà tutti i tuoi dati. Sei sicuro di voler procedere?',
+    'auth.login_subtitle': 'Bentornato! Accedi per continuare.',
+    'auth.register_subtitle': 'Crea un account per iniziare!',
   },
   en: {
     'nav.dashboard': 'Dashboard',
@@ -206,6 +208,8 @@ export const translations = {
     'auth.delete_success': 'Account successfully deleted',
     'auth.cancel': 'Cancel',
     'auth.delete_warning': 'Warning: This action is irreversible and will delete all your data. Are you sure you want to proceed?',
+    'auth.login_subtitle': 'Welcome back! Log in to continue.',
+    'auth.register_subtitle': 'Create an account to get started!',
   }
 };
 
