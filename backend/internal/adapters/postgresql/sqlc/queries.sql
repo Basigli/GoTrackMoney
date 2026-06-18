@@ -35,6 +35,10 @@ SET username = COALESCE(NULLIF($2, ''), username),
 WHERE id = $1
 RETURNING id, username, password, session_duration_hours;
 
+-- name: DeleteUser :exec
+DELETE FROM users
+WHERE id = $1;
+
 -- name: ListCategories :many
 SELECT
   id, name, creator_id, emoji, type

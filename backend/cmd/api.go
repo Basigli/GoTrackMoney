@@ -51,6 +51,7 @@ func (app *application) mount() http.Handler {
 		r.Get("/users", handler.ListUsers)
 		r.Get("/auth/me", handler.Me)
 		r.Put("/users/me", handler.UpdateUser)
+		r.Delete("/users/me", handler.DeleteUser)
 
 		r.Get("/categories", handler.ListCategories)
 		r.Post("/categories", handler.CreateCategory)

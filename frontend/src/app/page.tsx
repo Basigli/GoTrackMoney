@@ -19,6 +19,8 @@ export default function Home() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const { categories, fetchCategories, incomes, fetchIncomes, expenses, fetchExpenses } = useData(token);
@@ -458,9 +460,19 @@ export default function Home() {
         <h1 className="form-title">{isLogin ? t('auth.login') : t('auth.register')}</h1>
         <form onSubmit={handleAuth}>
           <input className="input-field" type="text" placeholder={t('auth.username')} value={username} onChange={e => setUsername(e.target.value)} required />
-          <input className="input-field" type="password" placeholder={t('auth.password')} value={password} onChange={e => setPassword(e.target.value)} required />
+          <div style={{ position: 'relative' }}>
+            <input className="input-field" type={showPassword ? "text" : "password"} placeholder={t('auth.password')} value={password} onChange={e => setPassword(e.target.value)} required />
+            <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6 }}>
+              {showPassword ? '👁️' : '👁️‍🗨️'}
+            </button>
+          </div>
           {!isLogin && (
-            <input className="input-field" type="password" placeholder={t('auth.confirm_password')} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required />
+            <div style={{ position: 'relative', marginTop: '12px' }}>
+              <input className="input-field" type={showConfirmPassword ? "text" : "password"} placeholder={t('auth.confirm_password')} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required style={{ margin: 0 }} />
+              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6 }}>
+                {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+              </button>
+            </div>
           )}
           <button type="submit" className="submit-btn">{isLogin ? t('auth.login') : t('auth.register')}</button>
         </form>

@@ -140,6 +140,22 @@ func (h *handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	json.Write(w, http.StatusOK, toUserResponse(user))
 }
 
+func (h *handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if err := h.service.DeleteUser(r.Context(), userID); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *handler) Me(w http.ResponseWriter, r *http.Request) {
 	user, ok := auth.CurrentUser(r.Context())
 	if !ok {

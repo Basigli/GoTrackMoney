@@ -96,6 +96,12 @@ export const translations = {
     'auth.session_duration': 'Durata Sessione',
     'auth.confirm_password': 'Conferma Password',
     'auth.passwords_do_not_match': 'Le password non coincidono',
+    'auth.delete_account': 'Elimina Account',
+    'auth.delete_confirm_phrase': 'elimina il mio account',
+    'auth.delete_instructions': 'Digita "%{phrase}" per confermare:',
+    'auth.delete_success': 'Account eliminato con successo',
+    'auth.cancel': 'Annulla',
+    'auth.delete_warning': 'Attenzione: Questa azione è irreversibile e cancellerà tutti i tuoi dati. Sei sicuro di voler procedere?',
   },
   en: {
     'nav.dashboard': 'Dashboard',
@@ -194,6 +200,12 @@ export const translations = {
     'auth.session_duration': 'Session Duration',
     'auth.confirm_password': 'Confirm Password',
     'auth.passwords_do_not_match': 'Passwords do not match',
+    'auth.delete_account': 'Delete Account',
+    'auth.delete_confirm_phrase': 'delete my account',
+    'auth.delete_instructions': 'Type "%{phrase}" to confirm:',
+    'auth.delete_success': 'Account successfully deleted',
+    'auth.cancel': 'Cancel',
+    'auth.delete_warning': 'Warning: This action is irreversible and will delete all your data. Are you sure you want to proceed?',
   }
 };
 

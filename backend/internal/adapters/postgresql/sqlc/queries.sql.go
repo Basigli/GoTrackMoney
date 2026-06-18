@@ -210,6 +210,16 @@ func (q *Queries) DeletePeriodicExpense(ctx context.Context, arg DeletePeriodicE
 	return err
 }
 
+const deleteUser = `-- name: DeleteUser :exec
+DELETE FROM users
+WHERE id = $1
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, deleteUser, id)
+	return err
+}
+
 const findCategoryByID = `-- name: FindCategoryByID :one
 SELECT
   id, name, creator_id, emoji, type

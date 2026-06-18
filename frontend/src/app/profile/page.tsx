@@ -10,11 +10,15 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export default function ProfilePage() {
   const { token, user, loading, logout } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [sessionDurationHours, setSessionDurationHours] = useState<number>(24);
+  
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -58,6 +62,30 @@ export default function ProfilePage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    const expectedPhrase = language === 'it' ? 'elimina il mio account' : 'delete my account';
+    if (deleteConfirmText !== expectedPhrase) {
+      toast.error('Phrase does not match / La frase non coincide');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/users/me`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        toast.success(t('auth.delete_success') || 'Account deleted');
+        logout();
+      } else {
+        toast.error('Error deleting account');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(t('record.error_conn'));
+    }
+  };
+
   if (loading || !user) return null;
 
   return (
@@ -84,13 +112,19 @@ export default function ProfilePage() {
 
             <div style={{ marginBottom: '24px' }}>
               <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>{t('auth.password')} (Lascia vuoto per non cambiare / Leave blank to keep)</label>
-              <input 
-                className="input-field" 
-                type="password" 
-                value={password} 
-                onChange={e => setPassword(e.target.value)} 
-                placeholder="Nuova password..."
-              />
+              <div style={{ position: 'relative' }}>
+                <input 
+                  className="input-field" 
+                  type={showPassword ? "text" : "password"} 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  placeholder="Nuova password..."
+                  style={{ margin: 0 }}
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6 }}>
+                  {showPassword ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </div>
             </div>
 
             <div style={{ marginBottom: '24px' }}>
@@ -108,8 +142,55 @@ export default function ProfilePage() {
 
             <button type="submit" className="submit-btn">{t('auth.save_profile')}</button>
           </form>
+
+          <div style={{ marginTop: '40px', paddingTop: '20px', borderTop: '1px solid var(--border-color)' }}>
+            <h2 style={{ fontSize: '1.2rem', color: 'var(--danger-color)', marginBottom: '8px' }}>Zona Pericolosa</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '16px' }}>{t('auth.delete_warning') || 'Warning: This action is irreversible and will delete all your data.'}</p>
+            <button 
+              onClick={() => setShowDeleteModal(true)} 
+              style={{ background: 'var(--danger-color)', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, width: '100%' }}
+            >
+              {t('auth.delete_account') || 'Delete Account'}
+            </button>
+          </div>
         </div>
       </div>
+
+      {showDeleteModal && (
+        <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <h2 style={{ color: 'var(--danger-color)', marginBottom: '16px' }}>{t('auth.delete_account') || 'Delete Account'}</h2>
+            <p style={{ marginBottom: '16px', color: 'var(--text-muted)' }}>
+              {t('auth.delete_warning') || 'Warning: This action is irreversible and will delete all your data.'}
+            </p>
+            <p style={{ marginBottom: '8px', fontWeight: 500 }}>
+              {(t('auth.delete_instructions') || 'Type "%{phrase}" to confirm:').replace('%{phrase}', language === 'it' ? 'elimina il mio account' : 'delete my account')}
+            </p>
+            <input 
+              type="text" 
+              className="input-field" 
+              value={deleteConfirmText}
+              onChange={e => setDeleteConfirmText(e.target.value)}
+              placeholder={language === 'it' ? 'elimina il mio account' : 'delete my account'}
+              style={{ marginBottom: '24px' }}
+            />
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={() => setShowDeleteModal(false)}
+                style={{ flex: 1, padding: '12px', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', color: 'var(--text-color)', cursor: 'pointer' }}
+              >
+                {t('auth.cancel') || 'Cancel'}
+              </button>
+              <button 
+                onClick={handleDeleteAccount}
+                style={{ flex: 1, padding: '12px', background: 'var(--danger-color)', border: 'none', borderRadius: '12px', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+              >
+                {t('auth.delete_account') || 'Delete Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

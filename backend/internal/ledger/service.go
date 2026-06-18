@@ -23,6 +23,7 @@ type Service interface {
 	ListUsers(ctx context.Context) ([]repo.User, error)
 	CreateUser(ctx context.Context, params createUserParams) (repo.User, error)
 	UpdateUser(ctx context.Context, id int64, params updateUserParams) (repo.User, error)
+	DeleteUser(ctx context.Context, id int64) error
 	AuthenticateUser(ctx context.Context, params loginParams) (repo.User, error)
 
 	ListCategories(ctx context.Context) ([]repo.Category, error)
@@ -107,6 +108,10 @@ func (s *svc) UpdateUser(ctx context.Context, id int64, params updateUserParams)
 		Column3: hashStr,
 		Column4: params.SessionDurationHours,
 	})
+}
+
+func (s *svc) DeleteUser(ctx context.Context, id int64) error {
+	return s.repo.DeleteUser(ctx, id)
 }
 
 func (s *svc) AuthenticateUser(ctx context.Context, params loginParams) (repo.User, error) {
