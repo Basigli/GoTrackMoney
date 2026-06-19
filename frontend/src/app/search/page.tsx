@@ -183,7 +183,7 @@ export default function SearchPage() {
       <Toaster position="bottom-center" />
       <Navbar username={user.username} onLogout={logout} />
       
-      <div style={{ padding: '0 20px', marginBottom: '24px' }}>
+      <div style={{ padding: '24px 20px', marginBottom: '24px' }}>
         <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '20px' }}>
           {t('nav.search')}
         </h2>

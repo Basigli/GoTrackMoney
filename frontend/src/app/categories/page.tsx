@@ -78,7 +78,7 @@ export default function CategoriesPage() {
       <Toaster position="bottom-center" />
       <Navbar username={user.username} onLogout={logout} />
       
-      <div style={{ padding: '0 20px', marginBottom: '24px' }}>
+      <div style={{ padding: '24px 20px', marginBottom: '24px' }}>
         <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '20px' }}>
           {editingCategory ? t('categories.edit') : t('categories.new')}
         </h2>
@@ -125,7 +125,7 @@ export default function CategoriesPage() {
         </form>
       </div>
 
-      <div style={{ padding: '0 20px', marginBottom: '40px' }}>
+      <div style={{ padding: '24px 20px', marginBottom: '40px' }}>
         <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '20px' }}>{t('categories.my_categories')}</h2>
         
         <div style={{ marginBottom: '20px' }}>

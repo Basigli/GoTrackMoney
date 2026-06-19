@@ -70,15 +70,40 @@ input[type="color"]::-moz-color-swatch {
   }
 }
 
-/* Navbar */
+/* Navbar Structure */
 .navbar {
   display: flex;
-  gap: 16px;
   background: var(--surface-color);
   padding: 16px 20px;
   border-bottom: 1px solid var(--border-color);
   align-items: center;
-  overflow-x: auto;
+  justify-content: space-between;
+}
+
+.navbar-header {
+  display: none;
+}
+
+.mobile-menu-btn {
+  display: none;
+}
+
+.navbar-content {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-links {
+  display: flex;
+  gap: 16px;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .nav-link {
@@ -97,10 +122,53 @@ input[type="color"]::-moz-color-swatch {
   background: rgba(167, 177, 249, 0.1);
 }
 
-.nav-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
+@media (max-width: 768px) {
+  .navbar {
+    flex-direction: column;
+    padding: 12px 20px;
+    align-items: stretch;
+  }
+  .navbar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+  .mobile-menu-btn {
+    display: block;
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--text-color);
+    cursor: pointer;
+  }
+  .navbar-content {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    margin-top: 16px;
+    gap: 16px;
+  }
+  .navbar-content.open {
+    display: flex;
+  }
+  .nav-links {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+  .nav-link {
+    width: 100%;
+    text-align: center;
+    padding: 12px;
+  }
+  .nav-right {
+    flex-direction: column;
+    width: 100%;
+    gap: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+  }
 }
 
 .logout-btn {
@@ -218,23 +286,35 @@ input[type="color"]::-moz-color-swatch {
 /* Tabs */
 .tabs {
   display: flex;
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: 16px;
-  background: var(--bg-color);
+  background: var(--input-bg);
+  border-radius: 16px;
+  padding: 6px;
+  margin: 0 20px 24px 20px;
+  overflow-x: auto;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .tab {
-  padding: 16px 24px;
-  font-size: 16px;
+  flex: 1;
+  text-align: center;
+  padding: 10px 16px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-muted);
+  border-radius: 12px;
   cursor: pointer;
-  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .tab.active {
-  color: var(--text-color);
-  border-bottom: 3px solid var(--text-color);
+  background: var(--surface-color);
+  color: var(--primary-color);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 /* List Items */
