@@ -12,9 +12,9 @@ import (
 )
 
 const createCategory = `-- name: CreateCategory :one
-INSERT INTO categories (name, creator_id, emoji, type)
-VALUES ($1, $2, $3, $4)
-RETURNING id, name, creator_id, emoji, type
+INSERT INTO categories (name, creator_id, emoji, type, color)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, name, creator_id, emoji, type, color
 `
 
 type CreateCategoryParams struct {
@@ -22,6 +22,7 @@ type CreateCategoryParams struct {
 	CreatorID int64  `json:"creator_id"`
 	Emoji     string `json:"emoji"`
 	Type      string `json:"type"`
+	Color     string `json:"color"`
 }
 
 func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error) {
@@ -30,6 +31,7 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 		arg.CreatorID,
 		arg.Emoji,
 		arg.Type,
+		arg.Color,
 	)
 	var i Category
 	err := row.Scan(
@@ -38,6 +40,7 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 		&i.CreatorID,
 		&i.Emoji,
 		&i.Type,
+		&i.Color,
 	)
 	return i, err
 }
@@ -252,7 +255,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 
 const findCategoryByID = `-- name: FindCategoryByID :one
 SELECT
-  id, name, creator_id, emoji, type
+  id, name, creator_id, emoji, type, color
 FROM
   categories
 WHERE
@@ -268,13 +271,14 @@ func (q *Queries) FindCategoryByID(ctx context.Context, id int64) (Category, err
 		&i.CreatorID,
 		&i.Emoji,
 		&i.Type,
+		&i.Color,
 	)
 	return i, err
 }
 
 const findCategoryByIDAndCreatorID = `-- name: FindCategoryByIDAndCreatorID :one
 SELECT
-  id, name, creator_id, emoji, type
+  id, name, creator_id, emoji, type, color
 FROM
   categories
 WHERE
@@ -295,6 +299,7 @@ func (q *Queries) FindCategoryByIDAndCreatorID(ctx context.Context, arg FindCate
 		&i.CreatorID,
 		&i.Emoji,
 		&i.Type,
+		&i.Color,
 	)
 	return i, err
 }
@@ -385,7 +390,7 @@ func (q *Queries) FindUserByUsername(ctx context.Context, username string) (User
 
 const listCategories = `-- name: ListCategories :many
 SELECT
-  id, name, creator_id, emoji, type
+  id, name, creator_id, emoji, type, color
 FROM
   categories
 ORDER BY
@@ -407,6 +412,7 @@ func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
 			&i.CreatorID,
 			&i.Emoji,
 			&i.Type,
+			&i.Color,
 		); err != nil {
 			return nil, err
 		}
@@ -420,7 +426,7 @@ func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
 
 const listCategoriesByCreatorID = `-- name: ListCategoriesByCreatorID :many
 SELECT
-  id, name, creator_id, emoji, type
+  id, name, creator_id, emoji, type, color
 FROM
   categories
 WHERE
@@ -444,6 +450,7 @@ func (q *Queries) ListCategoriesByCreatorID(ctx context.Context, creatorID int64
 			&i.CreatorID,
 			&i.Emoji,
 			&i.Type,
+			&i.Color,
 		); err != nil {
 			return nil, err
 		}
@@ -708,10 +715,11 @@ UPDATE categories
 SET
   name = $2,
   emoji = $3,
-  type = $4
+  type = $4,
+  color = $6
 WHERE
   id = $1 AND creator_id = $5
-RETURNING id, name, creator_id, emoji, type
+RETURNING id, name, creator_id, emoji, type, color
 `
 
 type UpdateCategoryParams struct {
@@ -720,6 +728,7 @@ type UpdateCategoryParams struct {
 	Emoji     string `json:"emoji"`
 	Type      string `json:"type"`
 	CreatorID int64  `json:"creator_id"`
+	Color     string `json:"color"`
 }
 
 func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error) {
@@ -729,6 +738,7 @@ func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) 
 		arg.Emoji,
 		arg.Type,
 		arg.CreatorID,
+		arg.Color,
 	)
 	var i Category
 	err := row.Scan(
@@ -737,6 +747,7 @@ func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) 
 		&i.CreatorID,
 		&i.Emoji,
 		&i.Type,
+		&i.Color,
 	)
 	return i, err
 }

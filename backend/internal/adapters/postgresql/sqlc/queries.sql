@@ -41,7 +41,7 @@ WHERE id = $1;
 
 -- name: ListCategories :many
 SELECT
-  id, name, creator_id, emoji, type
+  id, name, creator_id, emoji, type, color
 FROM
   categories
 ORDER BY
@@ -49,20 +49,20 @@ ORDER BY
 
 -- name: FindCategoryByID :one
 SELECT
-  id, name, creator_id, emoji, type
+  id, name, creator_id, emoji, type, color
 FROM
   categories
 WHERE
   id = $1;
 
 -- name: CreateCategory :one
-INSERT INTO categories (name, creator_id, emoji, type)
-VALUES ($1, $2, $3, $4)
-RETURNING id, name, creator_id, emoji, type;
+INSERT INTO categories (name, creator_id, emoji, type, color)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, name, creator_id, emoji, type, color;
 
 -- name: ListCategoriesByCreatorID :many
 SELECT
-  id, name, creator_id, emoji, type
+  id, name, creator_id, emoji, type, color
 FROM
   categories
 WHERE
@@ -72,7 +72,7 @@ ORDER BY
 
 -- name: FindCategoryByIDAndCreatorID :one
 SELECT
-  id, name, creator_id, emoji, type
+  id, name, creator_id, emoji, type, color
 FROM
   categories
 WHERE
@@ -143,10 +143,11 @@ UPDATE categories
 SET
   name = $2,
   emoji = $3,
-  type = $4
+  type = $4,
+  color = $6
 WHERE
   id = $1 AND creator_id = $5
-RETURNING id, name, creator_id, emoji, type;
+RETURNING id, name, creator_id, emoji, type, color;
 
 -- name: UpdateExpense :one
 UPDATE expenses

@@ -12,9 +12,14 @@ export default function CategoriesPage() {
   const { categories, fetchCategories } = useData(token);
   const { t } = useLanguage();
   
+  const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#eab308', '#ec4899', '#f97316', '#ef4444', '#14b8a6', '#f43f5e', '#84cc16'];
+  const getRandomColor = () => COLORS[Math.floor(Math.random() * COLORS.length)];
+  const getStableColor = (id: number) => COLORS[id % COLORS.length];
+
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('📝');
   const [type, setType] = useState<'expense' | 'income'>('expense');
+  const [color, setColor] = useState(getRandomColor());
   const [filter, setFilter] = useState('');
   const [editingCategory, setEditingCategory] = useState<any>(null);
 
@@ -34,11 +39,12 @@ export default function CategoriesPage() {
       const res = await fetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name, emoji, type })
+        body: JSON.stringify({ name, emoji, type, color })
       });
       if (res.ok) {
         setName('');
         setEmoji('📝');
+        setColor(getRandomColor());
         setEditingCategory(null);
         toast.success(editingCategory ? t('categories.success_update') : t('categories.success_create'));
         fetchCategories();
@@ -56,6 +62,7 @@ export default function CategoriesPage() {
     setName(cat.name);
     setEmoji(cat.emoji || '📝');
     setType(cat.type || 'expense');
+    setColor(cat.color || getStableColor(cat.id));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -86,6 +93,12 @@ export default function CategoriesPage() {
               <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px', color: 'var(--text-color)' }}>{t('categories.name')}</label>
               <input type="text" value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', padding: '16px 20px', background: 'var(--input-bg)', border: 'none', borderRadius: '16px', fontSize: '16px', color: 'var(--text-color)' }} placeholder={t('categories.name_placeholder')} required />
             </div>
+            <div style={{ flex: '0 0 60px' }}>
+              <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px', color: 'var(--text-color)' }}>Colore</label>
+              <div style={{ width: '100%', height: '52px', borderRadius: '16px', overflow: 'hidden', border: 'none', cursor: 'pointer', background: 'none' }}>
+                <input type="color" value={color} onChange={e => setColor(e.target.value)} style={{ width: '100%', height: '100%', padding: '0', background: 'none', border: 'none', cursor: 'pointer' }} />
+              </div>
+            </div>
           </div>
 
           <div className="radio-group" style={{ marginBottom: '24px', display: 'flex', gap: '24px' }}>
@@ -104,7 +117,7 @@ export default function CategoriesPage() {
               {editingCategory ? t('categories.save_btn') : t('categories.add_btn')}
             </button>
             {editingCategory && (
-              <button type="button" onClick={() => { setEditingCategory(null); setName(''); setEmoji('📝'); }} style={{ background: 'var(--input-bg)', color: 'var(--text-color)', flex: '0 0 auto', padding: '16px 24px', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}>
+              <button type="button" onClick={() => { setEditingCategory(null); setName(''); setEmoji('📝'); setColor(getRandomColor()); }} style={{ background: 'var(--input-bg)', color: 'var(--text-color)', flex: '0 0 auto', padding: '16px 24px', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}>
                 {t('categories.cancel_btn')}
               </button>
             )}
@@ -130,8 +143,9 @@ export default function CategoriesPage() {
             <h3 style={{ fontSize: '18px', marginBottom: '12px', color: 'var(--danger-color)' }}>{t('categories.expenses_list')}</h3>
             <div className="list-container">
               {expenseCategories.map(c => (
-                <div key={c.id} className="list-item" onClick={() => handleEditClick(c)} style={{ padding: '16px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                  <span style={{ fontSize: '24px', marginRight: '16px' }}>{c.emoji || '📝'}</span>
+                <div key={c.id} className="list-item" onClick={() => handleEditClick(c)} style={{ padding: '16px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '6px', background: c.color || getStableColor(c.id) }}></div>
+                  <span style={{ fontSize: '24px', marginRight: '16px', marginLeft: '6px' }}>{c.emoji || '📝'}</span>
                   <span style={{ fontSize: '16px', fontWeight: 500 }}>{c.name}</span>
                 </div>
               ))}
@@ -143,8 +157,9 @@ export default function CategoriesPage() {
             <h3 style={{ fontSize: '18px', marginBottom: '12px', color: 'var(--success-color)' }}>{t('categories.incomes_list')}</h3>
             <div className="list-container">
               {incomeCategories.map(c => (
-                <div key={c.id} className="list-item" onClick={() => handleEditClick(c)} style={{ padding: '16px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                  <span style={{ fontSize: '24px', marginRight: '16px' }}>{c.emoji || '📝'}</span>
+                <div key={c.id} className="list-item" onClick={() => handleEditClick(c)} style={{ padding: '16px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '6px', background: c.color || getStableColor(c.id) }}></div>
+                  <span style={{ fontSize: '24px', marginRight: '16px', marginLeft: '6px' }}>{c.emoji || '📝'}</span>
                   <span style={{ fontSize: '16px', fontWeight: 500 }}>{c.name}</span>
                 </div>
               ))}

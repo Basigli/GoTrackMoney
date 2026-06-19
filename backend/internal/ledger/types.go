@@ -11,6 +11,7 @@ type createCategoryParams struct {
 	Name  string `json:"name"`
 	Emoji string `json:"emoji"`
 	Type  string `json:"type"`
+	Color string `json:"color"`
 }
 
 type createExpenseParams struct {
@@ -39,6 +40,7 @@ type updateCategoryParams struct {
 	Name  string `json:"name"`
 	Emoji string `json:"emoji"`
 	Type  string `json:"type"`
+	Color string `json:"color"`
 }
 
 type updateExpenseParams struct {

@@ -14,6 +14,7 @@ type Category struct {
 	CreatorID int64  `json:"creator_id"`
 	Emoji     string `json:"emoji"`
 	Type      string `json:"type"`
+	Color     string `json:"color"`
 }
 
 type Expense struct {

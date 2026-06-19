@@ -267,9 +267,11 @@ export default function Home() {
       return category?.emoji || '📝';
     };
 
-    const getProgressBarColor = (index: number) => {
-      const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#eab308', '#ec4899', '#f97316'];
-      return colors[index % colors.length];
+    const getCategoryColor = (catId: number, _index: number) => {
+      const category = categories.find(c => c.id === catId);
+      if (category?.color) return category.color;
+      const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#eab308', '#ec4899', '#f97316', '#ef4444', '#14b8a6', '#f43f5e', '#84cc16'];
+      return colors[catId % colors.length];
     };
 
 
@@ -348,7 +350,7 @@ export default function Home() {
                   </div>
                   <div className="item-progress-container">
                     <div className="progress-bar-bg">
-                      <div className="progress-bar-fill" style={{ width: `${percentage}%`, backgroundColor: getProgressBarColor(index) }}></div>
+                      <div className="progress-bar-fill" style={{ width: `${percentage}%`, backgroundColor: getCategoryColor(parseInt(catId), index) }}></div>
                     </div>
                     <div className="progress-text">{percentage.toFixed(2)} {t('dashboard.percentage_total')}</div>
                   </div>

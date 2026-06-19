@@ -154,6 +154,9 @@ func (s *svc) CreateCategory(ctx context.Context, params createCategoryParams) (
 	if params.Type == "" {
 		params.Type = "expense"
 	}
+	if params.Color == "" {
+		params.Color = "" // backend leaves empty string if not provided, random color on frontend
+	}
 
 	user, err := currentUser(ctx)
 	if err != nil {
@@ -164,6 +167,7 @@ func (s *svc) CreateCategory(ctx context.Context, params createCategoryParams) (
 		CreatorID: user.ID,
 		Emoji:     params.Emoji,
 		Type:      params.Type,
+		Color:     params.Color,
 	})
 }
 
@@ -185,6 +189,7 @@ func (s *svc) UpdateCategory(ctx context.Context, params updateCategoryParams) (
 		Name:      params.Name,
 		Emoji:     params.Emoji,
 		Type:      params.Type,
+		Color:     params.Color,
 		CreatorID: user.ID,
 	})
 }

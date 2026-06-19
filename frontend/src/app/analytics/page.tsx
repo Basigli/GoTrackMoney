@@ -39,18 +39,22 @@ export default function AnalyticsPage() {
   });
 
   const expensesByCategory = currentMonthExpenses.reduce((acc, exp) => {
-    const cat = categories.find(c => c.id === exp.category_id);
-    const name = cat ? `${cat.emoji} ${cat.name}` : t('dashboard.unknown');
-    if (!acc[name]) acc[name] = 0;
-    acc[name] += exp.amount;
+    if (!acc[exp.category_id]) acc[exp.category_id] = 0;
+    acc[exp.category_id] += exp.amount;
     return acc;
-  }, {} as Record<string, number>);
-
-  const pieData = Object.entries(expensesByCategory)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value);
+  }, {} as Record<number, number>);
 
   const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#eab308', '#ec4899', '#f97316', '#14b8a6', '#f43f5e', '#84cc16'];
+  const getStableColor = (id: number) => COLORS[id % COLORS.length];
+
+  const pieData = Object.entries(expensesByCategory)
+    .map(([catId, value], index) => {
+      const cat = categories.find(c => c.id === parseInt(catId));
+      const name = cat ? `${cat.emoji} ${cat.name}` : t('dashboard.unknown');
+      const color = cat?.color || getStableColor(parseInt(catId));
+      return { name, value, color };
+    })
+    .sort((a, b) => b.value - a.value);
 
   // Process data for Bar Chart (Income vs Expense over last 6 months ending in selected month)
   const last6Months = Array.from({ length: 6 }).map((_, i) => {
@@ -150,17 +154,9 @@ export default function AnalyticsPage() {
               <div style={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
+                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5}>
                       {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
                     <PieTooltip 
