@@ -23,7 +23,7 @@ services:
       context: ./backend
     container_name: gotrackmoney_backend
     ports:
-      - "8080:8080"
+      - "8098:8098"
     environment:
       - GOOSE_DBSTRING=host=db user=postgres password=postgrespassword dbname=ecom sslmode=disable
       - AUTH_TOKEN_SECRET=production-secret-change-me-in-real-prod
@@ -38,7 +38,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8080
+      - NEXT_PUBLIC_API_URL=http://localhost:8098
     depends_on:
       - backend
 

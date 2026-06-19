@@ -13,7 +13,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import toast, { Toaster } from 'react-hot-toast';
 import { FormEvent, forwardRef } from 'react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
 
 export default function SearchPage() {
   const { token, user, loading, logout } = useAuth();

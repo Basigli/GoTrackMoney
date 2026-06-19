@@ -11,8 +11,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # In production, NEXT_PUBLIC_API_URL should point to the backend address accessible by the user's browser.
-# During the build, it is baked in. If users access via localhost, it defaults to localhost:8080.
-ARG NEXT_PUBLIC_API_URL=http://localhost:8080
+# During the build, it is baked in. If users access via localhost, it defaults to localhost:8098.
+ARG NEXT_PUBLIC_API_URL=http://localhost:8098
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 RUN npm run build
 

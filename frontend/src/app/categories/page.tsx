@@ -31,7 +31,7 @@ export default function CategoriesPage() {
     e.preventDefault();
     if (!token) return;
     
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
     const endpoint = editingCategory ? `${API_BASE}/categories/${editingCategory.id}` : `${API_BASE}/categories`;
     const method = editingCategory ? 'PUT' : 'POST';
 

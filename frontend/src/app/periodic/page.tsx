@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import { it, enUS } from 'date-fns/locale';
 import toast, { Toaster } from 'react-hot-toast';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8098';
 
 export default function PeriodicPage() {
   const { token, user, loading, logout } = useAuth();
