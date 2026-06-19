@@ -26,6 +26,7 @@ type Expense struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	CategoryID  int64              `json:"category_id"`
 	SpentOn     pgtype.Timestamptz `json:"spent_on"`
+	IsPeriodic  bool               `json:"is_periodic"`
 }
 
 type Income struct {

@@ -42,6 +42,7 @@ type Service interface {
 
 	ListPeriodicExpenses(ctx context.Context) ([]repo.PeriodicExpense, error)
 	CreatePeriodicExpense(ctx context.Context, params createPeriodicExpenseParams) (repo.PeriodicExpense, error)
+	UpdatePeriodicExpense(ctx context.Context, params updatePeriodicExpenseParams) (repo.PeriodicExpense, error)
 	DeletePeriodicExpense(ctx context.Context, id int64) error
 }
 
@@ -426,6 +427,7 @@ func (s *svc) checkAndGeneratePeriodicExpenses(ctx context.Context, userID int64
 			UserID:      pe.UserID,
 			CategoryID:  pe.CategoryID,
 			SpentOn:     pgtype.Timestamptz{Time: pe.NextDueDate.Time, Valid: true},
+			IsPeriodic:  true,
 		})
 		if err != nil {
 			return err
@@ -523,5 +525,31 @@ func (s *svc) DeletePeriodicExpense(ctx context.Context, id int64) error {
 	return s.repo.DeletePeriodicExpense(ctx, repo.DeletePeriodicExpenseParams{
 		ID:     id,
 		UserID: user.ID,
+	})
+}
+
+func (s *svc) UpdatePeriodicExpense(ctx context.Context, params updatePeriodicExpenseParams) (repo.PeriodicExpense, error) {
+	if params.PeriodInterval <= 0 {
+		return repo.PeriodicExpense{}, fmt.Errorf("period_interval must be greater than zero")
+	}
+	if params.PeriodUnit == "" {
+		return repo.PeriodicExpense{}, fmt.Errorf("period_unit is required")
+	}
+	user, err := currentUser(ctx)
+	if err != nil {
+		return repo.PeriodicExpense{}, err
+	}
+	
+	nextDue := time.Now()
+	if params.NextDueDate != nil {
+		nextDue = *params.NextDueDate
+	}
+
+	return s.repo.UpdatePeriodicExpense(ctx, repo.UpdatePeriodicExpenseParams{
+		ID:             params.ID,
+		UserID:         user.ID,
+		PeriodInterval: params.PeriodInterval,
+		PeriodUnit:     params.PeriodUnit,
+		NextDueDate:    pgtype.Timestamptz{Time: nextDue, Valid: true},
 	})
 }

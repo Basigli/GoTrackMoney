@@ -47,10 +47,10 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 
 const createExpense = `-- name: CreateExpense :one
 INSERT INTO expenses (
-  name, description, amount, user_id, category_id, spent_on
+  name, description, amount, user_id, category_id, spent_on, is_periodic
 )
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, name, description, amount, user_id, created_at, category_id, spent_on
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, name, description, amount, user_id, created_at, category_id, spent_on, is_periodic
 `
 
 type CreateExpenseParams struct {
@@ -60,6 +60,7 @@ type CreateExpenseParams struct {
 	UserID      int64              `json:"user_id"`
 	CategoryID  int64              `json:"category_id"`
 	SpentOn     pgtype.Timestamptz `json:"spent_on"`
+	IsPeriodic  bool               `json:"is_periodic"`
 }
 
 func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (Expense, error) {
@@ -70,6 +71,7 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (E
 		arg.UserID,
 		arg.CategoryID,
 		arg.SpentOn,
+		arg.IsPeriodic,
 	)
 	var i Expense
 	err := row.Scan(
@@ -81,6 +83,7 @@ func (q *Queries) CreateExpense(ctx context.Context, arg CreateExpenseParams) (E
 		&i.CreatedAt,
 		&i.CategoryID,
 		&i.SpentOn,
+		&i.IsPeriodic,
 	)
 	return i, err
 }
@@ -464,7 +467,7 @@ func (q *Queries) ListCategoriesByCreatorID(ctx context.Context, creatorID int64
 
 const listExpenses = `-- name: ListExpenses :many
 SELECT
-  id, name, description, amount, user_id, created_at, category_id, spent_on
+  id, name, description, amount, user_id, created_at, category_id, spent_on, is_periodic
 FROM
   expenses
 ORDER BY
@@ -489,6 +492,7 @@ func (q *Queries) ListExpenses(ctx context.Context) ([]Expense, error) {
 			&i.CreatedAt,
 			&i.CategoryID,
 			&i.SpentOn,
+			&i.IsPeriodic,
 		); err != nil {
 			return nil, err
 		}
@@ -502,7 +506,7 @@ func (q *Queries) ListExpenses(ctx context.Context) ([]Expense, error) {
 
 const listExpensesByUserID = `-- name: ListExpensesByUserID :many
 SELECT
-  id, name, description, amount, user_id, created_at, category_id, spent_on
+  id, name, description, amount, user_id, created_at, category_id, spent_on, is_periodic
 FROM
   expenses
 WHERE
@@ -536,6 +540,7 @@ func (q *Queries) ListExpensesByUserID(ctx context.Context, arg ListExpensesByUs
 			&i.CreatedAt,
 			&i.CategoryID,
 			&i.SpentOn,
+			&i.IsPeriodic,
 		); err != nil {
 			return nil, err
 		}
@@ -762,7 +767,7 @@ SET
   spent_on = $6
 WHERE
   id = $1 AND user_id = $7
-RETURNING id, name, description, amount, user_id, created_at, category_id, spent_on
+RETURNING id, name, description, amount, user_id, created_at, category_id, spent_on, is_periodic
 `
 
 type UpdateExpenseParams struct {
@@ -795,6 +800,7 @@ func (q *Queries) UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (E
 		&i.CreatedAt,
 		&i.CategoryID,
 		&i.SpentOn,
+		&i.IsPeriodic,
 	)
 	return i, err
 }
@@ -842,6 +848,51 @@ func (q *Queries) UpdateIncome(ctx context.Context, arg UpdateIncomeParams) (Inc
 		&i.CreatedAt,
 		&i.CategoryID,
 		&i.ReceivedOn,
+	)
+	return i, err
+}
+
+const updatePeriodicExpense = `-- name: UpdatePeriodicExpense :one
+UPDATE periodic_expenses
+SET
+  period_interval = $2,
+  period_unit = $3,
+  next_due_date = $4
+WHERE
+  id = $1 AND user_id = $5
+RETURNING id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at
+`
+
+type UpdatePeriodicExpenseParams struct {
+	ID             int64              `json:"id"`
+	PeriodInterval int32              `json:"period_interval"`
+	PeriodUnit     string             `json:"period_unit"`
+	NextDueDate    pgtype.Timestamptz `json:"next_due_date"`
+	UserID         int64              `json:"user_id"`
+}
+
+func (q *Queries) UpdatePeriodicExpense(ctx context.Context, arg UpdatePeriodicExpenseParams) (PeriodicExpense, error) {
+	row := q.db.QueryRow(ctx, updatePeriodicExpense,
+		arg.ID,
+		arg.PeriodInterval,
+		arg.PeriodUnit,
+		arg.NextDueDate,
+		arg.UserID,
+	)
+	var i PeriodicExpense
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.Amount,
+		&i.UserID,
+		&i.CategoryID,
+		&i.PeriodInterval,
+		&i.PeriodUnit,
+		&i.StartDate,
+		&i.LastGeneratedDate,
+		&i.NextDueDate,
+		&i.CreatedAt,
 	)
 	return i, err
 }

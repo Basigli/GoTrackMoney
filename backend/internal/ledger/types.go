@@ -71,6 +71,13 @@ type createPeriodicExpenseParams struct {
 	StartDate      *time.Time `json:"start_date,omitempty"`
 }
 
+type updatePeriodicExpenseParams struct {
+	ID             int64
+	PeriodInterval int32      `json:"period_interval"`
+	PeriodUnit     string     `json:"period_unit"`
+	NextDueDate    *time.Time `json:"next_due_date,omitempty"`
+}
+
 type periodicExpenseResponse struct {
 	ID                 int64      `json:"id"`
 	Name               string     `json:"name"`

@@ -34,6 +34,7 @@ type Querier interface {
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error)
 	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (Expense, error)
 	UpdateIncome(ctx context.Context, arg UpdateIncomeParams) (Income, error)
+	UpdatePeriodicExpense(ctx context.Context, arg UpdatePeriodicExpenseParams) (PeriodicExpense, error)
 	UpdatePeriodicExpenseNextDueDate(ctx context.Context, arg UpdatePeriodicExpenseNextDueDateParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }

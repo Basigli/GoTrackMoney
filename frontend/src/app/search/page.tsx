@@ -213,7 +213,10 @@ export default function SearchPage() {
               <div className="item-icon" style={{ fontSize: '24px', marginRight: '16px' }}>{getIconForCategory(item.category_id)}</div>
               <div className="item-content" style={{ flex: 1 }}>
                 <div className="item-header" style={{ marginBottom: '4px', display: 'flex', justifyContent: 'space-between' }}>
-                  <div className="item-title" style={{ fontWeight: 600 }}>{item.description || item.name}</div>
+                  <div className="item-title" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ color: 'inherit' }}>{item.description || item.name}</span>
+                    {(item as any).is_periodic && <span style={{ color: 'var(--primary-color)', fontSize: '12px', fontWeight: 'bold', padding: '2px 6px', background: 'var(--input-bg)', borderRadius: '8px' }}>{t('record.periodic') || 'Periodica'}</span>}
+                  </div>
                   <div className="item-amount" style={{ color: item.isExpense ? 'var(--danger-color)' : 'var(--success-color)', fontWeight: 600 }}>
                     {item.isExpense ? '-' : '+'}{item.amount.toFixed(2)} €
                   </div>

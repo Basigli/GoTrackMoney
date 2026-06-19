@@ -4,7 +4,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export interface Category { id: number; name: string; emoji: string; type: string; color?: string; }
 export interface Income { id: number; name: string; amount: number; description: string; category_id: number; received_on: string; }
-export interface Expense { id: number; name: string; amount: number; description: string; category_id: number; spent_on: string; }
+export interface Expense { id: number; name: string; amount: number; description: string; category_id: number; spent_on: string; is_periodic?: boolean; }
 export interface PeriodicExpense { id: number; name: string; amount: number; description: string; category_id: number; period_interval: number; period_unit: string; start_date: string; next_due_date: string; }
 
 export function useData(token: string | null) {

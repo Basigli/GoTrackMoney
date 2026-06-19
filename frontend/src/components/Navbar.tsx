@@ -13,6 +13,7 @@ export default function Navbar({ username, onLogout }: { username: string, onLog
       <div style={{ display: 'flex', gap: '16px' }}>
         <Link href="/" className={`nav-link ${pathname === '/' ? 'active' : ''}`}>{t('nav.dashboard')}</Link>
         <Link href="/categories" className={`nav-link ${pathname === '/categories' ? 'active' : ''}`}>{t('nav.categories')}</Link>
+        <Link href="/periodic" className={`nav-link ${pathname === '/periodic' ? 'active' : ''}`}>{t('record.periodic') || 'Periodic'}</Link>
         <Link href="/search" className={`nav-link ${pathname === '/search' ? 'active' : ''}`}>{t('nav.search')}</Link>
         <Link href="/analytics" className={`nav-link ${pathname === '/analytics' ? 'active' : ''}`}>{t('nav.analytics')}</Link>
       </div>

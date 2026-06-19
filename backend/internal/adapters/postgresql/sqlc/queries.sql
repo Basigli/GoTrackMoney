@@ -80,7 +80,7 @@ WHERE
 
 -- name: ListExpenses :many
 SELECT
-  id, name, description, amount, user_id, created_at, category_id, spent_on
+  id, name, description, amount, user_id, created_at, category_id, spent_on, is_periodic
 FROM
   expenses
 ORDER BY
@@ -88,7 +88,7 @@ ORDER BY
 
 -- name: ListExpensesByUserID :many
 SELECT
-  id, name, description, amount, user_id, created_at, category_id, spent_on
+  id, name, description, amount, user_id, created_at, category_id, spent_on, is_periodic
 FROM
   expenses
 WHERE
@@ -99,10 +99,10 @@ LIMIT $2 OFFSET $3;
 
 -- name: CreateExpense :one
 INSERT INTO expenses (
-  name, description, amount, user_id, category_id, spent_on
+  name, description, amount, user_id, category_id, spent_on, is_periodic
 )
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, name, description, amount, user_id, created_at, category_id, spent_on;
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, name, description, amount, user_id, created_at, category_id, spent_on, is_periodic;
 
 -- name: ListIncomes :many
 SELECT
@@ -159,7 +159,7 @@ SET
   spent_on = $6
 WHERE
   id = $1 AND user_id = $7
-RETURNING id, name, description, amount, user_id, created_at, category_id, spent_on;
+RETURNING id, name, description, amount, user_id, created_at, category_id, spent_on, is_periodic;
 
 -- name: UpdateIncome :one
 UPDATE incomes
@@ -188,6 +188,16 @@ INSERT INTO periodic_expenses (
   name, description, amount, user_id, category_id, period_interval, period_unit, start_date, next_due_date
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at;
+
+-- name: UpdatePeriodicExpense :one
+UPDATE periodic_expenses
+SET
+  period_interval = $2,
+  period_unit = $3,
+  next_due_date = $4
+WHERE
+  id = $1 AND user_id = $5
 RETURNING id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at;
 
 -- name: FindDuePeriodicExpensesByUserID :many

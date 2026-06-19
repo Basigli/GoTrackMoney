@@ -456,7 +456,10 @@ export default function Home() {
                   }}>
                     <div className="item-content">
                       <div className="item-header" style={{ marginBottom: '4px' }}>
-                        <div className="item-title">{item.description || item.name}</div>
+                        <div className="item-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ color: 'inherit' }}>{item.description || item.name}</span>
+                          {(item as any).is_periodic && <span style={{ color: 'var(--primary-color)', fontSize: '12px', fontWeight: 'bold', padding: '2px 6px', background: 'var(--input-bg)', borderRadius: '8px' }}>{t('record.periodic') || 'Periodica'}</span>}
+                        </div>
                         <div className="item-amount" style={{ color: activeTab === 'uscite' ? 'var(--danger-color)' : 'var(--success-color)' }}>
                           {activeTab === 'uscite' ? '-' : '+'}{item.amount.toFixed(2)} €
                         </div>

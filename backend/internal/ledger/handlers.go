@@ -508,3 +508,35 @@ func (h *handler) DeletePeriodicExpense(w http.ResponseWriter, r *http.Request) 
 	}
 	json.Write(w, http.StatusOK, map[string]string{"status": "ok"})
 }
+
+func (h *handler) UpdatePeriodicExpense(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		http.Error(w, "missing id", http.StatusBadRequest)
+		return
+	}
+	
+	var payload updatePeriodicExpenseParams
+	if err := json.Read(r, &payload); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	
+	var id int64
+	fmt.Sscanf(idStr, "%d", &id)
+	payload.ID = id
+
+	expense, err := h.service.UpdatePeriodicExpense(r.Context(), payload)
+	if err != nil {
+		log.Println(err)
+		switch {
+		case errors.Is(err, auth.ErrUnauthorized):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		default:
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		return
+	}
+	json.Write(w, http.StatusOK, expense)
+}

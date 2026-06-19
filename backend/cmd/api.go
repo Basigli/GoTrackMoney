@@ -69,6 +69,7 @@ func (app *application) mount() http.Handler {
 
 		r.Get("/periodic-expenses", handler.ListPeriodicExpenses)
 		r.Post("/periodic-expenses", handler.CreatePeriodicExpense)
+		r.Put("/periodic-expenses/{id}", handler.UpdatePeriodicExpense)
 		r.Delete("/periodic-expenses/{id}", handler.DeletePeriodicExpense)
 	})
 
