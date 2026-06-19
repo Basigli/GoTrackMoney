@@ -130,6 +130,14 @@ INSERT INTO incomes (
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id, name, description, amount, user_id, created_at, category_id, received_on;
 
+-- name: DeleteExpense :exec
+DELETE FROM expenses
+WHERE id = $1 AND user_id = $2;
+
+-- name: DeleteIncome :exec
+DELETE FROM incomes
+WHERE id = $1 AND user_id = $2;
+
 -- name: UpdateCategory :one
 UPDATE categories
 SET

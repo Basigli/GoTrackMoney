@@ -33,10 +33,12 @@ type Service interface {
 	ListExpenses(ctx context.Context, limit, offset int32) ([]repo.Expense, error)
 	CreateExpense(ctx context.Context, params createExpenseParams) (repo.Expense, error)
 	UpdateExpense(ctx context.Context, params updateExpenseParams) (repo.Expense, error)
+	DeleteExpense(ctx context.Context, id int64) error
 
 	ListIncomes(ctx context.Context, limit, offset int32) ([]repo.Income, error)
 	CreateIncome(ctx context.Context, params createIncomeParams) (repo.Income, error)
 	UpdateIncome(ctx context.Context, params updateIncomeParams) (repo.Income, error)
+	DeleteIncome(ctx context.Context, id int64) error
 
 	ListPeriodicExpenses(ctx context.Context) ([]repo.PeriodicExpense, error)
 	CreatePeriodicExpense(ctx context.Context, params createPeriodicExpenseParams) (repo.PeriodicExpense, error)
@@ -263,6 +265,11 @@ func (s *svc) UpdateExpense(ctx context.Context, params updateExpenseParams) (re
 		return repo.Expense{}, err
 	}
 
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return repo.Expense{}, auth.ErrUnauthorized
+	}
+
 	return s.repo.UpdateExpense(ctx, repo.UpdateExpenseParams{
 		ID:          params.ID,
 		Name:        params.Name,
@@ -270,7 +277,18 @@ func (s *svc) UpdateExpense(ctx context.Context, params updateExpenseParams) (re
 		Amount:      params.Amount,
 		CategoryID:  params.CategoryID,
 		SpentOn:     timestamptzFromTime(params.SpentOn),
-		UserID:      user.ID,
+		UserID:      userID,
+	})
+}
+
+func (s *svc) DeleteExpense(ctx context.Context, id int64) error {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return auth.ErrUnauthorized
+	}
+	return s.repo.DeleteExpense(ctx, repo.DeleteExpenseParams{
+		ID:     id,
+		UserID: userID,
 	})
 }
 
@@ -334,14 +352,14 @@ func (s *svc) UpdateIncome(ctx context.Context, params updateIncomeParams) (repo
 		return repo.Income{}, fmt.Errorf("category_id is required")
 	}
 
-	user, err := currentUser(ctx)
-	if err != nil {
-		return repo.Income{}, err
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return repo.Income{}, auth.ErrUnauthorized
 	}
 
 	if _, err := s.repo.FindCategoryByIDAndCreatorID(ctx, repo.FindCategoryByIDAndCreatorIDParams{
 		ID:        params.CategoryID,
-		CreatorID: user.ID,
+		CreatorID: userID,
 	}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return repo.Income{}, ErrCategoryNotFound
@@ -356,7 +374,18 @@ func (s *svc) UpdateIncome(ctx context.Context, params updateIncomeParams) (repo
 		Amount:      params.Amount,
 		CategoryID:  params.CategoryID,
 		ReceivedOn:  timestamptzFromTime(params.ReceivedOn),
-		UserID:      user.ID,
+		UserID:      userID,
+	})
+}
+
+func (s *svc) DeleteIncome(ctx context.Context, id int64) error {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return auth.ErrUnauthorized
+	}
+	return s.repo.DeleteIncome(ctx, repo.DeleteIncomeParams{
+		ID:     id,
+		UserID: userID,
 	})
 }
 

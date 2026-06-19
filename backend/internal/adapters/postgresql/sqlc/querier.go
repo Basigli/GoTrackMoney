@@ -14,6 +14,8 @@ type Querier interface {
 	CreateIncome(ctx context.Context, arg CreateIncomeParams) (Income, error)
 	CreatePeriodicExpense(ctx context.Context, arg CreatePeriodicExpenseParams) (PeriodicExpense, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeleteExpense(ctx context.Context, arg DeleteExpenseParams) error
+	DeleteIncome(ctx context.Context, arg DeleteIncomeParams) error
 	DeletePeriodicExpense(ctx context.Context, arg DeletePeriodicExpenseParams) error
 	DeleteUser(ctx context.Context, id int64) error
 	FindCategoryByID(ctx context.Context, id int64) (Category, error)

@@ -195,6 +195,36 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const deleteExpense = `-- name: DeleteExpense :exec
+DELETE FROM expenses
+WHERE id = $1 AND user_id = $2
+`
+
+type DeleteExpenseParams struct {
+	ID     int64 `json:"id"`
+	UserID int64 `json:"user_id"`
+}
+
+func (q *Queries) DeleteExpense(ctx context.Context, arg DeleteExpenseParams) error {
+	_, err := q.db.Exec(ctx, deleteExpense, arg.ID, arg.UserID)
+	return err
+}
+
+const deleteIncome = `-- name: DeleteIncome :exec
+DELETE FROM incomes
+WHERE id = $1 AND user_id = $2
+`
+
+type DeleteIncomeParams struct {
+	ID     int64 `json:"id"`
+	UserID int64 `json:"user_id"`
+}
+
+func (q *Queries) DeleteIncome(ctx context.Context, arg DeleteIncomeParams) error {
+	_, err := q.db.Exec(ctx, deleteIncome, arg.ID, arg.UserID)
+	return err
+}
+
 const deletePeriodicExpense = `-- name: DeletePeriodicExpense :exec
 DELETE FROM periodic_expenses
 WHERE id = $1 AND user_id = $2

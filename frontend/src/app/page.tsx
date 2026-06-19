@@ -198,6 +198,36 @@ export default function Home() {
     }
   };
 
+  const handleDeleteRecord = async () => {
+    if (!editingItem || !token) return;
+
+    // Confirm deletion
+    if (!window.confirm('Sei sicuro di voler eliminare questo elemento? / Are you sure you want to delete this item?')) return;
+
+    const endpoint = addType === 'entrata' ? `/incomes/${editingItem.id}` : `/expenses/${editingItem.id}`;
+    
+    try {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setEditingItem(null);
+        setShowAddModal(false);
+        if (addType === 'entrata') fetchIncomes();
+        else fetchExpenses();
+        toast.success(t('record.success_edit') || 'Eliminato con successo / Successfully deleted', {
+          style: { borderRadius: '12px', background: '#333', color: '#fff' }
+        });
+      } else {
+        toast.error('Errore durante l\'eliminazione / Error deleting item');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(t('record.error_conn'));
+    }
+  };
+
   if (loading) return null;
 
   if (token && user) {
@@ -410,8 +440,14 @@ export default function Home() {
                     )}
                   </div>
                 )}
-
-                <button type="submit" className="submit-btn">✓ {t('record.save')}</button>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                  {editingItem && (
+                    <button type="button" onClick={handleDeleteRecord} className="submit-btn" style={{ background: 'var(--danger-color)', flex: 1 }}>
+                      🗑️ {t('auth.delete_account')?.split(' ')[0] || 'Delete'}
+                    </button>
+                  )}
+                  <button type="submit" className="submit-btn" style={{ flex: 2 }}>✓ {t('record.save')}</button>
+                </div>
               </form>
             </div>
           </div>

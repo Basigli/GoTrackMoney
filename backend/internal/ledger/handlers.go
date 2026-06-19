@@ -324,6 +324,28 @@ func (h *handler) UpdateExpense(w http.ResponseWriter, r *http.Request) {
 	json.Write(w, http.StatusOK, expense)
 }
 
+func (h *handler) DeleteExpense(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		http.Error(w, "missing id", http.StatusBadRequest)
+		return
+	}
+	var id int64
+	fmt.Sscanf(idStr, "%d", &id)
+
+	if err := h.service.DeleteExpense(r.Context(), id); err != nil {
+		log.Println(err)
+		switch {
+		case errors.Is(err, auth.ErrUnauthorized):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *handler) ListIncomes(w http.ResponseWriter, r *http.Request) {
 	limit, offset := parsePagination(r)
 	incomes, err := h.service.ListIncomes(r.Context(), limit, offset)
@@ -393,6 +415,28 @@ func (h *handler) UpdateIncome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.Write(w, http.StatusOK, income)
+}
+
+func (h *handler) DeleteIncome(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		http.Error(w, "missing id", http.StatusBadRequest)
+		return
+	}
+	var id int64
+	fmt.Sscanf(idStr, "%d", &id)
+
+	if err := h.service.DeleteIncome(r.Context(), id); err != nil {
+		log.Println(err)
+		switch {
+		case errors.Is(err, auth.ErrUnauthorized):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func toUserResponses(users []repo.User) []userResponse {
