@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent, forwardRef } from 'react';
 import { useData, Income, Expense } from '@/hooks/useData';
 import Navbar from '@/components/Navbar';
+import { HeaderDateInput, ModalDateInput } from '@/components/DateInputs';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { format } from 'date-fns';
@@ -271,27 +272,7 @@ export default function Home() {
       return colors[index % colors.length];
     };
 
-    const HeaderDateInput = forwardRef(({ value, onClick }: any, ref: any) => (
-      <div className="date-display" onClick={onClick} ref={ref} style={{ cursor: 'pointer' }}>
-        <span className="date-icon">📅</span>
-        <div className="date-text">
-          <h2>{filterMode === 'month' ? format(filterDate, 'MMM yyyy', { locale: dateLocale }) : format(filterDate, 'yyyy')}</h2>
-          <p>{t('dashboard.filter_by')} {filterMode === 'month' ? t('dashboard.filter_month').toLowerCase() : t('dashboard.filter_year').toLowerCase()}</p>
-        </div>
-      </div>
-    ));
-    HeaderDateInput.displayName = 'HeaderDateInput';
 
-    const ModalDateInput = forwardRef(({ value, onClick }: any, ref: any) => (
-      <div className="modal-header" onClick={onClick} ref={ref} style={{ cursor: 'pointer' }}>
-        <span className="date-icon">📅</span>
-        <div className="date-text">
-          <h2>{t('record.date_time')}</h2>
-          <p>{format(addDate, 'd MMM yyyy, HH:mm', { locale: dateLocale })}</p>
-        </div>
-      </div>
-    ));
-    ModalDateInput.displayName = 'ModalDateInput';
 
     return (
       <div className="app-container">
@@ -302,10 +283,14 @@ export default function Home() {
           <DatePicker
             selected={filterDate}
             onChange={(date: Date | null) => date && setFilterDate(date)}
+            dateFormat={filterMode === 'month' ? 'MMM yyyy' : 'yyyy'}
             showMonthYearPicker={filterMode === 'month'}
             showYearPicker={filterMode === 'year'}
-            dateFormat={filterMode === 'month' ? "MMM yyyy" : "yyyy"}
-            customInput={<HeaderDateInput />}
+            customInput={
+              <HeaderDateInput 
+                extraText={`${t('dashboard.filter_by')} ${filterMode === 'month' ? t('dashboard.filter_month').toLowerCase() : t('dashboard.filter_year').toLowerCase()}`} 
+              />
+            }
             locale={dateLocale}
             withPortal
           />
@@ -385,8 +370,8 @@ export default function Home() {
                 showTimeSelect
                 timeFormat="HH:mm"
                 timeIntervals={15}
-                dateFormat="d MMMM yyyy, HH:mm"
-                customInput={<ModalDateInput />}
+                dateFormat="d MMM yyyy, HH:mm"
+                customInput={<ModalDateInput labelText={t('record.date_time')} />}
                 locale={dateLocale}
                 withPortal
               />

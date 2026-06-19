@@ -1,12 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, forwardRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useData } from '@/hooks/useData';
 import Navbar from '@/components/Navbar';
+import { HeaderDateInput } from '@/components/DateInputs';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { format, subMonths } from 'date-fns';
 import { it, enUS } from 'date-fns/locale';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
 import {
   PieChart, Pie, Cell, Tooltip as PieTooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as BarTooltip, Legend
@@ -17,6 +20,7 @@ export default function AnalyticsPage() {
   const { categories, incomes, expenses, fetchCategories, fetchIncomes, fetchExpenses } = useData(token);
   const { t, language } = useLanguage();
   const dateLocale = language === 'it' ? it : enUS;
+  const [filterDate, setFilterDate] = useState<Date>(new Date());
 
   useEffect(() => {
     if (token) {
@@ -28,11 +32,10 @@ export default function AnalyticsPage() {
 
   if (loading || !user) return null;
 
-  // Process data for Pie Chart (Expenses by Category for current month)
-  const currentDate = new Date();
+  // Process data for Pie Chart (Expenses by Category for selected month)
   const currentMonthExpenses = expenses.filter(e => {
     const d = new Date(e.spent_on);
-    return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
+    return d.getMonth() === filterDate.getMonth() && d.getFullYear() === filterDate.getFullYear();
   });
 
   const expensesByCategory = currentMonthExpenses.reduce((acc, exp) => {
@@ -49,9 +52,9 @@ export default function AnalyticsPage() {
 
   const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#eab308', '#ec4899', '#f97316', '#14b8a6', '#f43f5e', '#84cc16'];
 
-  // Process data for Bar Chart (Income vs Expense over last 6 months)
+  // Process data for Bar Chart (Income vs Expense over last 6 months ending in selected month)
   const last6Months = Array.from({ length: 6 }).map((_, i) => {
-    const d = subMonths(new Date(), i);
+    const d = subMonths(filterDate, i);
     return { month: d.getMonth(), year: d.getFullYear(), date: d };
   }).reverse();
 
@@ -114,18 +117,34 @@ export default function AnalyticsPage() {
       <Navbar username={user.username} onLogout={logout} />
       
       <div style={{ padding: '24px 20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
           <h1 style={{ fontSize: '24px', fontWeight: 700 }}>{t('analytics.title')}</h1>
-          <button onClick={exportToCSV} className="submit-btn" style={{ margin: 0, padding: '8px 16px', width: 'auto', fontSize: '14px', borderRadius: '12px' }}>
-            {t('analytics.export_csv')}
-          </button>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <DatePicker
+              selected={filterDate}
+              onChange={(date: Date | null) => date && setFilterDate(date)}
+              dateFormat="MMM yyyy"
+              showMonthYearPicker
+              customInput={
+                <HeaderDateInput 
+                  extraText={`${t('dashboard.filter_by')} ${t('dashboard.filter_month').toLowerCase()}`} 
+                />
+              }
+              locale={dateLocale}
+            />
+            
+            <button onClick={exportToCSV} className="submit-btn" style={{ margin: 0, padding: '8px 16px', width: 'auto', fontSize: '14px', borderRadius: '12px' }}>
+              {t('analytics.export_csv')}
+            </button>
+          </div>
         </div>
 
         <div className="analytics-grid">
           {/* Expenses by Category (Pie Chart) */}
           <div style={{ background: 'var(--surface-color)', padding: '24px', borderRadius: '24px', border: '1px solid var(--border-color)' }}>
             <h3 style={{ fontSize: '18px', marginBottom: '24px', color: 'var(--text-color)' }}>
-              {t('analytics.expenses_by_category')} ({format(currentDate, 'MMMM yyyy', { locale: dateLocale })})
+              {t('analytics.expenses_by_category')} ({format(filterDate, 'MMMM yyyy', { locale: dateLocale })})
             </h3>
             {pieData.length > 0 ? (
               <div style={{ height: 300 }}>

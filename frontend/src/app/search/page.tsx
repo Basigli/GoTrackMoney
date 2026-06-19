@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useData } from '@/hooks/useData';
 import Navbar from '@/components/Navbar';
+import { ModalDateInput } from '@/components/DateInputs';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { format } from 'date-fns';
 import { it, enUS } from 'date-fns/locale';
@@ -175,16 +176,7 @@ export default function SearchPage() {
     return textMatch || amountMatch;
   });
 
-  const ModalDateInput = forwardRef(({ value, onClick }: any, ref: any) => (
-    <div className="modal-header" onClick={onClick} ref={ref} style={{ cursor: 'pointer' }}>
-      <span className="date-icon">📅</span>
-      <div className="date-text">
-        <h2>{t('record.date_time')}</h2>
-        <p>{format(addDate, 'd MMM yyyy, HH:mm', { locale: dateLocale })}</p>
-      </div>
-    </div>
-  ));
-  ModalDateInput.displayName = 'ModalDateInput';
+
 
   return (
     <div className="app-container">
@@ -257,8 +249,8 @@ export default function SearchPage() {
               showTimeSelect
               timeFormat="HH:mm"
               timeIntervals={15}
-              dateFormat="d MMMM yyyy, HH:mm"
-              customInput={<ModalDateInput />}
+              dateFormat="d MMM yyyy, HH:mm"
+              customInput={<ModalDateInput labelText={t('record.date_time')} />}
               locale={dateLocale}
               withPortal
             />
