@@ -35,6 +35,6 @@ COPY --from=builder /app/internal/adapters/postgresql/migrations ./migrations
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 
-EXPOSE 8080
+EXPOSE 8098
 
 ENTRYPOINT ["./entrypoint.sh"]
