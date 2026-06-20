@@ -375,7 +375,6 @@ export default function Home() {
                 dateFormat="d MMM yyyy, HH:mm"
                 customInput={<ModalDateInput labelText={t('record.date_time')} />}
                 locale={dateLocale}
-                withPortal
               />
 
               <div className="radio-group">
