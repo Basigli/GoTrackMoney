@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_BASE } from '@/utils/api';
 
 export function useAuth() {
   const [token, setToken] = useState<string | null>(null);
@@ -20,7 +21,7 @@ export function useAuth() {
 
   const fetchMe = async (authToken: string) => {
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? `http://${window.location.hostname}:8098` : 'http://localhost:8098');
+      // Using imported API_BASE
       const res = await fetch(`${API_BASE}/auth/me`, {
         headers: { Authorization: `Bearer ${authToken}` }
       });

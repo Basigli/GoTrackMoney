@@ -11,7 +11,7 @@ import { it, enUS } from 'date-fns/locale';
 import toast, { Toaster } from 'react-hot-toast';
 import { useLanguage } from '@/i18n/LanguageContext';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? `http://${window.location.hostname}:8098` : 'http://localhost:8098');
+import { API_BASE } from '@/utils/api';
 
 export default function Home() {
   const [token, setToken] = useState<string | null>(null);

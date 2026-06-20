@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { useData } from '@/hooks/useData';
 import toast, { Toaster } from 'react-hot-toast';
+import { API_BASE } from '@/utils/api';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 export default function CategoriesPage() {
@@ -31,7 +32,7 @@ export default function CategoriesPage() {
     e.preventDefault();
     if (!token) return;
     
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? `http://${window.location.hostname}:8098` : 'http://localhost:8098');
+    // Using imported API_BASE
     const endpoint = editingCategory ? `${API_BASE}/categories/${editingCategory.id}` : `${API_BASE}/categories`;
     const method = editingCategory ? 'PUT' : 'POST';
 
