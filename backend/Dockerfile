@@ -9,11 +9,11 @@ RUN apk add --no-cache git
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Build goose migration tool (do this before copying source to cache it)
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+
 # Copy the source code
 COPY . .
-
-# Build goose migration tool
-RUN go install github.com/pressly/goose/v3/cmd/goose@latest
 
 # Build the Go app
 RUN CGO_ENABLED=0 GOOS=linux go build -o ecom ./cmd
