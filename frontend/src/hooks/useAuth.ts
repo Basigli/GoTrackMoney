@@ -4,7 +4,7 @@ import { API_BASE } from '@/utils/api';
 
 export function useAuth() {
   const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<{id: number, username: string, session_duration_hours: number} | null>(null);
+  const [user, setUser] = useState<{id: number, username: string, session_duration_hours: number, is_admin: boolean} | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 

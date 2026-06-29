@@ -118,7 +118,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="app-container">
-      <Navbar username={user.username} onLogout={logout} />
+      <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
       
       <div style={{ padding: '24px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>

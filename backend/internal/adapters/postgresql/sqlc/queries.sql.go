@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countUsers = `-- name: CountUsers :one
+SELECT COUNT(*) FROM users
+`
+
+func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countUsers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCategory = `-- name: CreateCategory :one
 INSERT INTO categories (name, creator_id, emoji, type, color)
 VALUES ($1, $2, $3, $4, $5)
@@ -181,7 +192,7 @@ func (q *Queries) CreatePeriodicExpense(ctx context.Context, arg CreatePeriodicE
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (username, password)
 VALUES ($1, $2)
-RETURNING id, username, password, session_duration_hours
+RETURNING id, username, password, session_duration_hours, is_admin
 `
 
 type CreateUserParams struct {
@@ -197,6 +208,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Username,
 		&i.Password,
 		&i.SessionDurationHours,
+		&i.IsAdmin,
 	)
 	return i, err
 }
@@ -351,7 +363,7 @@ func (q *Queries) FindDuePeriodicExpensesByUserID(ctx context.Context, userID in
 
 const findUserByID = `-- name: FindUserByID :one
 SELECT
-  id, username, password, session_duration_hours
+  id, username, password, session_duration_hours, is_admin
 FROM
   users
 WHERE
@@ -366,13 +378,14 @@ func (q *Queries) FindUserByID(ctx context.Context, id int64) (User, error) {
 		&i.Username,
 		&i.Password,
 		&i.SessionDurationHours,
+		&i.IsAdmin,
 	)
 	return i, err
 }
 
 const findUserByUsername = `-- name: FindUserByUsername :one
 SELECT
-  id, username, password, session_duration_hours
+  id, username, password, session_duration_hours, is_admin
 FROM
   users
 WHERE
@@ -387,6 +400,7 @@ func (q *Queries) FindUserByUsername(ctx context.Context, username string) (User
 		&i.Username,
 		&i.Password,
 		&i.SessionDurationHours,
+		&i.IsAdmin,
 	)
 	return i, err
 }
@@ -683,7 +697,7 @@ func (q *Queries) ListPeriodicExpensesByUserID(ctx context.Context, userID int64
 
 const listUsers = `-- name: ListUsers :many
 SELECT
-  id, username, password, session_duration_hours
+  id, username, password, session_duration_hours, is_admin
 FROM
   users
 ORDER BY
@@ -704,6 +718,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.Username,
 			&i.Password,
 			&i.SessionDurationHours,
+			&i.IsAdmin,
 		); err != nil {
 			return nil, err
 		}
@@ -923,7 +938,7 @@ SET username = COALESCE(NULLIF($2, ''), username),
     password = COALESCE(NULLIF($3, ''), password),
     session_duration_hours = COALESCE(NULLIF($4::int, 0), session_duration_hours)
 WHERE id = $1
-RETURNING id, username, password, session_duration_hours
+RETURNING id, username, password, session_duration_hours, is_admin
 `
 
 type UpdateUserParams struct {
@@ -946,6 +961,21 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Username,
 		&i.Password,
 		&i.SessionDurationHours,
+		&i.IsAdmin,
 	)
 	return i, err
+}
+
+const updateUserRole = `-- name: UpdateUserRole :exec
+UPDATE users SET is_admin = $2 WHERE id = $1
+`
+
+type UpdateUserRoleParams struct {
+	ID      int64 `json:"id"`
+	IsAdmin bool  `json:"is_admin"`
+}
+
+func (q *Queries) UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) error {
+	_, err := q.db.Exec(ctx, updateUserRole, arg.ID, arg.IsAdmin)
+	return err
 }

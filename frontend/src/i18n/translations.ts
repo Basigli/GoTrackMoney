@@ -104,6 +104,17 @@ export const translations = {
     'auth.delete_warning': 'Attenzione: Questa azione è irreversibile e cancellerà tutti i tuoi dati. Sei sicuro di voler procedere?',
     'auth.login_subtitle': 'Bentornato! Accedi per continuare.',
     'auth.register_subtitle': 'Crea un account per iniziare!',
+
+    // Admin Panel
+    'nav.admin': 'Pannello Admin',
+    'admin.title': 'Gestione Utenti',
+    'admin.reset_password': 'Reset Password',
+    'admin.delete': 'Elimina',
+    'admin.confirm_delete': 'Sei sicuro di voler eliminare questo utente? Questa azione eliminerà anche tutte le sue spese e le sue entrate!',
+    'admin.reset_success': 'Password resettata con successo. Password temporanea:',
+    'admin.id': 'ID',
+    'admin.username': 'Username',
+    'admin.actions': 'Azioni',
   },
   en: {
     'nav.dashboard': 'Dashboard',
@@ -205,11 +216,22 @@ export const translations = {
     'auth.delete_account': 'Delete Account',
     'auth.delete_confirm_phrase': 'delete my account',
     'auth.delete_instructions': 'Type "%{phrase}" to confirm:',
-    'auth.delete_success': 'Account successfully deleted',
+    'auth.delete_success': 'Account deleted successfully',
     'auth.cancel': 'Cancel',
     'auth.delete_warning': 'Warning: This action is irreversible and will delete all your data. Are you sure you want to proceed?',
     'auth.login_subtitle': 'Welcome back! Log in to continue.',
     'auth.register_subtitle': 'Create an account to get started!',
+
+    // Admin Panel
+    'nav.admin': 'Admin Panel',
+    'admin.title': 'User Management',
+    'admin.reset_password': 'Reset Password',
+    'admin.delete': 'Delete',
+    'admin.confirm_delete': 'Are you sure you want to delete this user? This will also delete all of their expenses and incomes!',
+    'admin.reset_success': 'Password reset successfully. Temp password:',
+    'admin.id': 'ID',
+    'admin.username': 'Username',
+    'admin.actions': 'Actions',
   }
 };
 

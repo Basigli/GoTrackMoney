@@ -23,6 +23,7 @@ type userResponse struct {
 	ID                   int64  `json:"id"`
 	Username             string `json:"username"`
 	SessionDurationHours int32  `json:"session_duration_hours"`
+	IsAdmin              bool   `json:"is_admin"`
 }
 
 type authResponse struct {
@@ -166,6 +167,7 @@ func (h *handler) Me(w http.ResponseWriter, r *http.Request) {
 	json.Write(w, http.StatusOK, userResponse{
 		ID:       user.ID,
 		Username: user.Username,
+		IsAdmin:  user.IsAdmin,
 	})
 }
 
@@ -452,6 +454,7 @@ func toUserResponse(user repo.User) userResponse {
 		ID:                   user.ID,
 		Username:             user.Username,
 		SessionDurationHours: user.SessionDurationHours,
+		IsAdmin:              user.IsAdmin,
 	}
 }
 
@@ -539,4 +542,39 @@ func (h *handler) UpdatePeriodicExpense(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	json.Write(w, http.StatusOK, expense)
+}
+
+func (h *handler) AdminResetUserPassword(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		http.Error(w, "missing id", http.StatusBadRequest)
+		return
+	}
+	var id int64
+	fmt.Sscanf(idStr, "%d", &id)
+
+	tempPassword, err := h.service.AdminResetUserPassword(r.Context(), id)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.Write(w, http.StatusOK, map[string]string{"temp_password": tempPassword})
+}
+
+func (h *handler) AdminDeleteUser(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		http.Error(w, "missing id", http.StatusBadRequest)
+		return
+	}
+	var id int64
+	fmt.Sscanf(idStr, "%d", &id)
+
+	if err := h.service.DeleteUser(r.Context(), id); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.Write(w, http.StatusOK, map[string]string{"status": "ok"})
 }

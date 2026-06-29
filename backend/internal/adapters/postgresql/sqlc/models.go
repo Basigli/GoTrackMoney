@@ -60,4 +60,5 @@ type User struct {
 	Username             string `json:"username"`
 	Password             string `json:"password"`
 	SessionDurationHours int32  `json:"session_duration_hours"`
+	IsAdmin              bool   `json:"is_admin"`
 }

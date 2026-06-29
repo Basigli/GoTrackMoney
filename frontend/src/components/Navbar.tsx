@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/i18n/LanguageContext';
 
-export default function Navbar({ username, onLogout }: { username: string, onLogout: () => void }) {
+export default function Navbar({ username, onLogout, isAdmin }: { username: string, onLogout: () => void, isAdmin?: boolean }) {
   const pathname = usePathname();
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
@@ -26,6 +26,7 @@ export default function Navbar({ username, onLogout }: { username: string, onLog
           <Link href="/periodic" className={`nav-link ${pathname === '/periodic' ? 'active' : ''}`}>{t('record.periodic') || 'Periodic'}</Link>
           <Link href="/search" className={`nav-link ${pathname === '/search' ? 'active' : ''}`}>{t('nav.search')}</Link>
           <Link href="/analytics" className={`nav-link ${pathname === '/analytics' ? 'active' : ''}`}>{t('nav.analytics')}</Link>
+          {isAdmin && <Link href="/admin" className={`nav-link ${pathname === '/admin' ? 'active' : ''}`}>{t('nav.admin')}</Link>}
         </div>
         <div className="nav-right">
           <Link href="/profile" style={{ color: '#94a3b8', textDecoration: 'none', fontWeight: 600 }}>{username}</Link>

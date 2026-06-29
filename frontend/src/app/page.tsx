@@ -15,7 +15,7 @@ import { API_BASE } from '@/utils/api';
 
 export default function Home() {
   const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<{id: number, username: string, session_duration_hours: number} | null>(null);
+  const [user, setUser] = useState<{id: number, username: string, session_duration_hours: number, is_admin: boolean} | null>(null);
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -279,7 +279,7 @@ export default function Home() {
     return (
       <div className="app-container">
         <Toaster position="bottom-center" />
-        <Navbar username={user.username} onLogout={logout} />
+        <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
         
         <div className="header-area">
           <DatePicker

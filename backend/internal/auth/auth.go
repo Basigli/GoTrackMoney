@@ -21,6 +21,7 @@ type contextKey struct{}
 type User struct {
 	ID       int64  `json:"id"`
 	Username string `json:"username"`
+	IsAdmin  bool   `json:"is_admin"`
 }
 
 type UserReader interface {
@@ -119,6 +120,7 @@ func (m *Manager) Middleware(reader UserReader) func(http.Handler) http.Handler 
 			ctx := WithUser(r.Context(), User{
 				ID:       user.ID,
 				Username: user.Username,
+				IsAdmin:  user.IsAdmin,
 			})
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
@@ -148,8 +150,20 @@ func bearerToken(value string) (string, error) {
 }
 
 func unauthorized(w http.ResponseWriter) {
-	w.Header().Set("WWW-Authenticate", "Bearer")
-	http.Error(w, ErrUnauthorized.Error(), http.StatusUnauthorized)
+	w.WriteHeader(http.StatusUnauthorized)
+	w.Write([]byte("unauthorized"))
+}
+
+func AdminMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, ok := CurrentUser(r.Context())
+		if !ok || !user.IsAdmin {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte("forbidden: admin only"))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func UsernameFromContext(ctx context.Context) (string, bool) {

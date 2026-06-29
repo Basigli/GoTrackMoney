@@ -24,6 +24,10 @@ func (f *fakeService) CreateUser(context.Context, createUserParams) (repo.User, 
 	return repo.User{}, nil
 }
 
+func (f *fakeService) AdminResetUserPassword(context.Context, int64) (string, error) { return "", nil }
+func (f *fakeService) UpdateUser(context.Context, int64, updateUserParams) (repo.User, error) { return repo.User{}, nil }
+func (f *fakeService) DeleteUser(context.Context, int64) error { return nil }
+
 func (f *fakeService) AuthenticateUser(ctx context.Context, params loginParams) (repo.User, error) {
 	return f.authenticateUser(ctx, params)
 }
@@ -34,17 +38,28 @@ func (f *fakeService) CreateCategory(context.Context, createCategoryParams) (rep
 	return repo.Category{}, nil
 }
 
-func (f *fakeService) ListExpenses(context.Context) ([]repo.Expense, error) { return nil, nil }
+func (f *fakeService) ListExpenses(context.Context, int32, int32) ([]repo.Expense, error) { return nil, nil }
 
 func (f *fakeService) CreateExpense(context.Context, createExpenseParams) (repo.Expense, error) {
 	return repo.Expense{}, nil
 }
 
-func (f *fakeService) ListIncomes(context.Context) ([]repo.Income, error) { return nil, nil }
+func (f *fakeService) ListIncomes(context.Context, int32, int32) ([]repo.Income, error) { return nil, nil }
 
 func (f *fakeService) CreateIncome(context.Context, createIncomeParams) (repo.Income, error) {
 	return repo.Income{}, nil
 }
+
+func (f *fakeService) UpdateCategory(context.Context, updateCategoryParams) (repo.Category, error) { return repo.Category{}, nil }
+func (f *fakeService) UpdateExpense(context.Context, updateExpenseParams) (repo.Expense, error) { return repo.Expense{}, nil }
+func (f *fakeService) DeleteExpense(context.Context, int64) error { return nil }
+func (f *fakeService) UpdateIncome(context.Context, updateIncomeParams) (repo.Income, error) { return repo.Income{}, nil }
+func (f *fakeService) DeleteIncome(context.Context, int64) error { return nil }
+
+func (f *fakeService) ListPeriodicExpenses(context.Context) ([]repo.PeriodicExpense, error) { return nil, nil }
+func (f *fakeService) CreatePeriodicExpense(context.Context, createPeriodicExpenseParams) (repo.PeriodicExpense, error) { return repo.PeriodicExpense{}, nil }
+func (f *fakeService) UpdatePeriodicExpense(context.Context, updatePeriodicExpenseParams) (repo.PeriodicExpense, error) { return repo.PeriodicExpense{}, nil }
+func (f *fakeService) DeletePeriodicExpense(context.Context, int64) error { return nil }
 
 type fakeUserReader struct {
 	user repo.User
@@ -123,7 +138,7 @@ func TestAuthMiddlewareProtectsMeEndpoint(t *testing.T) {
 	})
 
 	t.Run("allows valid token", func(t *testing.T) {
-		token, err := authManager.Issue(42)
+		token, err := authManager.Issue(42, 0)
 		if err != nil {
 			t.Fatalf("issue token: %v", err)
 		}

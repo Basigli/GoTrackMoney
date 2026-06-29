@@ -91,7 +91,7 @@ export default function ProfilePage() {
   return (
     <div className="app-container">
       <Toaster position="bottom-center" />
-      <Navbar username={user.username} onLogout={logout} />
+      <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
       
       <div style={{ padding: '40px 20px', maxWidth: '500px', margin: '0 auto' }}>
         <div className="glass-container" style={{ margin: 0, maxWidth: '100%' }}>

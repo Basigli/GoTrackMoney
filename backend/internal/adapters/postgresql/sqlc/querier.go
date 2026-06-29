@@ -9,6 +9,7 @@ import (
 )
 
 type Querier interface {
+	CountUsers(ctx context.Context) (int64, error)
 	CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error)
 	CreateExpense(ctx context.Context, arg CreateExpenseParams) (Expense, error)
 	CreateIncome(ctx context.Context, arg CreateIncomeParams) (Income, error)
@@ -37,6 +38,7 @@ type Querier interface {
 	UpdatePeriodicExpense(ctx context.Context, arg UpdatePeriodicExpenseParams) (PeriodicExpense, error)
 	UpdatePeriodicExpenseNextDueDate(ctx context.Context, arg UpdatePeriodicExpenseNextDueDateParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
+	UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) error
 }
 
 var _ Querier = (*Queries)(nil)

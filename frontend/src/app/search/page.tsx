@@ -181,7 +181,7 @@ export default function SearchPage() {
   return (
     <div className="app-container">
       <Toaster position="bottom-center" />
-      <Navbar username={user.username} onLogout={logout} />
+      <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
       
       <div style={{ padding: '24px 20px', marginBottom: '24px' }}>
         <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '20px' }}>

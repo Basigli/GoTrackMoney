@@ -24,6 +24,7 @@ type Service interface {
 	CreateUser(ctx context.Context, params createUserParams) (repo.User, error)
 	UpdateUser(ctx context.Context, id int64, params updateUserParams) (repo.User, error)
 	DeleteUser(ctx context.Context, id int64) error
+	AdminResetUserPassword(ctx context.Context, id int64) (string, error)
 	AuthenticateUser(ctx context.Context, params loginParams) (repo.User, error)
 
 	ListCategories(ctx context.Context) ([]repo.Category, error)
@@ -76,10 +77,32 @@ func (s *svc) CreateUser(ctx context.Context, params createUserParams) (repo.Use
 		return repo.User{}, err
 	}
 
-	return s.repo.CreateUser(ctx, repo.CreateUserParams{
+	// Check if this is the very first user in the database
+	count, err := s.repo.CountUsers(ctx)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return repo.User{}, err
+	}
+
+	user, err := s.repo.CreateUser(ctx, repo.CreateUserParams{
 		Username: params.Username,
 		Password: string(hash),
 	})
+	if err != nil {
+		return repo.User{}, err
+	}
+
+	// Make the first user an admin
+	if count == 0 {
+		err = s.repo.UpdateUserRole(ctx, repo.UpdateUserRoleParams{
+			ID:      user.ID,
+			IsAdmin: true,
+		})
+		if err == nil {
+			user.IsAdmin = true
+		}
+	}
+
+	return user, nil
 }
 
 type updateUserParams struct {
@@ -552,4 +575,32 @@ func (s *svc) UpdatePeriodicExpense(ctx context.Context, params updatePeriodicEx
 		PeriodUnit:     params.PeriodUnit,
 		NextDueDate:    pgtype.Timestamptz{Time: nextDue, Valid: true},
 	})
+}
+
+func (s *svc) AdminResetUserPassword(ctx context.Context, id int64) (string, error) {
+	// Generate random 8 character temp password
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, 8)
+	for i := range b {
+		b[i] = charset[time.Now().UnixNano()%int64(len(charset))]
+		time.Sleep(1 * time.Nanosecond) // Just to ensure randomness in this simple approach
+	}
+	tempPassword := string(b)
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(tempPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = s.repo.UpdateUser(ctx, repo.UpdateUserParams{
+		ID:      id,
+		Column2: "", // COALESCE preserves
+		Column3: string(hash),
+		Column4: 0, // COALESCE preserves
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return tempPassword, nil
 }

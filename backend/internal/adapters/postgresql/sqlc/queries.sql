@@ -1,6 +1,6 @@
 -- name: ListUsers :many
 SELECT
-  id, username, password, session_duration_hours
+  id, username, password, session_duration_hours, is_admin
 FROM
   users
 ORDER BY
@@ -8,7 +8,7 @@ ORDER BY
 
 -- name: FindUserByUsername :one
 SELECT
-  id, username, password, session_duration_hours
+  id, username, password, session_duration_hours, is_admin
 FROM
   users
 WHERE
@@ -16,7 +16,7 @@ WHERE
 
 -- name: FindUserByID :one
 SELECT
-  id, username, password, session_duration_hours
+  id, username, password, session_duration_hours, is_admin
 FROM
   users
 WHERE
@@ -25,7 +25,7 @@ WHERE
 -- name: CreateUser :one
 INSERT INTO users (username, password)
 VALUES ($1, $2)
-RETURNING id, username, password, session_duration_hours;
+RETURNING id, username, password, session_duration_hours, is_admin;
 
 -- name: UpdateUser :one
 UPDATE users
@@ -33,7 +33,7 @@ SET username = COALESCE(NULLIF($2, ''), username),
     password = COALESCE(NULLIF($3, ''), password),
     session_duration_hours = COALESCE(NULLIF($4::int, 0), session_duration_hours)
 WHERE id = $1
-RETURNING id, username, password, session_duration_hours;
+RETURNING id, username, password, session_duration_hours, is_admin;
 
 -- name: DeleteUser :exec
 DELETE FROM users
@@ -219,3 +219,9 @@ WHERE
 -- name: DeletePeriodicExpense :exec
 DELETE FROM periodic_expenses
 WHERE id = $1 AND user_id = $2;
+
+-- name: CountUsers :one
+SELECT COUNT(*) FROM users;
+
+-- name: UpdateUserRole :exec
+UPDATE users SET is_admin = $2 WHERE id = $1;

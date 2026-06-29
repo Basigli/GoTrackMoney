@@ -53,6 +53,11 @@ func (app *application) mount() http.Handler {
 		r.Put("/users/me", handler.UpdateUser)
 		r.Delete("/users/me", handler.DeleteUser)
 
+		r.With(auth.AdminMiddleware).Group(func(r chi.Router) {
+			r.Put("/admin/users/{id}/reset-password", handler.AdminResetUserPassword)
+			r.Delete("/admin/users/{id}", handler.AdminDeleteUser)
+		})
+
 		r.Get("/categories", handler.ListCategories)
 		r.Post("/categories", handler.CreateCategory)
 		r.Put("/categories/{id}", handler.UpdateCategory)
