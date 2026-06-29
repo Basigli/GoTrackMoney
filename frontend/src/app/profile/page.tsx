@@ -10,7 +10,7 @@ import { API_BASE } from '@/utils/api';
 
 export default function ProfilePage() {
   const { token, user, loading, logout } = useAuth();
-  const { t, language } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -140,7 +140,15 @@ export default function ProfilePage() {
               />
             </div>
 
-            <button type="submit" className="submit-btn">{t('auth.save_profile')}</button>
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Lingua / Language</label>
+              <div className="lang-switcher" style={{ display: 'flex', background: 'var(--input-bg)', borderRadius: '16px', padding: '4px', width: 'fit-content' }}>
+                <button type="button" onClick={() => setLanguage('it')} style={{ padding: '8px 16px', border: 'none', background: language === 'it' ? 'var(--surface-color)' : 'transparent', borderRadius: '12px', cursor: 'pointer', color: 'var(--text-color)', fontWeight: language === 'it' ? 'bold' : 'normal' }}>Italiano</button>
+                <button type="button" onClick={() => setLanguage('en')} style={{ padding: '8px 16px', border: 'none', background: language === 'en' ? 'var(--surface-color)' : 'transparent', borderRadius: '12px', cursor: 'pointer', color: 'var(--text-color)', fontWeight: language === 'en' ? 'bold' : 'normal' }}>English</button>
+              </div>
+            </div>
+
+            <button type="submit" className="submit-btn" style={{ background: 'var(--success-color)' }}>{t('auth.save_profile')}</button>
           </form>
 
           <div style={{ marginTop: '40px', paddingTop: '20px', borderTop: '1px solid var(--border-color)' }}>
