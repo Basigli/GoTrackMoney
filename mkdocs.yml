@@ -2,16 +2,7 @@ site_name: GoTrackMoney
 site_description: Documentation for GoTrackMoney - A self-hosted personal finance tracker
 site_author: Gabe
 
-theme:
-  name: material
-  palette:
-    scheme: slate
-    primary: blue
-    accent: blue
-  features:
-    - navigation.instant
-    - navigation.tabs
-    - navigation.top
+theme: readthedocs
 
 nav:
   - Home: index.md
@@ -20,3 +11,5 @@ nav:
     - Backup & Restore: backup_restore.md
     - Data Porting: porting.md
     - Testing: tests.md
+  - Implementation:
+    - Periodic Expenses: periodic_expenses_implementation.md
