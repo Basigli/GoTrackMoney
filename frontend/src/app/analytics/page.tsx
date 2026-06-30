@@ -136,6 +136,7 @@ export default function AnalyticsPage() {
                 />
               }
               locale={dateLocale}
+              withPortal
             />
             
             <button onClick={exportToCSV} className="submit-btn" style={{ margin: 0, padding: '8px 16px', width: 'auto', fontSize: '14px', borderRadius: '12px' }}>
