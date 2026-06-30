@@ -246,22 +246,6 @@ export default function SearchPage() {
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setShowAddModal(false)}>&times;</button>
             
-            <div className="input-group" style={{ marginBottom: '24px' }}>
-              <label className="input-label">{t('record.date_time')}</label>
-              <input 
-                type="datetime-local" 
-                className="input-field" 
-                value={format(addDate, "yyyy-MM-dd'T'HH:mm")}
-                onChange={e => {
-                  const newDate = new Date(e.target.value);
-                  if (!isNaN(newDate.getTime())) {
-                    setAddDate(newDate);
-                  }
-                }}
-                required
-              />
-            </div>
-
             <div className="radio-group">
               <label className="radio-label">
                 <input type="radio" name="type" checked={addType === 'entrata'} onChange={() => setAddType('entrata')} disabled={!!editingItem} />
@@ -274,6 +258,22 @@ export default function SearchPage() {
             </div>
 
             <form className="modal-form" onSubmit={handleAddSubmit}>
+              <div className="input-group">
+                <label className="input-label">{t('record.date_time')}</label>
+                <input 
+                  type="datetime-local" 
+                  className="input-field" 
+                  value={format(addDate, "yyyy-MM-dd'T'HH:mm")}
+                  onChange={e => {
+                    const newDate = new Date(e.target.value);
+                    if (!isNaN(newDate.getTime())) {
+                      setAddDate(newDate);
+                    }
+                  }}
+                  required
+                />
+              </div>
+
               <div className="input-group">
                 <label className="input-label">{t('record.amount')}</label>
                 <input type="number" step="0.01" className="input-field" placeholder={t('record.amount_placeholder')} value={addAmount} onChange={e => setAddAmount(e.target.value)} required />
