@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="Gabe" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Periodic Expenses - GoTrackMoney</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Periodic Expenses";
+        var mkdocs_page_input_path = "periodic_expenses_implementation.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> GoTrackMoney
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../getting_started/">Getting Started</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Guides</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../backup_restore/">Backup & Restore</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../porting/">Data Porting</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../tests/">Testing</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Implementation</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Periodic Expenses</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#1-database-schema">1. Database Schema</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#2-sqlc-queries-backend-models">2. SQLC Queries &amp; Backend Models</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#3-backend-logic-service-handlers">3. Backend Logic (Service &amp; Handlers)</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#4-frontend-application">4. Frontend Application</a>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">GoTrackMoney</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Implementation</li>
+      <li class="breadcrumb-item active">Periodic Expenses</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="periodic-expenses-implementation">Periodic Expenses Implementation</h1>
+<p>I implemented the Periodic Expenses feature across both the backend and frontend. Here's a breakdown of the changes:</p>
+<h2 id="1-database-schema">1. Database Schema</h2>
+<p>Created a new Goose migration <code>00003_add_periodic_expenses.sql</code> that introduces the <code>periodic_expenses</code> table. This table stores the configuration for a recurring expense:
+- <code>id</code>, <code>name</code>, <code>description</code>, <code>amount</code>, <code>user_id</code>, <code>category_id</code> (similar to standard expenses)
+- <code>period_interval</code>: An integer representing the multiplier for the period (e.g., <code>1</code>, <code>2</code>).
+- <code>period_unit</code>: A string representing the unit of time (e.g., <code>days</code>, <code>weeks</code>, <code>months</code>, <code>years</code>).
+- <code>start_date</code>: The original starting timestamp.
+- <code>next_due_date</code>: The next time the periodic expense should generate an actual expense record.
+- <code>last_generated_date</code>: The timestamp when the expense was last generated.</p>
+<h2 id="2-sqlc-queries-backend-models">2. SQLC Queries &amp; Backend Models</h2>
+<ul>
+<li>Appended new queries to <code>queries.sql</code> to manage periodic expenses (<code>CreatePeriodicExpense</code>, <code>ListPeriodicExpensesByUserID</code>, <code>DeletePeriodicExpense</code>, <code>UpdatePeriodicExpenseNextDueDate</code>, and <code>FindDuePeriodicExpensesByUserID</code>).</li>
+<li>Ran <code>sqlc generate</code> to automatically generate the database access code in Go.</li>
+</ul>
+<h2 id="3-backend-logic-service-handlers">3. Backend Logic (Service &amp; Handlers)</h2>
+<ul>
+<li><strong>Service Layer</strong>: Added a new method <code>checkAndGeneratePeriodicExpenses</code> to the <code>ledger.Service</code>. This method is invoked every time the <code>/expenses</code> endpoint is hit.</li>
+<li>It lazily finds all periodic expenses where <code>next_due_date &lt;= now()</code>.</li>
+<li>For each due periodic expense, it automatically inserts a standard <code>Expense</code> into the database.</li>
+<li>It then computes the <em>next</em> due date by adding the specified <code>period_interval</code> and <code>period_unit</code> to the current <code>next_due_date</code>, and updates the periodic expense record.</li>
+<li><strong>API Endpoints</strong>: Registered the endpoints <code>GET /periodic-expenses</code>, <code>POST /periodic-expenses</code>, and <code>DELETE /periodic-expenses/{id}</code> in the router (<code>api.go</code>) and corresponding handler implementations in <code>handlers.go</code>.</li>
+</ul>
+<h2 id="4-frontend-application">4. Frontend Application</h2>
+<ul>
+<li><strong><code>useData.ts</code></strong>: Introduced the <code>PeriodicExpense</code> TypeScript interface and added state variables and fetching logic for <code>periodicExpenses</code>.</li>
+<li><strong><code>page.tsx</code></strong>: Updated the "Add Expense" modal.</li>
+<li>Added a "Periodic Expense?" checkbox visible only when creating a new expense.</li>
+<li>If checked, two new inputs appear: a numeric input for the interval and a dropdown for the time unit (<code>Days</code>, <code>Weeks</code>, <code>Months</code>, <code>Years</code>).</li>
+<li>Adjusted the <code>handleAddSubmit</code> logic to POST to <code>/periodic-expenses</code> with the configured period settings instead of the standard <code>/expenses</code> endpoint when the user opts to create a periodic expense.</li>
+</ul>
+<p>Now, whenever you add a periodic expense from the UI, it registers the configuration in the backend. Then, simply fetching the expenses on the dashboard dynamically applies and generates any due transactions based on the recurring pattern!</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../tests/" class="btn btn-neutral float-left" title="Testing"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../tests/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
