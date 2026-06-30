@@ -246,16 +246,21 @@ export default function SearchPage() {
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setShowAddModal(false)}>&times;</button>
             
-            <DatePicker
-              selected={addDate}
-              onChange={(date: Date | null) => date && setAddDate(date)}
-              showTimeSelect
-              timeFormat="HH:mm"
-              timeIntervals={15}
-              dateFormat="d MMM yyyy, HH:mm"
-              customInput={<ModalDateInput labelText={t('record.date_time')} />}
-              locale={dateLocale}
-            />
+            <div className="input-group" style={{ marginBottom: '24px' }}>
+              <label className="input-label">{t('record.date_time')}</label>
+              <input 
+                type="datetime-local" 
+                className="input-field" 
+                value={format(addDate, "yyyy-MM-dd'T'HH:mm")}
+                onChange={e => {
+                  const newDate = new Date(e.target.value);
+                  if (!isNaN(newDate.getTime())) {
+                    setAddDate(newDate);
+                  }
+                }}
+                required
+              />
+            </div>
 
             <div className="radio-group">
               <label className="radio-label">
