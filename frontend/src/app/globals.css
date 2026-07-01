@@ -689,3 +689,21 @@ input[type="color"]::-moz-color-swatch {
 .input-field::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
+
+/* Fix for iOS datetime-local offset */
+input[type="datetime-local"].input-field {
+  -webkit-appearance: none;
+  appearance: none;
+  text-align: left;
+}
+
+input[type="datetime-local"]::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+  padding: 0;
+}
+
+input[type="datetime-local"]::-webkit-datetime-edit {
+  padding: 0;
+}
+
