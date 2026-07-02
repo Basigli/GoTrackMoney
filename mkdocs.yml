@@ -13,3 +13,5 @@ nav:
     - Testing: tests.md
   - Implementation:
     - Periodic Expenses: periodic_expenses_implementation.md
+  - Roadmap:
+    - Future Improvements: future_improvements.md
