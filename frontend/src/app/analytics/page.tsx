@@ -17,62 +17,60 @@ import {
 
 export default function AnalyticsPage() {
   const { token, user, loading, logout } = useAuth();
-  const { categories, incomes, expenses, fetchCategories, fetchIncomes, fetchExpenses } = useData(token);
+  const { categories, fetchCategories, fetchIncomesByDate, fetchExpensesByDate } = useData(token);
   const { t, language } = useLanguage();
   const dateLocale = language === 'it' ? it : enUS;
   const [filterDate, setFilterDate] = useState<Date>(new Date());
+  
+  const [rawPieData, setRawPieData] = useState<any[]>([]);
+  const [rawBarData, setRawBarData] = useState<any>({ incomes: [], expenses: [] });
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (token) {
       fetchCategories();
-      fetchIncomes();
-      fetchExpenses();
     }
-  }, [token, fetchCategories, fetchIncomes, fetchExpenses]);
+  }, [token, fetchCategories]);
+
+  useEffect(() => {
+    if (token) {
+      const month = filterDate.getMonth() + 1;
+      const year = filterDate.getFullYear();
+      
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/analytics/expenses-by-category?year=${year}&month=${month}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => setRawPieData(data || []));
+
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/analytics/income-vs-expense?year=${year}&month=${month}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => setRawBarData(data || { incomes: [], expenses: [] }));
+    }
+  }, [token, filterDate]);
 
   if (loading || !user) return null;
-
-  // Process data for Pie Chart (Expenses by Category for selected month)
-  const currentMonthExpenses = expenses.filter(e => {
-    const d = new Date(e.spent_on);
-    return d.getMonth() === filterDate.getMonth() && d.getFullYear() === filterDate.getFullYear();
-  });
-
-  const expensesByCategory = currentMonthExpenses.reduce((acc, exp) => {
-    if (!acc[exp.category_id]) acc[exp.category_id] = 0;
-    acc[exp.category_id] += exp.amount;
-    return acc;
-  }, {} as Record<number, number>);
 
   const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#eab308', '#ec4899', '#f97316', '#14b8a6', '#f43f5e', '#84cc16'];
   const getStableColor = (id: number) => COLORS[id % COLORS.length];
 
-  const pieData = Object.entries(expensesByCategory)
-    .map(([catId, value], index) => {
-      const cat = categories.find(c => c.id === parseInt(catId));
-      const name = cat ? `${cat.emoji} ${cat.name}` : t('dashboard.unknown');
-      const color = cat?.color || getStableColor(parseInt(catId));
-      return { name, value, color };
-    })
-    .sort((a, b) => b.value - a.value);
+  const pieData = rawPieData.map((d: any) => {
+    const cat = categories.find(c => c.id === d.category_id);
+    const name = cat ? `${cat.emoji} ${cat.name}` : t('dashboard.unknown');
+    const color = cat?.color || getStableColor(d.category_id);
+    return { name, value: d.total_amount, color };
+  }).sort((a: any, b: any) => b.value - a.value);
 
-  // Process data for Bar Chart (Income vs Expense over last 6 months ending in selected month)
   const last6Months = Array.from({ length: 6 }).map((_, i) => {
     const d = subMonths(filterDate, i);
-    return { month: d.getMonth(), year: d.getFullYear(), date: d };
+    return { month: d.getMonth() + 1, year: d.getFullYear(), date: d };
   }).reverse();
 
   const barData = last6Months.map(m => {
-    const inc = incomes.filter(i => {
-      const d = new Date(i.received_on);
-      return d.getMonth() === m.month && d.getFullYear() === m.year;
-    }).reduce((sum, i) => sum + i.amount, 0);
-    
-    const exp = expenses.filter(e => {
-      const d = new Date(e.spent_on);
-      return d.getMonth() === m.month && d.getFullYear() === m.year;
-    }).reduce((sum, e) => sum + e.amount, 0);
-
+    const inc = rawBarData.incomes?.find((i: any) => i.year === m.year && i.month === m.month)?.total_amount || 0;
+    const exp = rawBarData.expenses?.find((e: any) => e.year === m.year && e.month === m.month)?.total_amount || 0;
     return { 
       name: format(m.date, 'MMM', { locale: dateLocale }), 
       [t('dashboard.incomes')]: inc, 
@@ -80,40 +78,51 @@ export default function AnalyticsPage() {
     };
   });
 
-  const exportToCSV = () => {
-    // Header
-    const rows = [
-      ['Tipo/Type', 'Data/Date', 'Categoria/Category', 'Importo/Amount', 'Descrizione/Description']
-    ];
+  const exportToCSV = async () => {
+    if (!token) return;
+    setIsExporting(true);
+    try {
+      const year = filterDate.getFullYear();
+      const month = filterDate.getMonth() + 1;
+      
+      const monthIncomes = await fetchIncomesByDate(year, month);
+      const monthExpenses = await fetchExpensesByDate(year, month);
 
-    // Combine incomes and expenses
-    const combined = [
-      ...incomes.map(i => ({ type: t('record.income'), date: new Date(i.received_on), item: i })),
-      ...expenses.map(e => ({ type: t('record.expense'), date: new Date(e.spent_on), item: e }))
-    ].sort((a, b) => b.date.getTime() - a.date.getTime());
+      const rows = [
+        ['Tipo/Type', 'Data/Date', 'Categoria/Category', 'Importo/Amount', 'Descrizione/Description']
+      ];
 
-    for (const row of combined) {
-      const cat = categories.find(c => c.id === row.item.category_id);
-      const catName = cat ? cat.name : t('dashboard.unknown');
-      // Format row, escaping quotes for CSV
-      rows.push([
-        row.type,
-        format(row.date, 'yyyy-MM-dd HH:mm'),
-        `"${catName.replace(/"/g, '""')}"`,
-        row.item.amount.toString(),
-        `"${row.item.description.replace(/"/g, '""')}"`
-      ]);
+      const combined = [
+        ...monthIncomes.map((i: any) => ({ type: t('record.income'), date: new Date(i.received_on), item: i })),
+        ...monthExpenses.map((e: any) => ({ type: t('record.expense'), date: new Date(e.spent_on), item: e }))
+      ].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+      for (const row of combined) {
+        const cat = categories.find(c => c.id === row.item.category_id);
+        const catName = cat ? cat.name : t('dashboard.unknown');
+        rows.push([
+          row.type,
+          format(row.date, 'yyyy-MM-dd HH:mm'),
+          `"${catName.replace(/"/g, '""')}"`,
+          row.item.amount.toString(),
+          `"${row.item.description.replace(/"/g, '""')}"`
+        ]);
+      }
+
+      const csvContent = rows.map(e => e.join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `GoTrackMoney_Export_${format(new Date(), 'yyyyMMdd')}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsExporting(false);
     }
-
-    const csvContent = rows.map(e => e.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `GoTrackMoney_Export_${format(new Date(), 'yyyyMMdd')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   return (

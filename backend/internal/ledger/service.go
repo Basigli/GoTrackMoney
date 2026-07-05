@@ -44,6 +44,10 @@ type Service interface {
 	FilterExpenses(ctx context.Context, startDate, endDate time.Time) ([]repo.Expense, error)
 	FilterIncomes(ctx context.Context, startDate, endDate time.Time) ([]repo.Income, error)
 
+	GetExpensesByCategory(ctx context.Context, startDate, endDate time.Time) ([]repo.GetExpensesByCategoryRow, error)
+	GetMonthlyExpenseTotals(ctx context.Context, startDate, endDate time.Time) ([]repo.GetMonthlyExpenseTotalsRow, error)
+	GetMonthlyIncomeTotals(ctx context.Context, startDate, endDate time.Time) ([]repo.GetMonthlyIncomeTotalsRow, error)
+
 	ListPeriodicExpenses(ctx context.Context) ([]repo.PeriodicExpense, error)
 	CreatePeriodicExpense(ctx context.Context, params createPeriodicExpenseParams) (repo.PeriodicExpense, error)
 	UpdatePeriodicExpense(ctx context.Context, params updatePeriodicExpenseParams) (repo.PeriodicExpense, error)
@@ -631,4 +635,40 @@ func (s *svc) AdminResetUserPassword(ctx context.Context, id int64) (string, err
 	}
 
 	return tempPassword, nil
+}
+
+func (s *svc) GetExpensesByCategory(ctx context.Context, startDate, endDate time.Time) ([]repo.GetExpensesByCategoryRow, error) {
+	user, err := currentUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.GetExpensesByCategory(ctx, repo.GetExpensesByCategoryParams{
+		UserID:    user.ID,
+		SpentOn:   timestamptzFromTime(&startDate),
+		SpentOn_2: timestamptzFromTime(&endDate),
+	})
+}
+
+func (s *svc) GetMonthlyExpenseTotals(ctx context.Context, startDate, endDate time.Time) ([]repo.GetMonthlyExpenseTotalsRow, error) {
+	user, err := currentUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.GetMonthlyExpenseTotals(ctx, repo.GetMonthlyExpenseTotalsParams{
+		UserID:    user.ID,
+		SpentOn:   timestamptzFromTime(&startDate),
+		SpentOn_2: timestamptzFromTime(&endDate),
+	})
+}
+
+func (s *svc) GetMonthlyIncomeTotals(ctx context.Context, startDate, endDate time.Time) ([]repo.GetMonthlyIncomeTotalsRow, error) {
+	user, err := currentUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.GetMonthlyIncomeTotals(ctx, repo.GetMonthlyIncomeTotalsParams{
+		UserID:       user.ID,
+		ReceivedOn:   timestamptzFromTime(&startDate),
+		ReceivedOn_2: timestamptzFromTime(&endDate),
+	})
 }

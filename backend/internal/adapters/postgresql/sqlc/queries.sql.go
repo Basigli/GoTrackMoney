@@ -498,6 +498,142 @@ func (q *Queries) FindUserByUsername(ctx context.Context, username string) (User
 	return i, err
 }
 
+const getExpensesByCategory = `-- name: GetExpensesByCategory :many
+SELECT
+  category_id, SUM(amount)::float AS total_amount
+FROM
+  expenses
+WHERE
+  user_id = $1 AND spent_on >= $2 AND spent_on < $3
+GROUP BY
+  category_id
+`
+
+type GetExpensesByCategoryParams struct {
+	UserID    int64              `json:"user_id"`
+	SpentOn   pgtype.Timestamptz `json:"spent_on"`
+	SpentOn_2 pgtype.Timestamptz `json:"spent_on_2"`
+}
+
+type GetExpensesByCategoryRow struct {
+	CategoryID  int64   `json:"category_id"`
+	TotalAmount float64 `json:"total_amount"`
+}
+
+func (q *Queries) GetExpensesByCategory(ctx context.Context, arg GetExpensesByCategoryParams) ([]GetExpensesByCategoryRow, error) {
+	rows, err := q.db.Query(ctx, getExpensesByCategory, arg.UserID, arg.SpentOn, arg.SpentOn_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetExpensesByCategoryRow
+	for rows.Next() {
+		var i GetExpensesByCategoryRow
+		if err := rows.Scan(&i.CategoryID, &i.TotalAmount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getMonthlyExpenseTotals = `-- name: GetMonthlyExpenseTotals :many
+SELECT
+  EXTRACT(YEAR FROM spent_on)::int AS year,
+  EXTRACT(MONTH FROM spent_on)::int AS month,
+  SUM(amount)::float AS total_amount
+FROM
+  expenses
+WHERE
+  user_id = $1 AND spent_on >= $2 AND spent_on < $3
+GROUP BY
+  EXTRACT(YEAR FROM spent_on), EXTRACT(MONTH FROM spent_on)
+ORDER BY
+  year, month
+`
+
+type GetMonthlyExpenseTotalsParams struct {
+	UserID    int64              `json:"user_id"`
+	SpentOn   pgtype.Timestamptz `json:"spent_on"`
+	SpentOn_2 pgtype.Timestamptz `json:"spent_on_2"`
+}
+
+type GetMonthlyExpenseTotalsRow struct {
+	Year        int32   `json:"year"`
+	Month       int32   `json:"month"`
+	TotalAmount float64 `json:"total_amount"`
+}
+
+func (q *Queries) GetMonthlyExpenseTotals(ctx context.Context, arg GetMonthlyExpenseTotalsParams) ([]GetMonthlyExpenseTotalsRow, error) {
+	rows, err := q.db.Query(ctx, getMonthlyExpenseTotals, arg.UserID, arg.SpentOn, arg.SpentOn_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMonthlyExpenseTotalsRow
+	for rows.Next() {
+		var i GetMonthlyExpenseTotalsRow
+		if err := rows.Scan(&i.Year, &i.Month, &i.TotalAmount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getMonthlyIncomeTotals = `-- name: GetMonthlyIncomeTotals :many
+SELECT
+  EXTRACT(YEAR FROM received_on)::int AS year,
+  EXTRACT(MONTH FROM received_on)::int AS month,
+  SUM(amount)::float AS total_amount
+FROM
+  incomes
+WHERE
+  user_id = $1 AND received_on >= $2 AND received_on < $3
+GROUP BY
+  EXTRACT(YEAR FROM received_on), EXTRACT(MONTH FROM received_on)
+ORDER BY
+  year, month
+`
+
+type GetMonthlyIncomeTotalsParams struct {
+	UserID       int64              `json:"user_id"`
+	ReceivedOn   pgtype.Timestamptz `json:"received_on"`
+	ReceivedOn_2 pgtype.Timestamptz `json:"received_on_2"`
+}
+
+type GetMonthlyIncomeTotalsRow struct {
+	Year        int32   `json:"year"`
+	Month       int32   `json:"month"`
+	TotalAmount float64 `json:"total_amount"`
+}
+
+func (q *Queries) GetMonthlyIncomeTotals(ctx context.Context, arg GetMonthlyIncomeTotalsParams) ([]GetMonthlyIncomeTotalsRow, error) {
+	rows, err := q.db.Query(ctx, getMonthlyIncomeTotals, arg.UserID, arg.ReceivedOn, arg.ReceivedOn_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetMonthlyIncomeTotalsRow
+	for rows.Next() {
+		var i GetMonthlyIncomeTotalsRow
+		if err := rows.Scan(&i.Year, &i.Month, &i.TotalAmount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCategories = `-- name: ListCategories :many
 SELECT
   id, name, creator_id, emoji, type, color

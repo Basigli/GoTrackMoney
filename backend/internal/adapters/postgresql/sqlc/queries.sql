@@ -245,3 +245,41 @@ WHERE
   user_id = $1 AND received_on >= $2 AND received_on < $3
 ORDER BY
   received_on DESC, id DESC;
+
+-- name: GetExpensesByCategory :many
+SELECT
+  category_id, SUM(amount)::float AS total_amount
+FROM
+  expenses
+WHERE
+  user_id = $1 AND spent_on >= $2 AND spent_on < $3
+GROUP BY
+  category_id;
+
+-- name: GetMonthlyExpenseTotals :many
+SELECT
+  EXTRACT(YEAR FROM spent_on)::int AS year,
+  EXTRACT(MONTH FROM spent_on)::int AS month,
+  SUM(amount)::float AS total_amount
+FROM
+  expenses
+WHERE
+  user_id = $1 AND spent_on >= $2 AND spent_on < $3
+GROUP BY
+  EXTRACT(YEAR FROM spent_on), EXTRACT(MONTH FROM spent_on)
+ORDER BY
+  year, month;
+
+-- name: GetMonthlyIncomeTotals :many
+SELECT
+  EXTRACT(YEAR FROM received_on)::int AS year,
+  EXTRACT(MONTH FROM received_on)::int AS month,
+  SUM(amount)::float AS total_amount
+FROM
+  incomes
+WHERE
+  user_id = $1 AND received_on >= $2 AND received_on < $3
+GROUP BY
+  EXTRACT(YEAR FROM received_on), EXTRACT(MONTH FROM received_on)
+ORDER BY
+  year, month;

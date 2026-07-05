@@ -653,3 +653,87 @@ func (h *handler) FilterIncomes(w http.ResponseWriter, r *http.Request) {
 	}
 	json.Write(w, http.StatusOK, incomes)
 }
+
+func (h *handler) AnalyticsExpensesByCategory(w http.ResponseWriter, r *http.Request) {
+	start, end, err := parseDateFilter(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	totals, err := h.service.GetExpensesByCategory(r.Context(), start, end)
+	if err != nil {
+		log.Println(err)
+		if errors.Is(err, auth.ErrUnauthorized) {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if totals == nil {
+		totals = []repo.GetExpensesByCategoryRow{}
+	}
+	json.Write(w, http.StatusOK, totals)
+}
+
+func (h *handler) AnalyticsIncomeVsExpense(w http.ResponseWriter, r *http.Request) {
+	yearStr := r.URL.Query().Get("year")
+	monthStr := r.URL.Query().Get("month")
+
+	if yearStr == "" || monthStr == "" {
+		http.Error(w, "year and month are required", http.StatusBadRequest)
+		return
+	}
+
+	year, err := strconv.Atoi(yearStr)
+	if err != nil {
+		http.Error(w, "invalid year", http.StatusBadRequest)
+		return
+	}
+
+	month, err := strconv.Atoi(monthStr)
+	if err != nil {
+		http.Error(w, "invalid month", http.StatusBadRequest)
+		return
+	}
+
+	// Calculate range: last 6 months ending in the selected month
+	selectedMonthDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+	start := selectedMonthDate.AddDate(0, -5, 0)
+	end := selectedMonthDate.AddDate(0, 1, 0)
+
+	incomes, err := h.service.GetMonthlyIncomeTotals(r.Context(), start, end)
+	if err != nil {
+		log.Println(err)
+		if errors.Is(err, auth.ErrUnauthorized) {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	expenses, err := h.service.GetMonthlyExpenseTotals(r.Context(), start, end)
+	if err != nil {
+		log.Println(err)
+		if errors.Is(err, auth.ErrUnauthorized) {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if incomes == nil {
+		incomes = []repo.GetMonthlyIncomeTotalsRow{}
+	}
+	if expenses == nil {
+		expenses = []repo.GetMonthlyExpenseTotalsRow{}
+	}
+
+	json.Write(w, http.StatusOK, map[string]interface{}{
+		"incomes":  incomes,
+		"expenses": expenses,
+	})
+}
