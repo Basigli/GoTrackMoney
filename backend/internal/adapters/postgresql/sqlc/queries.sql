@@ -225,3 +225,23 @@ SELECT COUNT(*) FROM users;
 
 -- name: UpdateUserRole :exec
 UPDATE users SET is_admin = $2 WHERE id = $1;
+
+-- name: FilterExpensesByDate :many
+SELECT
+  id, name, description, amount, user_id, created_at, category_id, spent_on, is_periodic
+FROM
+  expenses
+WHERE
+  user_id = $1 AND spent_on >= $2 AND spent_on < $3
+ORDER BY
+  spent_on DESC, id DESC;
+
+-- name: FilterIncomesByDate :many
+SELECT
+  id, name, description, amount, user_id, created_at, category_id, received_on
+FROM
+  incomes
+WHERE
+  user_id = $1 AND received_on >= $2 AND received_on < $3
+ORDER BY
+  received_on DESC, id DESC;

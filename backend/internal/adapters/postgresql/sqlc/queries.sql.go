@@ -268,6 +268,99 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 	return err
 }
 
+const filterExpensesByDate = `-- name: FilterExpensesByDate :many
+SELECT
+  id, name, description, amount, user_id, created_at, category_id, spent_on, is_periodic
+FROM
+  expenses
+WHERE
+  user_id = $1 AND spent_on >= $2 AND spent_on < $3
+ORDER BY
+  spent_on DESC, id DESC
+`
+
+type FilterExpensesByDateParams struct {
+	UserID    int64              `json:"user_id"`
+	SpentOn   pgtype.Timestamptz `json:"spent_on"`
+	SpentOn_2 pgtype.Timestamptz `json:"spent_on_2"`
+}
+
+func (q *Queries) FilterExpensesByDate(ctx context.Context, arg FilterExpensesByDateParams) ([]Expense, error) {
+	rows, err := q.db.Query(ctx, filterExpensesByDate, arg.UserID, arg.SpentOn, arg.SpentOn_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Expense
+	for rows.Next() {
+		var i Expense
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Amount,
+			&i.UserID,
+			&i.CreatedAt,
+			&i.CategoryID,
+			&i.SpentOn,
+			&i.IsPeriodic,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const filterIncomesByDate = `-- name: FilterIncomesByDate :many
+SELECT
+  id, name, description, amount, user_id, created_at, category_id, received_on
+FROM
+  incomes
+WHERE
+  user_id = $1 AND received_on >= $2 AND received_on < $3
+ORDER BY
+  received_on DESC, id DESC
+`
+
+type FilterIncomesByDateParams struct {
+	UserID       int64              `json:"user_id"`
+	ReceivedOn   pgtype.Timestamptz `json:"received_on"`
+	ReceivedOn_2 pgtype.Timestamptz `json:"received_on_2"`
+}
+
+func (q *Queries) FilterIncomesByDate(ctx context.Context, arg FilterIncomesByDateParams) ([]Income, error) {
+	rows, err := q.db.Query(ctx, filterIncomesByDate, arg.UserID, arg.ReceivedOn, arg.ReceivedOn_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Income
+	for rows.Next() {
+		var i Income
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Amount,
+			&i.UserID,
+			&i.CreatedAt,
+			&i.CategoryID,
+			&i.ReceivedOn,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findCategoryByID = `-- name: FindCategoryByID :one
 SELECT
   id, name, creator_id, emoji, type, color

@@ -49,5 +49,27 @@ export function useData(token: string | null) {
     if (res.ok) setPeriodicExpenses(await res.json() || []);
   }, [token]);
 
-  return { categories, incomes, expenses, periodicExpenses, fetchCategories, fetchIncomes, fetchExpenses, fetchPeriodicExpenses };
+  const fetchIncomesByDate = useCallback(async (year: number, month: number) => {
+    if (!token) return;
+    const res = await fetch(`${API_BASE}/incomes/filter?year=${year}&month=${month}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) {
+      const data = await res.json() || [];
+      setIncomes(data);
+      return data;
+    }
+    return [];
+  }, [token]);
+
+  const fetchExpensesByDate = useCallback(async (year: number, month: number) => {
+    if (!token) return;
+    const res = await fetch(`${API_BASE}/expenses/filter?year=${year}&month=${month}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) {
+      const data = await res.json() || [];
+      setExpenses(data);
+      return data;
+    }
+    return [];
+  }, [token]);
+
+  return { categories, incomes, expenses, periodicExpenses, fetchCategories, fetchIncomes, fetchExpenses, fetchPeriodicExpenses, fetchIncomesByDate, fetchExpensesByDate };
 }

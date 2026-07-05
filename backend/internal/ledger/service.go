@@ -41,6 +41,9 @@ type Service interface {
 	UpdateIncome(ctx context.Context, params updateIncomeParams) (repo.Income, error)
 	DeleteIncome(ctx context.Context, id int64) error
 
+	FilterExpenses(ctx context.Context, startDate, endDate time.Time) ([]repo.Expense, error)
+	FilterIncomes(ctx context.Context, startDate, endDate time.Time) ([]repo.Income, error)
+
 	ListPeriodicExpenses(ctx context.Context) ([]repo.PeriodicExpense, error)
 	CreatePeriodicExpense(ctx context.Context, params createPeriodicExpenseParams) (repo.PeriodicExpense, error)
 	UpdatePeriodicExpense(ctx context.Context, params updatePeriodicExpenseParams) (repo.PeriodicExpense, error)
@@ -330,6 +333,31 @@ func (s *svc) ListIncomes(ctx context.Context, limit, offset int32) ([]repo.Inco
 		UserID: user.ID,
 		Limit:  limit,
 		Offset: offset,
+	})
+}
+
+func (s *svc) FilterExpenses(ctx context.Context, startDate, endDate time.Time) ([]repo.Expense, error) {
+	user, err := currentUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	s.checkAndGeneratePeriodicExpenses(ctx, user.ID)
+	return s.repo.FilterExpensesByDate(ctx, repo.FilterExpensesByDateParams{
+		UserID:  user.ID,
+		SpentOn:   timestamptzFromTime(&startDate),
+		SpentOn_2: timestamptzFromTime(&endDate),
+	})
+}
+
+func (s *svc) FilterIncomes(ctx context.Context, startDate, endDate time.Time) ([]repo.Income, error) {
+	user, err := currentUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.FilterIncomesByDate(ctx, repo.FilterIncomesByDateParams{
+		UserID:       user.ID,
+		ReceivedOn:   timestamptzFromTime(&startDate),
+		ReceivedOn_2: timestamptzFromTime(&endDate),
 	})
 }
 

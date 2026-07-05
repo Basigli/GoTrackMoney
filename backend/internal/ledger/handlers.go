@@ -578,3 +578,78 @@ func (h *handler) AdminDeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 	json.Write(w, http.StatusOK, map[string]string{"status": "ok"})
 }
+
+func parseDateFilter(r *http.Request) (time.Time, time.Time, error) {
+	yearStr := r.URL.Query().Get("year")
+	monthStr := r.URL.Query().Get("month")
+
+	if yearStr == "" {
+		return time.Time{}, time.Time{}, errors.New("year is required")
+	}
+
+	year, err := strconv.Atoi(yearStr)
+	if err != nil {
+		return time.Time{}, time.Time{}, errors.New("invalid year")
+	}
+
+	var start, end time.Time
+	if monthStr != "" && monthStr != "0" {
+		month, err := strconv.Atoi(monthStr)
+		if err != nil {
+			return time.Time{}, time.Time{}, errors.New("invalid month")
+		}
+		start = time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+		end = start.AddDate(0, 1, 0)
+	} else {
+		start = time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
+		end = start.AddDate(1, 0, 0)
+	}
+
+	return start, end, nil
+}
+
+func (h *handler) FilterExpenses(w http.ResponseWriter, r *http.Request) {
+	start, end, err := parseDateFilter(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	expenses, err := h.service.FilterExpenses(r.Context(), start, end)
+	if err != nil {
+		log.Println(err)
+		if errors.Is(err, auth.ErrUnauthorized) {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if expenses == nil {
+		expenses = []repo.Expense{}
+	}
+	json.Write(w, http.StatusOK, expenses)
+}
+
+func (h *handler) FilterIncomes(w http.ResponseWriter, r *http.Request) {
+	start, end, err := parseDateFilter(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	incomes, err := h.service.FilterIncomes(r.Context(), start, end)
+	if err != nil {
+		log.Println(err)
+		if errors.Is(err, auth.ErrUnauthorized) {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if incomes == nil {
+		incomes = []repo.Income{}
+	}
+	json.Write(w, http.StatusOK, incomes)
+}

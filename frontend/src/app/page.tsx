@@ -24,7 +24,7 @@ export default function Home() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const { categories, fetchCategories, incomes, fetchIncomes, expenses, fetchExpenses } = useData(token);
+  const { categories, fetchCategories, incomes, fetchIncomes, expenses, fetchExpenses, fetchIncomesByDate, fetchExpensesByDate } = useData(token);
 
   const [activeTab, setActiveTab] = useState<'uscite' | 'entrate'>('uscite');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -65,10 +65,17 @@ export default function Home() {
   useEffect(() => {
     if (token) {
       fetchCategories();
-      fetchIncomes();
-      fetchExpenses();
     }
-  }, [token, fetchCategories, fetchIncomes, fetchExpenses]);
+  }, [token, fetchCategories]);
+
+  useEffect(() => {
+    if (token) {
+      const year = filterDate.getFullYear();
+      const month = filterMode === 'month' ? filterDate.getMonth() + 1 : 0;
+      fetchIncomesByDate(year, month);
+      fetchExpensesByDate(year, month);
+    }
+  }, [token, filterDate, filterMode, fetchIncomesByDate, fetchExpensesByDate]);
 
   const fetchMe = async (authToken: string) => {
     try {
@@ -185,8 +192,15 @@ export default function Home() {
         setAddAmount(''); setAddCat(''); setAddDesc('');
         setEditingItem(null);
         setShowAddModal(false);
-        if (addType === 'entrata') fetchIncomes();
-        else fetchExpenses();
+        if (addType === 'entrata') {
+          const year = filterDate.getFullYear();
+          const month = filterMode === 'month' ? filterDate.getMonth() + 1 : 0;
+          fetchIncomesByDate(year, month);
+        } else {
+          const year = filterDate.getFullYear();
+          const month = filterMode === 'month' ? filterDate.getMonth() + 1 : 0;
+          fetchExpensesByDate(year, month);
+        }
         toast.success(editingItem ? t('record.success_edit') : (addType === 'entrata' ? t('record.success_income') : t('record.success_expense')), {
           style: { borderRadius: '12px', background: '#333', color: '#fff' }
         });
@@ -215,8 +229,15 @@ export default function Home() {
       if (res.ok) {
         setEditingItem(null);
         setShowAddModal(false);
-        if (addType === 'entrata') fetchIncomes();
-        else fetchExpenses();
+        if (addType === 'entrata') {
+          const year = filterDate.getFullYear();
+          const month = filterMode === 'month' ? filterDate.getMonth() + 1 : 0;
+          fetchIncomesByDate(year, month);
+        } else {
+          const year = filterDate.getFullYear();
+          const month = filterMode === 'month' ? filterDate.getMonth() + 1 : 0;
+          fetchExpensesByDate(year, month);
+        }
         toast.success(t('record.success_edit') || 'Eliminato con successo / Successfully deleted', {
           style: { borderRadius: '12px', background: '#333', color: '#fff' }
         });

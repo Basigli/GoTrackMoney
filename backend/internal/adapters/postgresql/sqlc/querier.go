@@ -19,6 +19,8 @@ type Querier interface {
 	DeleteIncome(ctx context.Context, arg DeleteIncomeParams) error
 	DeletePeriodicExpense(ctx context.Context, arg DeletePeriodicExpenseParams) error
 	DeleteUser(ctx context.Context, id int64) error
+	FilterExpensesByDate(ctx context.Context, arg FilterExpensesByDateParams) ([]Expense, error)
+	FilterIncomesByDate(ctx context.Context, arg FilterIncomesByDateParams) ([]Income, error)
 	FindCategoryByID(ctx context.Context, id int64) (Category, error)
 	FindCategoryByIDAndCreatorID(ctx context.Context, arg FindCategoryByIDAndCreatorIDParams) (Category, error)
 	FindDuePeriodicExpensesByUserID(ctx context.Context, userID int64) ([]PeriodicExpense, error)
