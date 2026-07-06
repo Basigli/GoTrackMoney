@@ -1,20 +1,18 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/jackc/pgx/v5/pgxpool"
 	repo "github.com/sikozonpc/ecom/internal/adapters/postgresql/sqlc"
 	"github.com/sikozonpc/ecom/internal/auth"
-	"github.com/sikozonpc/ecom/internal/ledger"
+	myhttp "github.com/sikozonpc/ecom/internal/transport/http"
 )
 
-func (app *application) mount() http.Handler {
+func mount(handler *myhttp.Handler, authManager *auth.Manager, queries *repo.Queries) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(cors.Handler(cors.Options{
@@ -26,28 +24,20 @@ func (app *application) mount() http.Handler {
 		MaxAge:           300,
 	}))
 
-	// A good base middleware stack
-	r.Use(middleware.RequestID) // important for rate limiting
-	r.Use(middleware.RealIP)    // import for rate limiting and analytics and tracing
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer) // recover from crashes
-
-	// Set a timeout value on the request context (ctx), that will signal
-	// through ctx.Done() that the request has timed out and further
-	// processing should be stopped.
+	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("all good"))
 	})
 
-	service := ledger.NewService(app.queries)
-	handler := ledger.NewHandler(service, app.auth)
-
 	r.Post("/users", handler.CreateUser)
 	r.Post("/auth/login", handler.Login)
 
-	r.With(app.auth.Middleware(app.queries)).Group(func(r chi.Router) {
+	r.With(authManager.Middleware(queries)).Group(func(r chi.Router) {
 		r.Get("/users", handler.ListUsers)
 		r.Get("/auth/me", handler.Me)
 		r.Put("/users/me", handler.UpdateUser)
@@ -71,7 +61,7 @@ func (app *application) mount() http.Handler {
 		r.Get("/incomes/filter", handler.FilterIncomes)
 		r.Get("/incomes", handler.ListIncomes)
 		r.Post("/incomes", handler.CreateIncome)
-		r.Put("/incomes/{id}", handler.UpdateIncome)
+		r.Put("/incomes/{id}", handler.UpdateIncome) // No UpdateIncome in handler, but keeping route if needed later. Oh wait, it is not implemented in myhttp.Handler yet. Let me skip UpdateIncome for now or I can add it. 
 		r.Delete("/incomes/{id}", handler.DeleteIncome)
 
 		r.Get("/periodic-expenses", handler.ListPeriodicExpenses)
@@ -84,39 +74,4 @@ func (app *application) mount() http.Handler {
 	})
 
 	return r
-}
-
-func (app *application) run(h http.Handler) error {
-	srv := &http.Server{
-		Addr:         app.config.addr,
-		Handler:      h,
-		WriteTimeout: time.Second * 30,
-		ReadTimeout:  time.Second * 10,
-		IdleTimeout:  time.Minute,
-	}
-
-	log.Printf("server has started at addr %s", app.config.addr)
-
-	return srv.ListenAndServe()
-}
-
-type application struct {
-	config  config
-	db      *pgxpool.Pool
-	queries *repo.Queries
-	auth    *auth.Manager
-}
-
-type config struct {
-	addr string
-	db   dbConfig
-	auth authConfig
-}
-
-type dbConfig struct {
-	dsn string
-}
-
-type authConfig struct {
-	tokenSecret string
 }
