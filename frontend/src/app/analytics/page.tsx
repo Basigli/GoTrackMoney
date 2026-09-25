@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState, forwardRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useData } from '@/hooks/useData';
+import type { Category, Income, Expense } from '@/hooks/useData';
+import { API_BASE } from '@/utils/api';
+import toast from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
 import { HeaderDateInput } from '@/components/DateInputs';
 import { useLanguage } from '@/i18n/LanguageContext';
@@ -15,53 +17,81 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as BarTooltip, Legend
 } from 'recharts';
 
+interface CategoryTotal { category_id: number; total_amount: number }
+interface MonthlyTotal { year: number; month: number; total_amount: number }
+interface MonthlyTotals { incomes: MonthlyTotal[]; expenses: MonthlyTotal[] }
+
+async function fetchJSON<T>(path: string, token: string, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${token}` }, signal,
+  });
+  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+  return response.json();
+}
+
+// Quote all fields and prevent text from being interpreted as spreadsheet formulas.
+function csvCell(value: string | number): string {
+  const text = String(value ?? '');
+  const safe = typeof value === 'string' && /^[\s]*[=+@-]/.test(text) ? `'${text}` : text;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
+
 export default function AnalyticsPage() {
   const { token, user, loading, logout } = useAuth();
-  const { categories, fetchCategories, fetchIncomesByDate, fetchExpensesByDate } = useData(token);
+  const [categories, setCategories] = useState<Category[]>([]);
   const { t, language } = useLanguage();
   const dateLocale = language === 'it' ? it : enUS;
   const [filterDate, setFilterDate] = useState<Date>(new Date());
-  
-  const [rawPieData, setRawPieData] = useState<any[]>([]);
-  const [rawBarData, setRawBarData] = useState<any>({ incomes: [], expenses: [] });
+
+  const [snapshot, setSnapshot] = useState<{
+    key: string; categories: CategoryTotal[]; totals: MonthlyTotals;
+  } | null>(null);
+  const [failedKey, setFailedKey] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
+  const monthKey = format(filterDate, 'yyyy-MM');
+  const requestKey = `${token}:${monthKey}:${retry}`;
 
   useEffect(() => {
-    if (token) {
-      fetchCategories();
-    }
-  }, [token, fetchCategories]);
+    if (!token) return;
+    const controller = new AbortController();
+    const [year, month] = monthKey.split('-');
+    const query = `?year=${year}&month=${month}`;
+    Promise.all([
+      fetchJSON<Category[]>('/categories', token, controller.signal),
+      fetchJSON<CategoryTotal[]>(`/analytics/expenses-by-category${query}`, token, controller.signal),
+      fetchJSON<MonthlyTotals>(`/analytics/income-vs-expense${query}`, token, controller.signal),
+    ]).then(([categoryList, pie, totals]) => {
+      if (controller.signal.aborted) return;
+      setCategories(categoryList || []);
+      setSnapshot({ key: requestKey, categories: pie || [], totals: {
+        incomes: totals.incomes || [], expenses: totals.expenses || [],
+      } });
+    }).catch(() => {
+      if (!controller.signal.aborted) setFailedKey(requestKey);
+    });
+    return () => controller.abort();
+  }, [token, monthKey, requestKey]);
 
-  useEffect(() => {
-    if (token) {
-      const month = filterDate.getMonth() + 1;
-      const year = filterDate.getFullYear();
-      
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/analytics/expenses-by-category?year=${year}&month=${month}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      .then(res => res.json())
-      .then(data => setRawPieData(data || []));
-
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/analytics/income-vs-expense?year=${year}&month=${month}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      .then(res => res.json())
-      .then(data => setRawBarData(data || { incomes: [], expenses: [] }));
-    }
-  }, [token, filterDate]);
+  const hasError = failedKey === requestKey;
+  const isReady = snapshot?.key === requestKey;
+  const rawPieData = isReady ? snapshot.categories : [];
+  const rawBarData = isReady ? snapshot.totals : { incomes: [], expenses: [] };
+  const money = (value: number) => new Intl.NumberFormat(language === 'it' ? 'it-IT' : 'en-IE', {
+    style: 'currency', currency: 'EUR',
+  }).format(value);
 
   if (loading || !user) return null;
 
   const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#eab308', '#ec4899', '#f97316', '#14b8a6', '#f43f5e', '#84cc16'];
   const getStableColor = (id: number) => COLORS[id % COLORS.length];
 
-  const pieData = rawPieData.map((d: any) => {
+  const pieData = rawPieData.map((d) => {
     const cat = categories.find(c => c.id === d.category_id);
     const name = cat ? `${cat.emoji} ${cat.name}` : t('dashboard.unknown');
     const color = cat?.color || getStableColor(d.category_id);
-    return { name, value: d.total_amount, color };
-  }).sort((a: any, b: any) => b.value - a.value);
+    return { id: d.category_id, name, value: d.total_amount, color };
+  }).sort((a, b) => b.value - a.value);
 
   const last6Months = Array.from({ length: 6 }).map((_, i) => {
     const d = subMonths(filterDate, i);
@@ -69,12 +99,12 @@ export default function AnalyticsPage() {
   }).reverse();
 
   const barData = last6Months.map(m => {
-    const inc = rawBarData.incomes?.find((i: any) => i.year === m.year && i.month === m.month)?.total_amount || 0;
-    const exp = rawBarData.expenses?.find((e: any) => e.year === m.year && e.month === m.month)?.total_amount || 0;
-    return { 
-      name: format(m.date, 'MMM', { locale: dateLocale }), 
-      [t('dashboard.incomes')]: inc, 
-      [t('dashboard.expenses')]: exp 
+    const inc = rawBarData.incomes?.find((i) => i.year === m.year && i.month === m.month)?.total_amount || 0;
+    const exp = rawBarData.expenses?.find((e) => e.year === m.year && e.month === m.month)?.total_amount || 0;
+    return {
+      name: format(m.date, 'MMM yy', { locale: dateLocale }),
+      income: inc,
+      expense: exp
     };
   });
 
@@ -84,76 +114,95 @@ export default function AnalyticsPage() {
     try {
       const year = filterDate.getFullYear();
       const month = filterDate.getMonth() + 1;
-      
-      const monthIncomes = await fetchIncomesByDate(year, month);
-      const monthExpenses = await fetchExpensesByDate(year, month);
 
-      const rows = [
-        ['Tipo/Type', 'Data/Date', 'Categoria/Category', 'Importo/Amount', 'Descrizione/Description']
+      const query = `?year=${year}&month=${month}`;
+      const [monthIncomes, monthExpenses] = await Promise.all([
+        fetchJSON<Income[]>(`/incomes/filter${query}`, token),
+        fetchJSON<Expense[]>(`/expenses/filter${query}`, token),
+      ]);
+      const rows: (string | number)[][] = [
+        [t('record.type'), t('record.date'), t('record.category'), t('record.amount'), t('record.description')],
       ];
-
       const combined = [
-        ...monthIncomes.map((i: any) => ({ type: t('record.income'), date: new Date(i.received_on), item: i })),
-        ...monthExpenses.map((e: any) => ({ type: t('record.expense'), date: new Date(e.spent_on), item: e }))
-      ].sort((a, b) => b.date.getTime() - a.date.getTime());
-
+        ...(monthIncomes || []).map(i => ({ type: t('record.income'), date: i.received_on, item: i })),
+        ...(monthExpenses || []).map(e => ({ type: t('record.expense'), date: e.spent_on, item: e })),
+      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       for (const row of combined) {
-        const cat = categories.find(c => c.id === row.item.category_id);
-        const catName = cat ? cat.name : t('dashboard.unknown');
         rows.push([
-          row.type,
-          format(row.date, 'yyyy-MM-dd HH:mm'),
-          `"${catName.replace(/"/g, '""')}"`,
-          row.item.amount.toString(),
-          `"${row.item.description.replace(/"/g, '""')}"`
+          row.type, row.date,
+          categories.find(c => c.id === row.item.category_id)?.name || t('dashboard.unknown'),
+          row.item.amount, row.item.description || '',
         ]);
       }
-
-      const csvContent = rows.map(e => e.join(',')).join('\n');
+      const csvContent = '\uFEFF' + rows.map(row => row.map(csvCell).join(',')).join('\r\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `GoTrackMoney_Export_${format(new Date(), 'yyyyMMdd')}.csv`);
+      link.setAttribute('download', `GoTrackMoney_Export_${format(filterDate, 'yyyy-MM')}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } catch (e) {
-      console.error(e);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      toast.error(t('analytics.export_error'));
     } finally {
       setIsExporting(false);
     }
   };
 
+  const selected = barData[barData.length - 1];
+  const balance = selected.income - selected.expense;
+  const savingsRate = selected.income > 0 ? balance / selected.income : null;
+  const expenseTotal = pieData.reduce((sum, item) => sum + item.value, 0);
+
   return (
     <div className="app-container">
       <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
-      
+
       <div style={{ padding: '24px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
           <h1 style={{ fontSize: '24px', fontWeight: 700 }}>{t('analytics.title')}</h1>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <DatePicker
               selected={filterDate}
               onChange={(date: Date | null) => date && setFilterDate(date)}
               dateFormat="MMM yyyy"
               showMonthYearPicker
               customInput={
-                <HeaderDateInput 
-                  extraText={`${t('dashboard.filter_by')} ${t('dashboard.filter_month').toLowerCase()}`} 
+                <HeaderDateInput
+                  extraText={`${t('dashboard.filter_by')} ${t('dashboard.filter_month').toLowerCase()}`}
                 />
               }
               locale={dateLocale}
               withPortal
             />
-            
-            <button onClick={exportToCSV} className="submit-btn" style={{ margin: 0, padding: '8px 16px', width: 'auto', fontSize: '14px', borderRadius: '12px' }}>
-              {t('analytics.export_csv')}
+
+            <button disabled={isExporting || !isReady} onClick={exportToCSV} className="submit-btn" style={{ margin: 0, padding: '8px 16px', width: 'auto', fontSize: '14px', borderRadius: '12px' }}>
+              {t(isExporting ? 'analytics.exporting' : 'analytics.export_csv')}
             </button>
           </div>
         </div>
 
+        {!isReady && (
+          <div role={hasError ? 'alert' : 'status'} className="analytics-card">
+            {t(hasError ? 'analytics.load_error' : 'analytics.loading')}
+            {hasError && <button className="submit-btn" onClick={() => setRetry(value => value + 1)}>{t('analytics.retry')}</button>}
+          </div>
+        )}
+        {isReady && <>
+        <div className="analytics-summary">
+          {[
+            [t('dashboard.incomes'), money(selected.income)],
+            [t('dashboard.expenses'), money(selected.expense)],
+            [t('analytics.net_balance'), money(balance)],
+            [t('analytics.savings_rate'), savingsRate === null ? '—' : new Intl.NumberFormat(language, { style: 'percent', maximumFractionDigits: 1 }).format(savingsRate)],
+          ].map(([label, value]) => (
+            <div className="analytics-card" key={label}><div>{label}</div><strong>{value}</strong></div>
+          ))}
+        </div>
+        <p className="analytics-note">{format(filterDate, 'MMMM yyyy', { locale: dateLocale })} · {t('analytics.rate_note')}</p>
         <div className="analytics-grid">
           {/* Expenses by Category (Pie Chart) */}
           <div style={{ background: 'var(--surface-color)', padding: '24px', borderRadius: '24px', border: '1px solid var(--border-color)' }}>
@@ -169,8 +218,8 @@ export default function AnalyticsPage() {
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <PieTooltip 
-                      formatter={(value: any) => `${Number(value).toFixed(2)} €`}
+                    <PieTooltip
+                      formatter={value => money(Number(value))}
                       contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
                     />
                   </PieChart>
@@ -181,6 +230,19 @@ export default function AnalyticsPage() {
                 {t('analytics.no_data')}
               </div>
             )}
+            {pieData.length > 0 && (
+              <table className="analytics-table">
+                <caption>{t('analytics.breakdown')}</caption>
+                <thead><tr><th>{t('record.category')}</th><th>{t('record.amount')}</th><th>%</th></tr></thead>
+                <tbody>{pieData.map(item => (
+                  <tr key={item.id}>
+                    <th scope="row"><span aria-hidden="true" style={{ color: item.color }}>● </span>{item.name}</th>
+                    <td>{money(item.value)}</td>
+                    <td>{expenseTotal > 0 ? new Intl.NumberFormat(language, { style: 'percent', maximumFractionDigits: 1 }).format(item.value / expenseTotal) : '—'}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            )}
           </div>
 
           {/* Income vs Expense (Bar Chart) */}
@@ -188,25 +250,26 @@ export default function AnalyticsPage() {
             <h3 style={{ fontSize: '18px', marginBottom: '24px', color: 'var(--text-color)' }}>
               {t('analytics.income_vs_expense')}
             </h3>
-            <div style={{ height: 300, minWidth: '500px' }}>
+            <div style={{ height: 300, width: '100%' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={barData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} dy={10} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} tickFormatter={(value) => `${value}€`} />
-                  <BarTooltip 
+                  <BarTooltip
                     cursor={{ fill: 'var(--bg-color)' }}
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                    formatter={(value: any) => `${Number(value).toFixed(2)} €`}
+                    formatter={value => money(Number(value))}
                   />
                   <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                  <Bar dataKey={t('dashboard.incomes')} fill="var(--success-color)" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                  <Bar dataKey={t('dashboard.expenses')} fill="var(--danger-color)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  <Bar dataKey="income" name={t('dashboard.incomes')} fill="var(--success-color)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  <Bar dataKey="expense" name={t('dashboard.expenses')} fill="var(--danger-color)" radius={[4, 4, 0, 0]} maxBarSize={40} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
         </div>
+        </>}
       </div>
     </div>
   );

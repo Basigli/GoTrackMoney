@@ -68,6 +68,15 @@ export const translations = {
 
     // Analytics Page
     'analytics.title': 'Analisi',
+    'analytics.loading': 'Caricamento delle analisi…',
+    'analytics.load_error': 'Impossibile caricare le analisi. Riprova.',
+    'analytics.retry': 'Riprova',
+    'analytics.exporting': 'Esportazione…',
+    'analytics.export_error': 'Esportazione non riuscita. Riprova.',
+    'analytics.net_balance': 'Saldo del mese',
+    'analytics.savings_rate': 'Tasso di risparmio',
+    'analytics.rate_note': 'Risparmio = saldo / entrate; non disponibile senza entrate. Il mese corrente può essere incompleto.',
+    'analytics.breakdown': 'Dettaglio delle spese per categoria',
     'analytics.expenses_by_category': 'Spese per Categoria',
     'analytics.income_vs_expense': 'Entrate vs Uscite (Ultimi 6 Mesi)',
     'analytics.no_data': 'Dati insufficienti',
@@ -185,6 +194,15 @@ export const translations = {
 
     // Analytics Page
     'analytics.title': 'Analytics',
+    'analytics.loading': 'Loading analytics…',
+    'analytics.load_error': 'Unable to load analytics. Please try again.',
+    'analytics.retry': 'Retry',
+    'analytics.exporting': 'Exporting…',
+    'analytics.export_error': 'Export failed. Please try again.',
+    'analytics.net_balance': 'Monthly net balance',
+    'analytics.savings_rate': 'Savings rate',
+    'analytics.rate_note': 'Savings = net balance / income; unavailable without income. The current month may be incomplete.',
+    'analytics.breakdown': 'Spending breakdown by category',
     'analytics.expenses_by_category': 'Expenses by Category',
     'analytics.income_vs_expense': 'Income vs Expense (Last 6 Months)',
     'analytics.no_data': 'Not enough data',

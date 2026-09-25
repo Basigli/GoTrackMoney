@@ -162,3 +162,23 @@ func TestAuthMiddlewareProtectsMeEndpoint(t *testing.T) {
 		}
 	})
 }
+
+func (f *fakeService) FilterExpenses(context.Context, time.Time, time.Time) ([]repo.Expense, error) {
+ return nil, nil
+}
+
+func (f *fakeService) FilterIncomes(context.Context, time.Time, time.Time) ([]repo.Income, error) {
+ return nil, nil
+}
+
+func (f *fakeService) GetExpensesByCategory(context.Context, time.Time, time.Time) ([]repo.GetExpensesByCategoryRow, error) {
+ return nil, nil
+}
+
+func (f *fakeService) GetMonthlyExpenseTotals(context.Context, time.Time, time.Time) ([]repo.GetMonthlyExpenseTotalsRow, error) {
+ return nil, nil
+}
+
+func (f *fakeService) GetMonthlyIncomeTotals(context.Context, time.Time, time.Time) ([]repo.GetMonthlyIncomeTotalsRow, error) {
+ return nil, nil
+}

@@ -75,5 +75,10 @@ To see the app in action without manually entering data, you can use the provide
 ```bash
 # Make sure the backend and database are running!
 python3 tests/generate_data.py
+
+# Optional: a different backend, shorter history, or reproducible amounts
+python3 tests/generate_data.py --api-url http://localhost:8098 --days 90 --seed 42
 ```
+The script defaults to `http://localhost:8098` (override with `--api-url` or `API_BASE_URL`). Each run creates a new account and uses UTC timestamps.
+
 The script will output the randomly generated username and password in the terminal. Log in with those credentials to explore the populated analytics and charts!

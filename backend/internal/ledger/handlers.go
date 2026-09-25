@@ -588,14 +588,14 @@ func parseDateFilter(r *http.Request) (time.Time, time.Time, error) {
 	}
 
 	year, err := strconv.Atoi(yearStr)
-	if err != nil {
+	if err != nil || year < 1 || year > 9999 {
 		return time.Time{}, time.Time{}, errors.New("invalid year")
 	}
 
 	var start, end time.Time
 	if monthStr != "" && monthStr != "0" {
 		month, err := strconv.Atoi(monthStr)
-		if err != nil {
+		if err != nil || month < 1 || month > 12 {
 			return time.Time{}, time.Time{}, errors.New("invalid month")
 		}
 		start = time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
@@ -687,13 +687,13 @@ func (h *handler) AnalyticsIncomeVsExpense(w http.ResponseWriter, r *http.Reques
 	}
 
 	year, err := strconv.Atoi(yearStr)
-	if err != nil {
+	if err != nil || year < 1 || year > 9999 {
 		http.Error(w, "invalid year", http.StatusBadRequest)
 		return
 	}
 
 	month, err := strconv.Atoi(monthStr)
-	if err != nil {
+	if err != nil || month < 1 || month > 12 {
 		http.Error(w, "invalid month", http.StatusBadRequest)
 		return
 	}

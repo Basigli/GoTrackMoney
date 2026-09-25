@@ -707,3 +707,15 @@ input[type="datetime-local"]::-webkit-datetime-edit {
   padding: 0;
 }
 
+
+/* Analytics summaries and an accessible alternative to the category chart. */
+.analytics-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; }
+.analytics-card { padding: 20px; border: 1px solid var(--border-color); border-radius: 20px; background: var(--surface-color); }
+.analytics-card strong { display: block; font-size: 24px; margin-top: 8px; overflow-wrap: anywhere; }
+.analytics-note { color: var(--text-muted); font-size: 13px; margin: 16px 0 24px; }
+.analytics-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.analytics-table caption { text-align: left; font-weight: 600; padding: 12px 0; }
+.analytics-table th, .analytics-table td { padding: 10px 4px; border-bottom: 1px solid var(--border-color); text-align: right; }
+.analytics-table th:first-child { text-align: left; overflow-wrap: anywhere; }
+.analytics-table tbody th { font-weight: 400; }
+.analytics-grid > div { min-width: 0; }

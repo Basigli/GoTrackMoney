@@ -424,7 +424,7 @@ export default function Home() {
                   <label className="input-label">{t('record.category')}</label>
                   <select className="input-field" value={addCat} onChange={e => setAddCat(e.target.value)} required>
                     <option value="" disabled>{t('record.select_category')}</option>
-                    {categories.filter(c => c.type === (addType === 'entrata' ? 'income' : 'expense')).map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
+                    {categories.filter(c => c.type === (addType === 'entrata' ? 'income' : 'expense')).sort((a, b) => a.name.localeCompare(b.name, language, { sensitivity: 'base' })).map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
                   </select>
                 </div>
 
