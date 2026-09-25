@@ -37,6 +37,8 @@ type Querier interface {
 	ListIncomesByUserID(ctx context.Context, arg ListIncomesByUserIDParams) ([]Income, error)
 	ListPeriodicExpensesByUserID(ctx context.Context, userID int64) ([]PeriodicExpense, error)
 	ListUsers(ctx context.Context) ([]User, error)
+	LockPeriodicExpense(ctx context.Context, arg LockPeriodicExpenseParams) (PeriodicExpense, error)
+	SearchTransactions(ctx context.Context, arg SearchTransactionsParams) ([]byte, error)
 	UpdateCategory(ctx context.Context, arg UpdateCategoryParams) (Category, error)
 	UpdateExpense(ctx context.Context, arg UpdateExpenseParams) (Expense, error)
 	UpdateIncome(ctx context.Context, arg UpdateIncomeParams) (Income, error)

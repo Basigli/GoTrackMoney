@@ -41,7 +41,7 @@ func (app *application) mount() http.Handler {
 		w.Write([]byte("all good"))
 	})
 
-	service := ledger.NewService(app.queries)
+	service := ledger.NewService(app.queries, app.db)
 	handler := ledger.NewHandler(service, app.auth)
 
 	r.Post("/users", handler.CreateUser)
@@ -57,6 +57,10 @@ func (app *application) mount() http.Handler {
 			r.Put("/admin/users/{id}/reset-password", handler.AdminResetUserPassword)
 			r.Delete("/admin/users/{id}", handler.AdminDeleteUser)
 		})
+
+		r.Get("/transactions/search", handler.SearchTransactions)
+		r.Get("/periodic-expenses/upcoming", handler.UpcomingPayments)
+		r.Post("/periodic-expenses/{id}/{action}", handler.PeriodicAction)
 
 		r.Get("/categories", handler.ListCategories)
 		r.Post("/categories", handler.CreateCategory)

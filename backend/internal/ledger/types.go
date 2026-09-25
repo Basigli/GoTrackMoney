@@ -73,21 +73,25 @@ type createPeriodicExpenseParams struct {
 
 type updatePeriodicExpenseParams struct {
 	ID             int64
-	PeriodInterval int32      `json:"period_interval"`
-	PeriodUnit     string     `json:"period_unit"`
-	NextDueDate    *time.Time `json:"next_due_date,omitempty"`
+	Name           *string    `json:"name"`
+	Description    *string    `json:"description"`
+	Amount         *float64   `json:"amount"`
+	CategoryID     *int64     `json:"category_id"`
+	PeriodInterval *int32     `json:"period_interval"`
+	PeriodUnit     *string    `json:"period_unit"`
+	NextDueDate    *time.Time `json:"next_due_date"`
 }
 
 type periodicExpenseResponse struct {
-	ID                 int64      `json:"id"`
-	Name               string     `json:"name"`
-	Description        string     `json:"description"`
-	Amount             float64    `json:"amount"`
-	CategoryID         int64      `json:"category_id"`
-	PeriodInterval     int32      `json:"period_interval"`
-	PeriodUnit         string     `json:"period_unit"`
-	StartDate          time.Time  `json:"start_date"`
-	LastGeneratedDate  *time.Time `json:"last_generated_date"`
-	NextDueDate        time.Time  `json:"next_due_date"`
-	CreatedAt          time.Time  `json:"created_at"`
+	ID                int64      `json:"id"`
+	Name              string     `json:"name"`
+	Description       string     `json:"description"`
+	Amount            float64    `json:"amount"`
+	CategoryID        int64      `json:"category_id"`
+	PeriodInterval    int32      `json:"period_interval"`
+	PeriodUnit        string     `json:"period_unit"`
+	StartDate         time.Time  `json:"start_date"`
+	LastGeneratedDate *time.Time `json:"last_generated_date"`
+	NextDueDate       time.Time  `json:"next_due_date"`
+	CreatedAt         time.Time  `json:"created_at"`
 }

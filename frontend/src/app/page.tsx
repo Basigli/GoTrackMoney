@@ -1,16 +1,21 @@
 'use client';
 
-import { useState, useEffect, FormEvent, forwardRef } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useData, Income, Expense } from '@/hooks/useData';
 import Navbar from '@/components/Navbar';
-import { HeaderDateInput, ModalDateInput } from '@/components/DateInputs';
+import { HeaderDateInput } from '@/components/DateInputs';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { format } from 'date-fns';
 import { it, enUS } from 'date-fns/locale';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { useLanguage } from '@/i18n/LanguageContext';
 
+import TransactionEditor, { type SavedTransaction } from '@/components/TransactionEditor';
+import SafeDialog from '@/components/SafeDialog';
+import MonthNavigation from '@/components/MonthNavigation';
+import { useSelectedMonth } from '@/hooks/useSelectedMonth';
+import type { Transaction, TransactionType } from '@/utils/transactions';
 import { API_BASE } from '@/utils/api';
 
 export default function Home() {
@@ -24,42 +29,43 @@ export default function Home() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const { categories, fetchCategories, incomes, fetchIncomes, expenses, fetchExpenses, fetchIncomesByDate, fetchExpensesByDate } = useData(token);
+  const { categories, fetchCategories, incomes, expenses, fetchIncomesByDate, fetchExpensesByDate } = useData(token);
 
   const [activeTab, setActiveTab] = useState<'uscite' | 'entrate'>('uscite');
   const [showAddModal, setShowAddModal] = useState(false);
   
   // Filtering state
-  const [filterDate, setFilterDate] = useState<Date>(new Date());
+  const [filterDate, setFilterDate] = useSelectedMonth(user?.id);
   const [filterMode, setFilterMode] = useState<'month' | 'year'>('month');
 
   const { t, language } = useLanguage();
   const dateLocale = language === 'it' ? it : enUS;
 
-  // Add/Edit modal state
-  const [addType, setAddType] = useState<'entrata' | 'spesa'>('spesa');
-  const [addAmount, setAddAmount] = useState('');
-  const [addCat, setAddCat] = useState('');
-  const [addDesc, setAddDesc] = useState('');
-  const [addDate, setAddDate] = useState<Date>(new Date());
-  const [editingItem, setEditingItem] = useState<any>(null);
-
-  // Periodic expenses state
-  const [isPeriodic, setIsPeriodic] = useState(false);
-  const [periodInterval, setPeriodInterval] = useState(1);
-  const [periodUnit, setPeriodUnit] = useState('months');
+  const [editingItem, setEditingItem] = useState<Transaction | null>(null);
+  const [initialEntry, setInitialEntry] = useState<{ type: TransactionType; category?: number; date: Date }>({ type: 'expense', date: new Date() });
+  const [dataErrorKey, setDataErrorKey] = useState('');
+  const [dataReadyKey, setDataReadyKey] = useState('');
+  const periodKey = `${token}:${filterMode}:${filterDate.getFullYear()}:${filterMode === 'month' ? filterDate.getMonth() + 1 : 0}`;
+  const [dataRevision, setDataRevision] = useState(0);
+  const [returnCategory, setReturnCategory] = useState<number | null>(null);
 
   // Category details modal state
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('auth_token');
-    if (savedToken) {
-      setToken(savedToken);
-      fetchMe(savedToken);
-    } else {
-      setLoading(false);
-    }
+    let cancelled = false;
+    Promise.resolve().then(async () => {
+      const savedToken = localStorage.getItem('auth_token');
+      if (!savedToken) { if (!cancelled) setLoading(false); return; }
+      try {
+        const response = await fetch(API_BASE + '/auth/me', { headers: { Authorization: 'Bearer ' + savedToken } });
+        if (!response.ok) throw new Error();
+        const current = await response.json();
+        if (!cancelled) { setUser(current); setToken(savedToken); }
+      } catch { if (!cancelled) localStorage.removeItem('auth_token'); }
+      finally { if (!cancelled) setLoading(false); }
+    });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -72,19 +78,13 @@ export default function Home() {
     if (token) {
       const year = filterDate.getFullYear();
       const month = filterMode === 'month' ? filterDate.getMonth() + 1 : 0;
-      fetchIncomesByDate(year, month);
-      fetchExpensesByDate(year, month);
+      let cancelled = false;
+      Promise.all([fetchIncomesByDate(year, month), fetchExpensesByDate(year, month)])
+        .then(() => { if (!cancelled) setDataReadyKey(periodKey); })
+        .catch(() => { if (!cancelled) setDataErrorKey(periodKey); });
+      return () => { cancelled = true; };
     }
-  }, [token, filterDate, filterMode, fetchIncomesByDate, fetchExpensesByDate]);
-
-  const fetchMe = async (authToken: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${authToken}` } });
-      if (res.ok) setUser(await res.json());
-      else logout();
-    } catch { logout(); }
-    finally { setLoading(false); }
-  };
+  }, [token, filterDate, filterMode, fetchIncomesByDate, fetchExpensesByDate, dataRevision, periodKey]);
 
   const handleAuth = async (e: FormEvent) => {
     e.preventDefault();
@@ -129,140 +129,47 @@ export default function Home() {
     setUser(null);
   };
 
-  const openAddModal = () => {
+  const openAddModal = (category?: number) => {
     setEditingItem(null);
-    setAddAmount(''); setAddCat(''); setAddDesc('');
-    setAddDate(new Date());
-    setIsPeriodic(false);
-    setPeriodInterval(1);
-    setPeriodUnit('months');
+    setReturnCategory(category ?? null);
+    let date = new Date();
+    if (category !== undefined) {
+      const sameYear = filterDate.getFullYear() === date.getFullYear();
+      const sameMonth = sameYear && filterDate.getMonth() === date.getMonth();
+      if (filterMode === 'month' && !sameMonth) date = new Date(filterDate.getFullYear(), filterDate.getMonth(), 1, 12);
+      if (filterMode === 'year' && !sameYear) date = new Date(filterDate.getFullYear(), 0, 1, 12);
+    }
+    setInitialEntry({ type: category !== undefined || activeTab === 'uscite' ? 'expense' : 'income', category, date });
+    setSelectedCategory(null);
     setShowAddModal(true);
   };
-
-  const openEditModal = (item: any) => {
-    setEditingItem(item);
-    setAddType(activeTab === 'uscite' ? 'spesa' : 'entrata');
-    setAddAmount(item.amount.toString());
-    setAddCat(item.category_id.toString());
-    setAddDesc(item.description);
-    setAddDate(new Date(item.spent_on || item.received_on));
+  const openEditModal = (item: Income | Expense) => {
+    setEditingItem({ ...item, type: 'spent_on' in item ? 'expense' : 'income', date: 'spent_on' in item ? item.spent_on : item.received_on });
+    setReturnCategory(item.category_id);
     setShowAddModal(true);
   };
-
-  const handleAddSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!token) return;
-    
-    let endpoint = addType === 'entrata' ? '/incomes' : '/expenses';
-    let method = 'POST';
-    
-    if (editingItem) {
-      endpoint = `${endpoint}/${editingItem.id}`;
-      method = 'PUT';
-    }
-
-    let payload: any = {
-      name: categories.find(c => c.id === parseInt(addCat))?.name || t('record.item'),
-      description: addDesc,
-      amount: parseFloat(addAmount),
-      category_id: parseInt(addCat, 10),
-      [addType === 'entrata' ? 'received_on' : 'spent_on']: addDate.toISOString()
-    };
-
-    if (isPeriodic && addType === 'spesa' && !editingItem) {
-      endpoint = '/periodic-expenses';
-      payload = {
-        name: payload.name,
-        description: payload.description,
-        amount: payload.amount,
-        category_id: payload.category_id,
-        period_interval: parseInt(periodInterval.toString(), 10),
-        period_unit: periodUnit,
-        start_date: addDate.toISOString()
-      };
-    }
-
-    try {
-      const res = await fetch(`${API_BASE}${endpoint}`, {
-        method,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        setAddAmount(''); setAddCat(''); setAddDesc('');
-        setEditingItem(null);
-        setShowAddModal(false);
-        if (addType === 'entrata') {
-          const year = filterDate.getFullYear();
-          const month = filterMode === 'month' ? filterDate.getMonth() + 1 : 0;
-          fetchIncomesByDate(year, month);
-        } else {
-          const year = filterDate.getFullYear();
-          const month = filterMode === 'month' ? filterDate.getMonth() + 1 : 0;
-          fetchExpensesByDate(year, month);
-        }
-        toast.success(editingItem ? t('record.success_edit') : (addType === 'entrata' ? t('record.success_income') : t('record.success_expense')), {
-          style: { borderRadius: '12px', background: '#333', color: '#fff' }
-        });
-      } else {
-        toast.error(editingItem ? t('record.error_save') : t('record.error_save'));
-      }
-    } catch (err) { 
-      console.error(err); 
-      toast.error(t('record.error_conn'));
-    }
-  };
-
-  const handleDeleteRecord = async () => {
-    if (!editingItem || !token) return;
-
-    // Confirm deletion
-    if (!window.confirm('Sei sicuro di voler eliminare questo elemento? / Are you sure you want to delete this item?')) return;
-
-    const endpoint = addType === 'entrata' ? `/incomes/${editingItem.id}` : `/expenses/${editingItem.id}`;
-    
-    try {
-      const res = await fetch(`${API_BASE}${endpoint}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        setEditingItem(null);
-        setShowAddModal(false);
-        if (addType === 'entrata') {
-          const year = filterDate.getFullYear();
-          const month = filterMode === 'month' ? filterDate.getMonth() + 1 : 0;
-          fetchIncomesByDate(year, month);
-        } else {
-          const year = filterDate.getFullYear();
-          const month = filterMode === 'month' ? filterDate.getMonth() + 1 : 0;
-          fetchExpensesByDate(year, month);
-        }
-        toast.success(t('record.success_edit') || 'Eliminato con successo / Successfully deleted', {
-          style: { borderRadius: '12px', background: '#333', color: '#fff' }
-        });
-      } else {
-        toast.error('Errore durante l\'eliminazione / Error deleting item');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error(t('record.error_conn'));
+  const closeEditor = () => { setShowAddModal(false); setSelectedCategory(returnCategory); };
+  const saved = (record: SavedTransaction) => {
+    setShowAddModal(false);
+    setSelectedCategory(null);
+    setDataReadyKey('');
+    const year = filterDate.getFullYear();
+    const month = filterMode === 'month' ? filterDate.getMonth() + 1 : 0;
+    void Promise.all([fetchIncomesByDate(year, month), fetchExpensesByDate(year, month)])
+      .then(() => { setDataReadyKey(periodKey); setSelectedCategory(returnCategory); })
+      .catch(() => { setDataErrorKey(periodKey); toast.error(t('analytics.load_error')); });
+    const date = new Date(record.date);
+    if (!record.deleted && returnCategory !== null && (record.category_id !== returnCategory || date.getUTCFullYear() !== year || (month !== 0 && date.getUTCMonth() + 1 !== month))) {
+      toast(t('form.saved_elsewhere', { category: categories.find(c => c.id === record.category_id)?.name || '', date: format(date, 'd MMM yyyy', { locale: dateLocale }) }));
     }
   };
 
   if (loading) return null;
 
   if (token && user) {
-    const isMatch = (dateString: string) => {
-      const d = new Date(dateString);
-      if (filterMode === 'year') {
-        return d.getFullYear() === filterDate.getFullYear();
-      }
-      return d.getMonth() === filterDate.getMonth() && d.getFullYear() === filterDate.getFullYear();
-    };
-
-    const filteredIncomes = incomes.filter(i => isMatch(i.received_on));
-    const filteredExpenses = expenses.filter(e => isMatch(e.spent_on));
+    const dataReady = dataReadyKey === periodKey;
+    const filteredIncomes = dataReady ? incomes : [];
+    const filteredExpenses = dataReady ? expenses : [];
 
     const totalIncome = filteredIncomes.reduce((sum, i) => sum + i.amount, 0);
     const totalExpense = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
@@ -288,7 +195,7 @@ export default function Home() {
       return category?.emoji || '📝';
     };
 
-    const getCategoryColor = (catId: number, _index: number) => {
+    const getCategoryColor = (catId: number) => {
       const category = categories.find(c => c.id === catId);
       if (category?.color) return category.color;
       const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#eab308', '#ec4899', '#f97316', '#ef4444', '#14b8a6', '#f43f5e', '#84cc16'];
@@ -299,7 +206,7 @@ export default function Home() {
 
     return (
       <div className="app-container">
-        <Toaster position="bottom-center" />
+
         <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
         
         <div className="header-area">
@@ -324,10 +231,14 @@ export default function Home() {
             >
               {filterMode === 'month' ? t('dashboard.filter_year') : t('dashboard.filter_month')}
             </button>
-            <button className="add-btn" onClick={openAddModal}>+</button>
+            <button className="add-btn" aria-label={t("record.new")} onClick={() => openAddModal()}>+</button>
           </div>
         </div>
 
+        <MonthNavigation date={filterDate} onChange={setFilterDate} mode={filterMode} />
+
+        {!dataReady && (dataErrorKey === periodKey ? <p role="alert">{t('analytics.load_error')} <button className="secondary-btn" onClick={() => { setDataErrorKey(''); setDataRevision(n => n+1); }}>{t('analytics.retry')}</button></p> : <p role="status">{t('analytics.loading')}</p>)}
+        {dataReady && <>
         <div className="balance-banner">
           <p className="balance-title">{t('dashboard.total_balance')}</p>
           <h1 className="balance-amount">{balance.toFixed(2)} €</h1>
@@ -355,14 +266,14 @@ export default function Home() {
         </div>
 
         <div className="list-container">
-          {Object.entries(activeGroups).map(([catId, items], index) => {
+          {Object.entries(activeGroups).map(([catId, items]) => {
             const category = categories.find(c => c.id === parseInt(catId));
-            const catTotal = (items as any[]).reduce((sum: number, i: any) => sum + i.amount, 0);
+            const catTotal = items.reduce((sum: number, i: Income | Expense) => sum + i.amount, 0);
             const percentage = activeTotal > 0 ? (catTotal / activeTotal) * 100 : 0;
             const catName = category?.name || t('dashboard.unknown');
             
             return (
-              <div key={catId} className="list-item" onClick={() => setSelectedCategory(parseInt(catId))}>
+              <div key={catId} className="list-item" role="button" tabIndex={0} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedCategory(parseInt(catId)); } }} onClick={() => setSelectedCategory(parseInt(catId))}>
                 <div className="item-icon">{getIconForCategory(parseInt(catId))}</div>
                 <div className="item-content">
                   <div className="item-header">
@@ -371,7 +282,7 @@ export default function Home() {
                   </div>
                   <div className="item-progress-container">
                     <div className="progress-bar-bg">
-                      <div className="progress-bar-fill" style={{ width: `${percentage}%`, backgroundColor: getCategoryColor(parseInt(catId), index) }}></div>
+                      <div className="progress-bar-fill" style={{ width: `${percentage}%`, backgroundColor: getCategoryColor(parseInt(catId)) }}></div>
                     </div>
                     <div className="progress-text">{percentage.toFixed(2)} {t('dashboard.percentage_total')}</div>
                   </div>
@@ -381,101 +292,19 @@ export default function Home() {
           })}
         </div>
 
+        </>}
         {/* Add Income/Expense Modal */}
-        {showAddModal && (
-          <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
-              <button className="modal-close" onClick={() => setShowAddModal(false)}>&times;</button>
-              
-              <div className="radio-group">
-                <label className="radio-label">
-                  <input type="radio" name="type" checked={addType === 'entrata'} onChange={() => setAddType('entrata')} />
-                  {t('record.income')}
-                </label>
-                <label className="radio-label">
-                  <input type="radio" name="type" checked={addType === 'spesa'} onChange={() => setAddType('spesa')} />
-                  {t('record.expense')}
-                </label>
-              </div>
-
-              <form className="modal-form" onSubmit={handleAddSubmit}>
-                <div className="input-group">
-                  <label className="input-label">{t('record.date_time')}</label>
-                  <input 
-                    type="datetime-local" 
-                    className="input-field" 
-                    value={format(addDate, "yyyy-MM-dd'T'HH:mm")}
-                    onChange={e => {
-                      const newDate = new Date(e.target.value);
-                      if (!isNaN(newDate.getTime())) {
-                        setAddDate(newDate);
-                      }
-                    }}
-                    required
-                  />
-                </div>
-
-                <div className="input-group">
-                  <label className="input-label">{t('record.amount')}</label>
-                  <input type="number" step="0.01" className="input-field" placeholder={t('record.amount_placeholder')} value={addAmount} onChange={e => setAddAmount(e.target.value)} required />
-                </div>
-                
-                <div className="input-group">
-                  <label className="input-label">{t('record.category')}</label>
-                  <select className="input-field" value={addCat} onChange={e => setAddCat(e.target.value)} required>
-                    <option value="" disabled>{t('record.select_category')}</option>
-                    {categories.filter(c => c.type === (addType === 'entrata' ? 'income' : 'expense')).sort((a, b) => a.name.localeCompare(b.name, language, { sensitivity: 'base' })).map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
-                  </select>
-                </div>
-
-                <div className="input-group">
-                  <label className="input-label">{t('record.description')}</label>
-                  <input type="text" className="input-field" placeholder={t('record.description_placeholder')} value={addDesc} onChange={e => setAddDesc(e.target.value)} />
-                </div>
-
-                {addType === 'spesa' && !editingItem && (
-                  <div className="input-group" style={{ marginBottom: '16px' }}>
-                    <label className="radio-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input type="checkbox" checked={isPeriodic} onChange={e => setIsPeriodic(e.target.checked)} />
-                      {t('record.periodic')}
-                    </label>
-                    {isPeriodic && (
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                        <input type="number" min="1" className="input-field" style={{ flex: 1 }} value={periodInterval} onChange={e => setPeriodInterval(parseInt(e.target.value) || 1)} />
-                        <select className="input-field" style={{ flex: 2 }} value={periodUnit} onChange={e => setPeriodUnit(e.target.value)}>
-                          <option value="days">{t('record.days')}</option>
-                          <option value="weeks">{t('record.weeks')}</option>
-                          <option value="months">{t('record.months')}</option>
-                          <option value="years">{t('record.years')}</option>
-                        </select>
-                      </div>
-                    )}
-                  </div>
-                )}
-                <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                  {editingItem && (
-                    <button type="button" onClick={handleDeleteRecord} className="submit-btn" style={{ background: 'var(--danger-color)', flex: 1 }}>
-                      🗑️ {t('auth.delete_account')?.split(' ')[0] || 'Delete'}
-                    </button>
-                  )}
-                  <button type="submit" className="submit-btn" style={{ flex: 2 }}>✓ {t('record.save')}</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        {showAddModal && <TransactionEditor token={token} categories={categories} item={editingItem}
+          initialType={initialEntry.type} initialCategory={initialEntry.category} initialDate={initialEntry.date}
+          onClose={closeEditor} onSaved={saved} />}
 
         {/* Category Details Modal */}
         {selectedCategory !== null && (
-          <div className="modal-overlay" onClick={() => setSelectedCategory(null)}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
-              <button className="modal-close" onClick={() => setSelectedCategory(null)}>&times;</button>
-              <h2 style={{ marginBottom: '24px' }}>
-                {t('dashboard.details_for', { category: categories.find(c => c.id === selectedCategory)?.name || '' })}
-              </h2>
+          <SafeDialog title={t('dashboard.details_for', { category: categories.find(c => c.id === selectedCategory)?.name || '' })} onClose={() => setSelectedCategory(null)}>
+            {activeTab === 'uscite' && <button className="submit-btn" onClick={() => openAddModal(selectedCategory)}>{t('form.add_expense')}</button>}
               <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '8px' }}>
-                {(activeGroups[selectedCategory] || []).map((item: any) => (
-                  <div key={item.id} className="list-item" style={{ padding: '12px 16px', cursor: 'pointer', marginBottom: '8px', borderRadius: '12px' }} onClick={() => {
+                {(activeGroups[selectedCategory] || []).map((item: Income | Expense) => (
+                  <div key={item.id} role="button" tabIndex={0} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedCategory(null); openEditModal(item); } }} className="list-item" style={{ padding: '12px 16px', cursor: 'pointer', marginBottom: '8px', borderRadius: '12px' }} onClick={() => {
                     setSelectedCategory(null);
                     openEditModal(item);
                   }}>
@@ -483,21 +312,20 @@ export default function Home() {
                       <div className="item-header" style={{ marginBottom: '4px' }}>
                         <div className="item-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={{ color: 'inherit' }}>{item.description || item.name}</span>
-                          {(item as any).is_periodic && <span style={{ color: 'var(--primary-color)', fontSize: '12px', fontWeight: 'bold', padding: '2px 6px', background: 'var(--input-bg)', borderRadius: '8px' }}>{t('record.periodic') || 'Periodica'}</span>}
+                          {('is_periodic' in item && item.is_periodic) && <span style={{ color: 'var(--primary-color)', fontSize: '12px', fontWeight: 'bold', padding: '2px 6px', background: 'var(--input-bg)', borderRadius: '8px' }}>{t('record.periodic') || 'Periodica'}</span>}
                         </div>
                         <div className="item-amount" style={{ color: activeTab === 'uscite' ? 'var(--danger-color)' : 'var(--success-color)' }}>
                           {activeTab === 'uscite' ? '-' : '+'}{item.amount.toFixed(2)} €
                         </div>
                       </div>
                       <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                        {format(new Date(item.spent_on || item.received_on), 'd MMM yyyy, HH:mm', { locale: dateLocale })}
+                        {format(new Date('spent_on' in item ? item.spent_on : item.received_on), 'd MMM yyyy, HH:mm', { locale: dateLocale })}
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
+          </SafeDialog>
         )}
       </div>
     );
@@ -506,7 +334,7 @@ export default function Home() {
   // Login UI
   return (
     <div className="auth-wrapper">
-      <Toaster position="bottom-center" />
+
       <div className="glass-container">
         <h1 className="form-title">{isLogin ? t('auth.login') : t('auth.register')}</h1>
         <p className="form-subtitle">

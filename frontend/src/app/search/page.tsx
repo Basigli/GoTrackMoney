@@ -1,309 +1,90 @@
 'use client';
-
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useData } from '@/hooks/useData';
-import Navbar from '@/components/Navbar';
-import { ModalDateInput } from '@/components/DateInputs';
-import { useLanguage } from '@/i18n/LanguageContext';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
-import { it, enUS } from 'date-fns/locale';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
-import toast, { Toaster } from 'react-hot-toast';
-import { FormEvent, forwardRef } from 'react';
-
+import { useAuth } from '@/hooks/useAuth';
+import type { Category } from '@/hooks/useData';
+import { useLanguage } from '@/i18n/LanguageContext';
 import { API_BASE } from '@/utils/api';
+import type { Transaction } from '@/utils/transactions';
+import Navbar from '@/components/Navbar';
+import TransactionEditor from '@/components/TransactionEditor';
 
-export default function SearchPage() {
-  const { token, user, loading, logout } = useAuth();
-  const { categories, incomes, expenses, fetchCategories, fetchIncomes, fetchExpenses } = useData(token);
+interface Results { items: Transaction[]; total: number; limit: number; offset: number }
+function SearchContent() {
+  const { user, token, loading, logout } = useAuth();
   const { t, language } = useLanguage();
-  const dateLocale = language === 'it' ? it : enUS;
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchType, setSearchType] = useState<'all' | 'expenses' | 'incomes'>('all');
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-
-  // Add/Edit modal state
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [addType, setAddType] = useState<'entrata' | 'spesa'>('spesa');
-  const [addAmount, setAddAmount] = useState('');
-  const [addCat, setAddCat] = useState('');
-  const [addDesc, setAddDesc] = useState('');
-  const [addDate, setAddDate] = useState<Date>(new Date());
-  const [editingItem, setEditingItem] = useState<any>(null);
-  const [isPeriodic, setIsPeriodic] = useState(false);
-  const [periodInterval, setPeriodInterval] = useState(1);
-  const [periodUnit, setPeriodUnit] = useState('months');
-
-  const openEditModal = (item: any) => {
-    setEditingItem(item);
-    setAddType(item.isExpense ? 'spesa' : 'entrata');
-    setAddAmount(item.amount.toString());
-    setAddCat(item.category_id.toString());
-    setAddDesc(item.description);
-    setAddDate(new Date(item.spent_on || item.received_on));
-    setShowAddModal(true);
-  };
-
-  const handleAddSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!token) return;
-    
-    let endpoint = addType === 'entrata' ? '/incomes' : '/expenses';
-    let method = 'POST';
-    
-    if (editingItem) {
-      endpoint = `${endpoint}/${editingItem.id}`;
-      method = 'PUT';
-    }
-
-    let payload: any = {
-      name: categories.find(c => c.id === parseInt(addCat))?.name || t('record.item'),
-      description: addDesc,
-      amount: parseFloat(addAmount),
-      category_id: parseInt(addCat, 10),
-      [addType === 'entrata' ? 'received_on' : 'spent_on']: addDate.toISOString()
-    };
-
-    try {
-      const res = await fetch(`${API_BASE}${endpoint}`, {
-        method,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        setAddAmount(''); setAddCat(''); setAddDesc('');
-        setEditingItem(null);
-        setShowAddModal(false);
-        if (addType === 'entrata') fetchIncomes();
-        else fetchExpenses();
-        toast.success(editingItem ? t('record.success_edit') : (addType === 'entrata' ? t('record.success_income') : t('record.success_expense')), {
-          style: { borderRadius: '12px', background: '#333', color: '#fff' }
-        });
-      } else {
-        toast.error(editingItem ? t('record.error_save') : t('record.error_save'));
-      }
-    } catch (err) { 
-      console.error(err); 
-      toast.error(t('record.error_conn'));
-    }
-  };
-
-  const handleDeleteRecord = async () => {
-    if (!editingItem || !token) return;
-
-    if (!window.confirm('Sei sicuro di voler eliminare questo elemento? / Are you sure you want to delete this item?')) return;
-
-    const endpoint = addType === 'entrata' ? `/incomes/${editingItem.id}` : `/expenses/${editingItem.id}`;
-    
-    try {
-      const res = await fetch(`${API_BASE}${endpoint}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        setEditingItem(null);
-        setShowAddModal(false);
-        if (addType === 'entrata') fetchIncomes();
-        else fetchExpenses();
-        toast.success(t('record.success_edit') || 'Eliminato con successo / Successfully deleted', {
-          style: { borderRadius: '12px', background: '#333', color: '#fff' }
-        });
-      } else {
-        toast.error('Errore durante l\'eliminazione / Error deleting item');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error(t('record.error_conn'));
-    }
-  };
-
-  const loadMore = async () => {
-    const nextOffset = offset + 100;
-    const [inc, exp] = await Promise.all([
-      fetchIncomes(nextOffset),
-      fetchExpenses(nextOffset)
-    ]);
-    setOffset(nextOffset);
-    if ((inc?.length || 0) < 100 && (exp?.length || 0) < 100) {
-      setHasMore(false);
-    }
-  };
-
+  const params = useSearchParams();
+  const query = params.toString();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [snapshot, setSnapshot] = useState<{ key: string; result: Results } | null>(null);
+  const [failure, setFailure] = useState('');
+  const [revision, setRevision] = useState(0);
+  const [editing, setEditing] = useState<Transaction | null>(null);
+  const key = token + ':' + query + ':' + revision;
+  const ready = snapshot?.key === key;
+  const failed = failure === key;
   useEffect(() => {
-    if (token) {
-      fetchCategories();
-      fetchIncomes();
-      fetchExpenses();
-    }
-  }, [token, fetchCategories, fetchIncomes, fetchExpenses]);
-
-  if (loading) return null;
-  if (!user) return null;
-
-  const getIconForCategory = (catId: number) => {
-    const category = categories.find(c => c.id === catId);
-    return category?.emoji || '📝';
+    if (!token) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      const headers = { Authorization: 'Bearer ' + token };
+      Promise.all([
+        fetch(API_BASE + '/transactions/search?' + query, { headers, signal: controller.signal }).then(res => { if (!res.ok) throw new Error(); return res.json() as Promise<Results>; }),
+        fetch(API_BASE + '/categories', { headers, signal: controller.signal }).then(res => { if (!res.ok) throw new Error(); return res.json() as Promise<Category[]>; }),
+      ]).then(([result, list]) => {
+        if (controller.signal.aborted) return;
+        setSnapshot({ key, result }); setCategories(list || []);
+      }).catch(() => { if (!controller.signal.aborted) setFailure(key); });
+    }, 250);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [token, query, key]);
+  const change = (field: string, value: string) => {
+    const next = new URLSearchParams(query);
+    if (value) next.set(field, value); else next.delete(field);
+    if (field !== 'offset') next.delete('offset');
+    window.history.replaceState(null, '', '/search?' + next.toString());
   };
-
-  const getCategoryName = (catId: number) => {
-    const category = categories.find(c => c.id === catId);
-    return category?.name || t('dashboard.unknown');
-  };
-
-  const allItems = [
-    ...expenses.map(e => ({ ...e, isExpense: true, date: e.spent_on })),
-    ...incomes.map(i => ({ ...i, isExpense: false, date: i.received_on }))
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  const queryLower = searchQuery.toLowerCase();
-  const queryNumber = parseFloat(searchQuery.replace(',', '.'));
-
-  const matches = allItems.filter(item => {
-    if (searchType === 'expenses' && !item.isExpense) return false;
-    if (searchType === 'incomes' && item.isExpense) return false;
-    
-    if (!searchQuery) return true;
-    
-    const textMatch = item.name.toLowerCase().includes(queryLower) || 
-                      (item.description || '').toLowerCase().includes(queryLower) ||
-                      getCategoryName(item.category_id).toLowerCase().includes(queryLower);
-                      
-    const amountMatch = !isNaN(queryNumber) && item.amount === queryNumber;
-    
-    return textMatch || amountMatch;
-  });
-
-
-
-  return (
-    <div className="app-container">
-      <Toaster position="bottom-center" />
-      <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
-      
-      <div style={{ padding: '24px 20px', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '20px' }}>
-          {t('nav.search')}
-        </h2>
-        <input 
-          type="text" 
-          placeholder={t('dashboard.search')}
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          style={{ width: '100%', padding: '16px 20px', background: 'var(--input-bg)', border: 'none', borderRadius: '16px', fontSize: '16px', color: 'var(--text-color)', marginBottom: '16px' }}
-        />
-
-        <div className="tabs" style={{ marginBottom: 0 }}>
-          <div className={`tab ${searchType === 'all' ? 'active' : ''}`} onClick={() => setSearchType('all')}>{t('search.all')}</div>
-          <div className={`tab ${searchType === 'expenses' ? 'active' : ''}`} onClick={() => setSearchType('expenses')}>{t('dashboard.expenses')}</div>
-          <div className={`tab ${searchType === 'incomes' ? 'active' : ''}`} onClick={() => setSearchType('incomes')}>{t('dashboard.incomes')}</div>
-        </div>
+  if (loading || !user || !token) return null;
+  const result = ready ? snapshot.result : null;
+  const money = (amount: number) => new Intl.NumberFormat(language, { style:'currency', currency:'EUR' }).format(amount);
+  return <div className="app-container">
+    <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
+    <main className="page-content">
+      <h1>{t('nav.search')}</h1>
+      <p className="analytics-note">{t('search.history')}</p>
+      <div className="search-filters">
+        <label>{t('dashboard.search')}<input className="input-field" type="search" value={params.get('q') || ''} onChange={e => change('q', e.target.value)} /></label>
+        <label>{t('record.type')}<select className="input-field" value={params.get('type') || ''} onChange={e => { const next = new URLSearchParams(query); next.delete('category_id'); next.delete('offset'); if (e.target.value) next.set('type', e.target.value); else next.delete('type'); window.history.replaceState(null, '', '/search?' + next); }}>
+          <option value="">{t('search.all')}</option><option value="expense">{t('record.expense')}</option><option value="income">{t('record.income')}</option>
+        </select></label>
+        <label>{t('record.category')}<select className="input-field" value={params.get('category_id') || ''} onChange={e => change('category_id', e.target.value)}>
+          <option value="">{t('search.all')}</option>
+          {categories.filter(c => !params.get('type') || c.type === params.get('type')).sort((a,b) => a.name.localeCompare(b.name, language, { sensitivity:'base' })).map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
+        </select></label>
+        {(['from','to','min_amount','max_amount'] as const).map(field => <label key={field}>{t('search.' + field)}
+          <input className="input-field" type={field === 'from' || field === 'to' ? 'date' : 'number'} min="0" step="0.01" value={params.get(field) || ''} onChange={e => change(field, e.target.value)} />
+        </label>)}
       </div>
-
-      <div style={{ padding: '0 20px' }}>
-        <p style={{ marginBottom: '16px', color: 'var(--text-muted)' }}>
-          {t('search.results_count').replace('{count}', matches.length.toString())}
-        </p>
-        
-        <div className="list-container">
-          {matches.map(item => (
-            <div key={`${item.isExpense ? 'exp' : 'inc'}-${item.id}`} className="list-item" onClick={() => openEditModal(item)} style={{ padding: '16px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-              <div className="item-icon" style={{ fontSize: '24px', marginRight: '16px' }}>{getIconForCategory(item.category_id)}</div>
-              <div className="item-content" style={{ flex: 1 }}>
-                <div className="item-header" style={{ marginBottom: '4px', display: 'flex', justifyContent: 'space-between' }}>
-                  <div className="item-title" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ color: 'inherit' }}>{item.description || item.name}</span>
-                    {(item as any).is_periodic && <span style={{ color: 'var(--primary-color)', fontSize: '12px', fontWeight: 'bold', padding: '2px 6px', background: 'var(--input-bg)', borderRadius: '8px' }}>{t('record.periodic') || 'Periodica'}</span>}
-                  </div>
-                  <div className="item-amount" style={{ color: item.isExpense ? 'var(--danger-color)' : 'var(--success-color)', fontWeight: 600 }}>
-                    {item.isExpense ? '-' : '+'}{item.amount.toFixed(2)} €
-                  </div>
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>{getCategoryName(item.category_id)}</span>
-                  <span>{format(new Date(item.date), 'd MMM yyyy, HH:mm', { locale: dateLocale })}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-          {matches.length === 0 && <div style={{ color: 'var(--text-muted)' }}>{t('dashboard.no_data')}</div>}
-          
-          {hasMore && matches.length >= 100 && (
-            <button 
-              onClick={loadMore} 
-              style={{ gridColumn: '1 / -1', width: '100%', padding: '16px', marginTop: '16px', background: 'var(--primary-color)', color: 'white', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}
-            >
-              {t('search.load_more')}
-            </button>
-          )}
+      <button className="secondary-btn" onClick={() => window.history.replaceState(null, '', '/search')}>{t('search.clear')}</button>
+      {!ready && <p role={failed ? 'alert' : 'status'}>{t(failed ? 'search.error' : 'analytics.loading')}
+        {failed && <button className="secondary-btn" onClick={() => setRevision(n => n + 1)}>{t('analytics.retry')}</button>}
+      </p>}
+      {result && <>
+        <p aria-live="polite">{t('search.results_count', { count: String(result.total) })}</p>
+        <div className="list-container">{result.items.map(item => <button className="list-item transaction-row" key={item.type + ':' + item.id} onClick={() => setEditing(item)}>
+          <span><strong>{item.description || item.name}</strong><small>{format(new Date(item.date), 'dd/MM/yyyy HH:mm')} · {categories.find(c => c.id === item.category_id)?.name || t('dashboard.unknown')}{item.is_periodic && ' · ' + t('record.periodic')}</small></span>
+          <span className={item.type === 'expense' ? 'amount-expense' : 'amount-income'}>{item.type === 'expense' ? '−' : '+'}{money(item.amount)}</span>
+        </button>)}</div>
+        {result.total === 0 && <p>{t('search.empty')}</p>}
+        <div className="form-row">
+          <button className="secondary-btn" disabled={result.offset === 0} onClick={() => change('offset', String(Math.max(0, result.offset - result.limit)))}>{t('search.previous')}</button>
+          <span>{result.total ? result.offset + 1 : 0}–{Math.min(result.offset + result.items.length, result.total)} / {result.total}</span>
+          <button className="secondary-btn" disabled={result.offset + result.limit >= result.total} onClick={() => change('offset', String(result.offset + result.limit))}>{t('search.next')}</button>
         </div>
-      </div>
-
-      {showAddModal && (
-        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowAddModal(false)}>&times;</button>
-            
-            <div className="radio-group">
-              <label className="radio-label">
-                <input type="radio" name="type" checked={addType === 'entrata'} onChange={() => setAddType('entrata')} disabled={!!editingItem} />
-                {t('record.income')}
-              </label>
-              <label className="radio-label">
-                <input type="radio" name="type" checked={addType === 'spesa'} onChange={() => setAddType('spesa')} disabled={!!editingItem} />
-                {t('record.expense')}
-              </label>
-            </div>
-
-            <form className="modal-form" onSubmit={handleAddSubmit}>
-              <div className="input-group">
-                <label className="input-label">{t('record.date_time')}</label>
-                <input 
-                  type="datetime-local" 
-                  className="input-field" 
-                  value={format(addDate, "yyyy-MM-dd'T'HH:mm")}
-                  onChange={e => {
-                    const newDate = new Date(e.target.value);
-                    if (!isNaN(newDate.getTime())) {
-                      setAddDate(newDate);
-                    }
-                  }}
-                  required
-                />
-              </div>
-
-              <div className="input-group">
-                <label className="input-label">{t('record.amount')}</label>
-                <input type="number" step="0.01" className="input-field" placeholder={t('record.amount_placeholder')} value={addAmount} onChange={e => setAddAmount(e.target.value)} required />
-              </div>
-              
-              <div className="input-group">
-                <label className="input-label">{t('record.category')}</label>
-                <select className="input-field" value={addCat} onChange={e => setAddCat(e.target.value)} required>
-                  <option value="" disabled>{t('record.select_category')}</option>
-                  {categories.filter(c => c.type === (addType === 'entrata' ? 'income' : 'expense')).map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
-                </select>
-              </div>
-
-              <div className="input-group">
-                <label className="input-label">{t('record.description')}</label>
-                <input type="text" className="input-field" placeholder={t('record.description_placeholder')} value={addDesc} onChange={e => setAddDesc(e.target.value)} />
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                {editingItem && (
-                  <button type="button" onClick={handleDeleteRecord} className="submit-btn" style={{ background: 'var(--danger-color)', flex: 1 }}>
-                    🗑️ {t('auth.delete_account')?.split(' ')[0] || 'Delete'}
-                  </button>
-                )}
-                <button type="submit" className="submit-btn" style={{ flex: 2 }}>✓ {t('record.save')}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+      </>}
+    </main>
+    {editing && <TransactionEditor token={token} categories={categories} item={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); change('offset', '0'); setRevision(n => n+1); }} />}
+  </div>;
 }
+export default function SearchPage() { return <Suspense fallback={null}><SearchContent /></Suspense>; }

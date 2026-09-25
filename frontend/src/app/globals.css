@@ -719,3 +719,36 @@ input[type="datetime-local"]::-webkit-datetime-edit {
 .analytics-table th:first-child { text-align: left; overflow-wrap: anywhere; }
 .analytics-table tbody th { font-weight: 400; }
 .analytics-grid > div { min-width: 0; }
+
+/* Shared transaction workflows */
+.page-content { padding: 24px 20px; }
+.page-content h1 { font-size: 24px; margin-bottom: 20px; }
+.page-content h2 { font-size: 20px; margin: 24px 0 12px; }
+.secondary-btn { padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--surface-color); color: var(--text-color); cursor: pointer; }
+button:disabled { opacity: .55; cursor: not-allowed; }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 3px; }
+.danger, .field-error, .amount-expense { color: var(--danger-color); }
+.amount-income { color: var(--success-color); }
+.field-error { font-size: 14px; margin: 4px 0 12px; }
+.form-row, .month-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0; }
+.form-row > label { flex: 1; min-width: 120px; }
+.month-navigation { justify-content: center; }
+.editor-dialog { padding: 0; border: 1px solid var(--border-color); border-radius: 20px; width: min(520px, calc(100% - 24px)); max-height: 90dvh; background: var(--surface-color); color: var(--text-color); margin: auto; }
+.editor-dialog::backdrop { background: rgba(0,0,0,.5); }
+.editor-body { position: relative; padding: 28px; }
+.editor-body h2 { margin: 0 32px 20px 0; font-size: 22px; }
+.editor-body fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.editor-body label { display: block; font-size: 14px; margin-top: 12px; }
+.editor-body .input-field { margin: 6px 0 8px; }
+.editor-body .submit-btn { margin: 12px 0; }
+.search-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 16px 0; }
+.search-filters label { font-size: 14px; }
+.search-filters .input-field { margin: 6px 0; }
+.transaction-row { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 16px; padding: 16px; text-align: left; color: var(--text-color); background: transparent; border: 0; font: inherit; }
+button.transaction-row { cursor: pointer; }
+.transaction-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.transaction-row small { display: block; color: var(--text-muted); margin-top: 6px; font-size: 12px; }
+.recurring-card { border: 1px solid var(--border-color); border-radius: 16px; background: var(--surface-color); margin-bottom: 12px; }
+.recurring-card .form-row { padding: 0 16px; }
+.chart-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 16px; font-size: 13px; }
+.chart-links a, .analytics-table a { color: var(--primary-color); }

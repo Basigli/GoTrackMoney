@@ -1,6 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import MonthNavigation from '@/components/MonthNavigation';
+import { useSelectedMonth } from '@/hooks/useSelectedMonth';
+import { transactionSearchLink } from '@/utils/transactions';
 import { useAuth } from '@/hooks/useAuth';
 import type { Category, Income, Expense } from '@/hooks/useData';
 import { API_BASE } from '@/utils/api';
@@ -41,7 +46,8 @@ export default function AnalyticsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const { t, language } = useLanguage();
   const dateLocale = language === 'it' ? it : enUS;
-  const [filterDate, setFilterDate] = useState<Date>(new Date());
+  const [filterDate, setFilterDate] = useSelectedMonth(user?.id);
+  const router = useRouter();
 
   const [snapshot, setSnapshot] = useState<{
     key: string; categories: CategoryTotal[]; totals: MonthlyTotals;
@@ -103,6 +109,7 @@ export default function AnalyticsPage() {
     const exp = rawBarData.expenses?.find((e) => e.year === m.year && e.month === m.month)?.total_amount || 0;
     return {
       name: format(m.date, 'MMM yy', { locale: dateLocale }),
+      date: m.date,
       income: inc,
       expense: exp
     };
@@ -179,6 +186,7 @@ export default function AnalyticsPage() {
               withPortal
             />
 
+            <MonthNavigation date={filterDate} onChange={setFilterDate} />
             <button disabled={isExporting || !isReady} onClick={exportToCSV} className="submit-btn" style={{ margin: 0, padding: '8px 16px', width: 'auto', fontSize: '14px', borderRadius: '12px' }}>
               {t(isExporting ? 'analytics.exporting' : 'analytics.export_csv')}
             </button>
@@ -211,9 +219,9 @@ export default function AnalyticsPage() {
             </h3>
             {pieData.length > 0 ? (
               <div style={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 320, height: 300 }}>
                   <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5}>
+                    <Pie onClick={(_, index) => router.push(transactionSearchLink(filterDate, "expense", pieData[index].id))} style={{ cursor: "pointer" }} data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5}>
                       {pieData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
@@ -236,7 +244,7 @@ export default function AnalyticsPage() {
                 <thead><tr><th>{t('record.category')}</th><th>{t('record.amount')}</th><th>%</th></tr></thead>
                 <tbody>{pieData.map(item => (
                   <tr key={item.id}>
-                    <th scope="row"><span aria-hidden="true" style={{ color: item.color }}>● </span>{item.name}</th>
+                    <th scope="row"><span aria-hidden="true" style={{ color: item.color }}>● </span><Link href={transactionSearchLink(filterDate, "expense", item.id)}>{item.name}</Link></th>
                     <td>{money(item.value)}</td>
                     <td>{expenseTotal > 0 ? new Intl.NumberFormat(language, { style: 'percent', maximumFractionDigits: 1 }).format(item.value / expenseTotal) : '—'}</td>
                   </tr>
@@ -251,7 +259,7 @@ export default function AnalyticsPage() {
               {t('analytics.income_vs_expense')}
             </h3>
             <div style={{ height: 300, width: '100%' }}>
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 320, height: 300 }}>
                 <BarChart data={barData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} dy={10} />
@@ -262,11 +270,16 @@ export default function AnalyticsPage() {
                     formatter={value => money(Number(value))}
                   />
                   <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                  <Bar dataKey="income" name={t('dashboard.incomes')} fill="var(--success-color)" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                  <Bar dataKey="expense" name={t('dashboard.expenses')} fill="var(--danger-color)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  <Bar onClick={(_, index) => router.push(transactionSearchLink(barData[index].date, "income"))} style={{ cursor: "pointer" }} dataKey="income" name={t('dashboard.incomes')} fill="var(--success-color)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  <Bar onClick={(_, index) => router.push(transactionSearchLink(barData[index].date, "expense"))} style={{ cursor: "pointer" }} dataKey="expense" name={t('dashboard.expenses')} fill="var(--danger-color)" radius={[4, 4, 0, 0]} maxBarSize={40} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
+            <div className="chart-links">{barData.map(month => <div key={month.name}>
+              <strong>{month.name}</strong>{' · '}
+              <Link href={transactionSearchLink(month.date, 'income')}>{t('dashboard.incomes')}</Link>{' · '}
+              <Link href={transactionSearchLink(month.date, 'expense')}>{t('dashboard.expenses')}</Link>
+            </div>)}</div>
           </div>
         </div>
         </>}

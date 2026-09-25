@@ -175,7 +175,7 @@ RETURNING id, name, description, amount, user_id, created_at, category_id, recei
 
 -- name: ListPeriodicExpensesByUserID :many
 SELECT
-  id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at
+  id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at, paused, schedule_anchor
 FROM
   periodic_expenses
 WHERE
@@ -185,28 +185,30 @@ ORDER BY
 
 -- name: CreatePeriodicExpense :one
 INSERT INTO periodic_expenses (
-  name, description, amount, user_id, category_id, period_interval, period_unit, start_date, next_due_date
+  name, description, amount, user_id, category_id, period_interval, period_unit, start_date, next_due_date, schedule_anchor
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+RETURNING id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at, paused, schedule_anchor;
 
 -- name: UpdatePeriodicExpense :one
 UPDATE periodic_expenses
 SET
   period_interval = $2,
   period_unit = $3,
-  next_due_date = $4
+  next_due_date = $4,
+  name = $6, description = $7, amount = $8, category_id = $9, paused = $10, schedule_anchor = $11
 WHERE
   id = $1 AND user_id = $5
-RETURNING id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at;
+RETURNING id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at, paused, schedule_anchor;
 
 -- name: FindDuePeriodicExpensesByUserID :many
 SELECT
-  id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at
+  id, name, description, amount, user_id, category_id, period_interval, period_unit, start_date, last_generated_date, next_due_date, created_at, paused, schedule_anchor
 FROM
   periodic_expenses
 WHERE
-  user_id = $1 AND next_due_date <= now();
+  user_id = $1 AND NOT paused AND next_due_date <= now()
+ORDER BY id FOR UPDATE;
 
 -- name: UpdatePeriodicExpenseNextDueDate :exec
 UPDATE periodic_expenses
@@ -283,3 +285,35 @@ GROUP BY
   EXTRACT(YEAR FROM received_on), EXTRACT(MONTH FROM received_on)
 ORDER BY
   year, month;
+
+-- name: LockPeriodicExpense :one
+SELECT * FROM periodic_expenses WHERE id = $1 AND user_id = $2 FOR UPDATE;
+
+-- name: SearchTransactions :one
+WITH transactions AS (
+ SELECT e.id, 'expense'::text AS type, e.name, e.description, e.amount,
+        e.category_id, COALESCE(e.spent_on, e.created_at) AS date, e.is_periodic
+ FROM expenses e WHERE e.user_id = sqlc.arg(user_id)
+ UNION ALL
+ SELECT i.id, 'income'::text AS type, i.name, i.description, i.amount,
+        i.category_id, COALESCE(i.received_on, i.created_at) AS date, false AS is_periodic
+ FROM incomes i WHERE i.user_id = sqlc.arg(user_id)
+), filtered AS (
+ SELECT t.* FROM transactions t JOIN categories c ON c.id = t.category_id
+ WHERE (sqlc.arg(kind)::text = '' OR t.type = sqlc.arg(kind))
+ AND (sqlc.arg(category)::bigint = 0 OR t.category_id = sqlc.arg(category))
+ AND (sqlc.narg(date_from)::timestamptz IS NULL OR t.date >= sqlc.narg(date_from))
+ AND (sqlc.narg(date_to)::timestamptz IS NULL OR t.date < sqlc.narg(date_to))
+ AND t.amount >= sqlc.arg(min_amount)::float8 AND t.amount <= sqlc.arg(max_amount)::float8
+ AND (sqlc.arg(query)::text = '' OR
+      strpos(lower(t.name || ' ' || t.description || ' ' || c.name), lower(sqlc.arg(query))) > 0
+      OR t.amount = sqlc.arg(exact_amount)::float8)
+), page AS (
+ SELECT * FROM filtered ORDER BY date DESC, type, id DESC
+ LIMIT sqlc.arg(page_limit)::int OFFSET sqlc.arg(page_offset)::int
+)
+SELECT jsonb_build_object(
+ 'items', COALESCE((SELECT jsonb_agg(page ORDER BY date DESC, type, id DESC) FROM page), '[]'::jsonb),
+ 'total', (SELECT count(*) FROM filtered),
+ 'limit', sqlc.arg(page_limit)::int, 'offset', sqlc.arg(page_offset)::int
+)::jsonb AS result;

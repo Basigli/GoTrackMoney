@@ -15,6 +15,7 @@ import (
 )
 
 type fakeService struct {
+ Service // Unused methods fail loudly; individual tests override exercised methods.
 	authenticateUser func(context.Context, loginParams) (repo.User, error)
 }
 

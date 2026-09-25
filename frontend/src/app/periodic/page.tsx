@@ -1,173 +1,93 @@
 'use client';
-
-import { useState, useEffect, FormEvent } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useData, PeriodicExpense } from '@/hooks/useData';
-import Navbar from '@/components/Navbar';
-import { useLanguage } from '@/i18n/LanguageContext';
+import { useEffect, useRef, useState } from 'react';
 import { format } from 'date-fns';
-import { it, enUS } from 'date-fns/locale';
-import toast, { Toaster } from 'react-hot-toast';
-
+import toast from 'react-hot-toast';
+import { useAuth } from '@/hooks/useAuth';
+import type { Category, PeriodicExpense } from '@/hooks/useData';
+import { useLanguage } from '@/i18n/LanguageContext';
 import { API_BASE } from '@/utils/api';
+import Navbar from '@/components/Navbar';
+import RecurringEditor from '@/components/RecurringEditor';
 
+interface Upcoming { total_7: number; total_30: number; items: { schedule_id: number; name: string; due_date: string; amount: number }[] }
 export default function PeriodicPage() {
   const { token, user, loading, logout } = useAuth();
-  const { categories, periodicExpenses, fetchCategories, fetchPeriodicExpenses } = useData(token);
   const { t, language } = useLanguage();
-  const dateLocale = language === 'it' ? it : enUS;
-
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingItem, setEditingItem] = useState<PeriodicExpense | null>(null);
-  
-  const [periodInterval, setPeriodInterval] = useState(1);
-  const [periodUnit, setPeriodUnit] = useState('months');
-
+  const [revision, setRevision] = useState(0);
+  const [snapshot, setSnapshot] = useState<{ key:string; schedules:PeriodicExpense[]; categories:Category[]; upcoming:Upcoming } | null>(null);
+  const [failure, setFailure] = useState('');
+  const [editing, setEditing] = useState<PeriodicExpense | null>(null);
+  const [busy, setBusy] = useState<number | null>(null);
+  const submitting = useRef(false);
+  const key = token + ':' + revision;
+  const ready = snapshot?.key === key;
   useEffect(() => {
-    if (token) {
-      fetchCategories();
-      fetchPeriodicExpenses();
-    }
-  }, [token, fetchCategories, fetchPeriodicExpenses]);
-
-  if (loading) return null;
-  if (!user) return null;
-
-  const getIconForCategory = (catId: number) => {
-    const category = categories.find(c => c.id === catId);
-    return category?.emoji || '📝';
-  };
-
-  const getCategoryName = (catId: number) => {
-    const category = categories.find(c => c.id === catId);
-    return category?.name || t('dashboard.unknown') || 'Unknown';
-  };
-
-  const openEditModal = (item: PeriodicExpense) => {
-    setEditingItem(item);
-    setPeriodInterval(item.period_interval);
-    setPeriodUnit(item.period_unit);
-    setShowEditModal(true);
-  };
-
-  const handleEditSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!token || !editingItem) return;
-
+    if (!token) return;
+    const controller = new AbortController();
+    const get = async <T,>(path: string): Promise<T> => {
+      const res = await fetch(API_BASE + path, { headers:{ Authorization:'Bearer ' + token }, signal:controller.signal });
+      if (!res.ok) throw new Error();
+      return res.json();
+    };
+    Promise.all([get<PeriodicExpense[]>('/periodic-expenses'), get<Category[]>('/categories'), get<Upcoming>('/periodic-expenses/upcoming')])
+      .then(([schedules,categories,upcoming]) => { if (!controller.signal.aborted) setSnapshot({ key, schedules:schedules || [], categories:categories || [], upcoming }); })
+      .catch(() => { if (!controller.signal.aborted) setFailure(key); });
+    return () => controller.abort();
+  }, [token, key]);
+  const action = async (item:PeriodicExpense, command:'pause'|'resume'|'skip'|'delete') => {
+    if (submitting.current) return;
+    if ((command === 'delete' || command === 'skip') && !window.confirm(t(command === 'delete' ? 'recurring.delete_confirm' : 'recurring.skip_confirm'))) return;
+    submitting.current = true; setBusy(item.id);
     try {
-      const res = await fetch(`${API_BASE}/periodic-expenses/${editingItem.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          period_interval: periodInterval,
-          period_unit: periodUnit
-        })
+      const res = await fetch(API_BASE + '/periodic-expenses/' + item.id + (command === 'delete' ? '' : '/' + command), {
+        method:command === 'delete' ? 'DELETE' : 'POST', headers:{ Authorization:'Bearer ' + token },
       });
-      if (res.ok) {
-        setEditingItem(null);
-        setShowEditModal(false);
-        fetchPeriodicExpenses();
-        toast.success(t('record.success_edit') || 'Successfully updated', {
-          style: { borderRadius: '12px', background: '#333', color: '#fff' }
-        });
-      } else {
-        toast.error(t('record.error_save') || 'Error saving');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error(t('record.error_conn') || 'Connection error');
-    }
+      if (!res.ok) throw new Error();
+      setRevision(n => n+1); toast.success(t('record.success_edit'));
+    } catch { toast.error(t('form.save_error')); }
+    finally { submitting.current = false; setBusy(null); }
   };
-
-  const handleDeleteRecord = async () => {
-    if (!editingItem || !token) return;
-
-    if (!window.confirm('Sei sicuro di voler eliminare questa spesa periodica? / Are you sure you want to delete this periodic expense?')) return;
-
-    try {
-      const res = await fetch(`${API_BASE}/periodic-expenses/${editingItem.id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        setEditingItem(null);
-        setShowEditModal(false);
-        fetchPeriodicExpenses();
-        toast.success(t('record.success_edit') || 'Eliminato con successo / Successfully deleted', {
-          style: { borderRadius: '12px', background: '#333', color: '#fff' }
-        });
-      } else {
-        toast.error('Errore durante l\'eliminazione / Error deleting item');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error(t('record.error_conn') || 'Connection error');
-    }
-  };
-
-  return (
-    <div className="app-container">
-      <Toaster position="bottom-center" />
-      <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
-      
-      <div style={{ padding: '24px 20px', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '20px' }}>
-          {t('record.periodic') || 'Spese Periodiche'}
-        </h2>
-      </div>
-
-      <div style={{ padding: '0 20px' }}>
-        <div className="list-container">
-          {periodicExpenses.map(item => (
-            <div key={item.id} className="list-item" onClick={() => openEditModal(item)} style={{ padding: '16px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-              <div className="item-icon" style={{ fontSize: '24px', marginRight: '16px' }}>{getIconForCategory(item.category_id)}</div>
-              <div className="item-content" style={{ flex: 1 }}>
-                <div className="item-header" style={{ marginBottom: '4px', display: 'flex', justifyContent: 'space-between' }}>
-                  <div className="item-title" style={{ fontWeight: 600, color: 'inherit' }}>
-                    {item.description || item.name}
-                  </div>
-                  <div className="item-amount" style={{ color: 'var(--danger-color)', fontWeight: 600 }}>
-                    -{item.amount.toFixed(2)} €
-                  </div>
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>{getCategoryName(item.category_id)} • Ogni {item.period_interval} {item.period_unit}</span>
-                  <span>Prossima: {format(new Date(item.next_due_date), 'd MMM yyyy', { locale: dateLocale })}</span>
-                </div>
+  if (loading || !user || !token) return null;
+  const money = (amount:number) => new Intl.NumberFormat(language, { style:'currency', currency:'EUR' }).format(amount);
+  return <div className="app-container">
+    <Navbar username={user.username} isAdmin={user.is_admin} onLogout={logout} />
+    <main className="page-content">
+      <h1>{t('record.periodic')}</h1>
+      {!ready && <p role={failure === key ? 'alert' : 'status'}>{t(failure === key ? 'analytics.load_error' : 'analytics.loading')}
+        {failure === key && <button className="secondary-btn" onClick={() => setRevision(n => n+1)}>{t('analytics.retry')}</button>}
+      </p>}
+      {ready && <>
+        <div className="analytics-summary">
+          <div className="analytics-card">{t('recurring.next_7')}<strong>{money(snapshot.upcoming.total_7)}</strong></div>
+          <div className="analytics-card">{t('recurring.next_30')}<strong>{money(snapshot.upcoming.total_30)}</strong></div>
+        </div>
+        <p className="analytics-note">{t('recurring.explanation')}</p>
+        {[false,true].map(paused => <section key={String(paused)}>
+          <h2>{t(paused ? 'recurring.paused' : 'recurring.active')}</h2>
+          <div className="list-container">{snapshot.schedules.filter(item => item.paused === paused).sort((a,b) => a.next_due_date.localeCompare(b.next_due_date) || a.id-b.id).map(item =>
+            <div className="recurring-card" key={item.id}>
+              <button className="transaction-row" onClick={() => setEditing(item)} disabled={busy !== null}>
+                <span><strong>{item.name}</strong><small>{snapshot.categories.find(c => c.id === item.category_id)?.name} · {t('recurring.every', { interval:String(item.period_interval), unit:t('record.' + item.period_unit).toLowerCase() })}</small>
+                  <small>{t(paused ? 'recurring.paused' : 'recurring.next_due')}{!paused && ': ' + format(new Date(item.next_due_date), 'dd/MM/yyyy HH:mm')}</small></span>
+                <strong>{money(item.amount)}</strong>
+              </button>
+              <div className="form-row">
+                <button className="secondary-btn" disabled={busy !== null} onClick={() => action(item, paused ? 'resume' : 'pause')}>{t(paused ? 'recurring.resume' : 'recurring.pause')}</button>
+                {!paused && <button className="secondary-btn" disabled={busy !== null} onClick={() => action(item,'skip')}>{t('recurring.skip')}</button>}
+                <button className="secondary-btn danger" disabled={busy !== null} onClick={() => action(item,'delete')}>{t('form.delete')}</button>
               </div>
             </div>
-          ))}
-          {periodicExpenses.length === 0 && <div style={{ color: 'var(--text-muted)' }}>{t('dashboard.no_data')}</div>}
-        </div>
-      </div>
-
-      {showEditModal && editingItem && (
-        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowEditModal(false)}>&times;</button>
-            <h2 style={{ marginBottom: '24px' }}>Modifica Periodicità</h2>
-            <form className="modal-form" onSubmit={handleEditSubmit}>
-              <div className="input-group" style={{ marginBottom: '16px' }}>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                  <input type="number" min="1" className="input-field" style={{ flex: 1 }} value={periodInterval} onChange={e => setPeriodInterval(parseInt(e.target.value) || 1)} />
-                  <select className="input-field" style={{ flex: 2 }} value={periodUnit} onChange={e => setPeriodUnit(e.target.value)}>
-                    <option value="days">{t('record.days') || 'Giorni'}</option>
-                    <option value="weeks">{t('record.weeks') || 'Settimane'}</option>
-                    <option value="months">{t('record.months') || 'Mesi'}</option>
-                    <option value="years">{t('record.years') || 'Anni'}</option>
-                  </select>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                <button type="button" onClick={handleDeleteRecord} className="submit-btn" style={{ background: 'var(--danger-color)', flex: 1 }}>
-                  🗑️ {t('auth.delete_account')?.split(' ')[0] || 'Elimina'}
-                </button>
-                <button type="submit" className="submit-btn" style={{ flex: 2 }}>✓ {t('record.save') || 'Salva'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+          )}</div>
+          {!snapshot.schedules.some(item => item.paused === paused) && <p className="analytics-note">{t('recurring.none')}</p>}
+        </section>)}
+        <details><summary>{t('recurring.upcoming')}</summary>
+          {snapshot.upcoming.items.length === 0 && <p>{t('recurring.none')}</p>}
+          {snapshot.upcoming.items.map(item => <div className="transaction-row" key={item.schedule_id + ':' + item.due_date}>
+            <span>{item.name}<small>{format(new Date(item.due_date),'dd/MM/yyyy HH:mm')}</small></span><span>{money(item.amount)}</span>
+          </div>)}
+        </details>
+      </>}
+    </main>
+    {editing && snapshot && <RecurringEditor item={editing} categories={snapshot.categories} token={token} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setRevision(n => n+1); toast.success(t('record.success_edit')); }} />}
+  </div>;
 }

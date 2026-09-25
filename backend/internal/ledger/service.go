@@ -2,8 +2,10 @@ package ledger
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -20,6 +22,9 @@ var (
 )
 
 type Service interface {
+	SearchTransactions(context.Context, repo.SearchTransactionsParams) (json.RawMessage, error)
+	PeriodicAction(context.Context, int64, string) (repo.PeriodicExpense, error)
+	UpcomingPayments(context.Context) (upcomingPayments, error)
 	ListUsers(ctx context.Context) ([]repo.User, error)
 	CreateUser(ctx context.Context, params createUserParams) (repo.User, error)
 	UpdateUser(ctx context.Context, id int64, params updateUserParams) (repo.User, error)
@@ -56,10 +61,15 @@ type Service interface {
 
 type svc struct {
 	repo repo.Querier
+	db   transactionBeginner
 }
 
-func NewService(repo repo.Querier) Service {
-	return &svc{repo: repo}
+type transactionBeginner interface {
+	Begin(context.Context) (pgx.Tx, error)
+}
+
+func NewService(queries repo.Querier, db transactionBeginner) Service {
+	return &svc{repo: queries, db: db}
 }
 
 func (s *svc) ListUsers(ctx context.Context) ([]repo.User, error) {
@@ -230,7 +240,9 @@ func (s *svc) ListExpenses(ctx context.Context, limit, offset int32) ([]repo.Exp
 	if err != nil {
 		return nil, err
 	}
-	s.checkAndGeneratePeriodicExpenses(ctx, user.ID)
+	if err := s.checkAndGeneratePeriodicExpenses(ctx, user.ID); err != nil {
+		return nil, err
+	}
 	return s.repo.ListExpensesByUserID(ctx, repo.ListExpensesByUserIDParams{
 		UserID: user.ID,
 		Limit:  limit,
@@ -242,7 +254,7 @@ func (s *svc) CreateExpense(ctx context.Context, params createExpenseParams) (re
 	if params.Name == "" {
 		return repo.Expense{}, fmt.Errorf("name is required")
 	}
-	if params.Amount <= 0 {
+	if params.Amount <= 0 || math.IsNaN(params.Amount) || math.IsInf(params.Amount, 0) {
 		return repo.Expense{}, fmt.Errorf("amount must be greater than zero")
 	}
 	if params.CategoryID <= 0 {
@@ -253,7 +265,7 @@ func (s *svc) CreateExpense(ctx context.Context, params createExpenseParams) (re
 	if err != nil {
 		return repo.Expense{}, err
 	}
-	if _, err := s.repo.FindCategoryByIDAndCreatorID(ctx, repo.FindCategoryByIDAndCreatorIDParams{
+	if category, err := s.repo.FindCategoryByIDAndCreatorID(ctx, repo.FindCategoryByIDAndCreatorIDParams{
 		ID:        params.CategoryID,
 		CreatorID: user.ID,
 	}); err != nil {
@@ -261,6 +273,8 @@ func (s *svc) CreateExpense(ctx context.Context, params createExpenseParams) (re
 			return repo.Expense{}, ErrCategoryNotFound
 		}
 		return repo.Expense{}, err
+	} else if category.Type != "expense" {
+		return repo.Expense{}, fmt.Errorf("category type must be expense")
 	}
 	return s.repo.CreateExpense(ctx, repo.CreateExpenseParams{
 		Name:        params.Name,
@@ -279,7 +293,7 @@ func (s *svc) UpdateExpense(ctx context.Context, params updateExpenseParams) (re
 	if params.Name == "" {
 		return repo.Expense{}, fmt.Errorf("name is required")
 	}
-	if params.Amount <= 0 {
+	if params.Amount <= 0 || math.IsNaN(params.Amount) || math.IsInf(params.Amount, 0) {
 		return repo.Expense{}, fmt.Errorf("amount must be greater than zero")
 	}
 	if params.CategoryID <= 0 {
@@ -291,7 +305,7 @@ func (s *svc) UpdateExpense(ctx context.Context, params updateExpenseParams) (re
 		return repo.Expense{}, err
 	}
 
-	if _, err := s.repo.FindCategoryByIDAndCreatorID(ctx, repo.FindCategoryByIDAndCreatorIDParams{
+	if category, err := s.repo.FindCategoryByIDAndCreatorID(ctx, repo.FindCategoryByIDAndCreatorIDParams{
 		ID:        params.CategoryID,
 		CreatorID: user.ID,
 	}); err != nil {
@@ -299,6 +313,8 @@ func (s *svc) UpdateExpense(ctx context.Context, params updateExpenseParams) (re
 			return repo.Expense{}, ErrCategoryNotFound
 		}
 		return repo.Expense{}, err
+	} else if category.Type != "expense" {
+		return repo.Expense{}, fmt.Errorf("category type must be expense")
 	}
 
 	userID, ok := auth.UserIDFromContext(ctx)
@@ -345,9 +361,11 @@ func (s *svc) FilterExpenses(ctx context.Context, startDate, endDate time.Time) 
 	if err != nil {
 		return nil, err
 	}
-	s.checkAndGeneratePeriodicExpenses(ctx, user.ID)
+	if err := s.checkAndGeneratePeriodicExpenses(ctx, user.ID); err != nil {
+		return nil, err
+	}
 	return s.repo.FilterExpensesByDate(ctx, repo.FilterExpensesByDateParams{
-		UserID:  user.ID,
+		UserID:    user.ID,
 		SpentOn:   timestamptzFromTime(&startDate),
 		SpentOn_2: timestamptzFromTime(&endDate),
 	})
@@ -369,7 +387,7 @@ func (s *svc) CreateIncome(ctx context.Context, params createIncomeParams) (repo
 	if params.Name == "" {
 		return repo.Income{}, fmt.Errorf("name is required")
 	}
-	if params.Amount <= 0 {
+	if params.Amount <= 0 || math.IsNaN(params.Amount) || math.IsInf(params.Amount, 0) {
 		return repo.Income{}, fmt.Errorf("amount must be greater than zero")
 	}
 	if params.CategoryID <= 0 {
@@ -380,7 +398,7 @@ func (s *svc) CreateIncome(ctx context.Context, params createIncomeParams) (repo
 	if err != nil {
 		return repo.Income{}, err
 	}
-	if _, err := s.repo.FindCategoryByIDAndCreatorID(ctx, repo.FindCategoryByIDAndCreatorIDParams{
+	if category, err := s.repo.FindCategoryByIDAndCreatorID(ctx, repo.FindCategoryByIDAndCreatorIDParams{
 		ID:        params.CategoryID,
 		CreatorID: user.ID,
 	}); err != nil {
@@ -388,6 +406,8 @@ func (s *svc) CreateIncome(ctx context.Context, params createIncomeParams) (repo
 			return repo.Income{}, ErrCategoryNotFound
 		}
 		return repo.Income{}, err
+	} else if category.Type != "income" {
+		return repo.Income{}, fmt.Errorf("category type must be income")
 	}
 	return s.repo.CreateIncome(ctx, repo.CreateIncomeParams{
 		Name:        params.Name,
@@ -406,7 +426,7 @@ func (s *svc) UpdateIncome(ctx context.Context, params updateIncomeParams) (repo
 	if params.Name == "" {
 		return repo.Income{}, fmt.Errorf("name is required")
 	}
-	if params.Amount <= 0 {
+	if params.Amount <= 0 || math.IsNaN(params.Amount) || math.IsInf(params.Amount, 0) {
 		return repo.Income{}, fmt.Errorf("amount must be greater than zero")
 	}
 	if params.CategoryID <= 0 {
@@ -418,7 +438,7 @@ func (s *svc) UpdateIncome(ctx context.Context, params updateIncomeParams) (repo
 		return repo.Income{}, auth.ErrUnauthorized
 	}
 
-	if _, err := s.repo.FindCategoryByIDAndCreatorID(ctx, repo.FindCategoryByIDAndCreatorIDParams{
+	if category, err := s.repo.FindCategoryByIDAndCreatorID(ctx, repo.FindCategoryByIDAndCreatorIDParams{
 		ID:        params.CategoryID,
 		CreatorID: userID,
 	}); err != nil {
@@ -426,6 +446,8 @@ func (s *svc) UpdateIncome(ctx context.Context, params updateIncomeParams) (repo
 			return repo.Income{}, ErrCategoryNotFound
 		}
 		return repo.Income{}, err
+	} else if category.Type != "income" {
+		return repo.Income{}, fmt.Errorf("category type must be income")
 	}
 
 	return s.repo.UpdateIncome(ctx, repo.UpdateIncomeParams{
@@ -466,56 +488,12 @@ func currentUser(ctx context.Context) (auth.User, error) {
 	return user, nil
 }
 
-func (s *svc) checkAndGeneratePeriodicExpenses(ctx context.Context, userID int64) error {
-	dueExpenses, err := s.repo.FindDuePeriodicExpensesByUserID(ctx, userID)
-	if err != nil {
-		return err
-	}
-	
-	now := time.Now()
-	for _, pe := range dueExpenses {
-		// generate the expense
-		_, err := s.repo.CreateExpense(ctx, repo.CreateExpenseParams{
-			Name:        pe.Name,
-			Description: pe.Description,
-			Amount:      pe.Amount,
-			UserID:      pe.UserID,
-			CategoryID:  pe.CategoryID,
-			SpentOn:     pgtype.Timestamptz{Time: pe.NextDueDate.Time, Valid: true},
-			IsPeriodic:  true,
-		})
-		if err != nil {
-			return err
-		}
-		
-		// calculate next due date
-		nextDue := pe.NextDueDate.Time
-		switch pe.PeriodUnit {
-		case "days":
-			nextDue = nextDue.AddDate(0, 0, int(pe.PeriodInterval))
-		case "weeks":
-			nextDue = nextDue.AddDate(0, 0, int(pe.PeriodInterval)*7)
-		case "months":
-			nextDue = nextDue.AddDate(0, int(pe.PeriodInterval), 0)
-		case "years":
-			nextDue = nextDue.AddDate(int(pe.PeriodInterval), 0, 0)
-		}
-		
-		err = s.repo.UpdatePeriodicExpenseNextDueDate(ctx, repo.UpdatePeriodicExpenseNextDueDateParams{
-			ID:                pe.ID,
-			LastGeneratedDate: pgtype.Timestamptz{Time: now, Valid: true},
-			NextDueDate:       pgtype.Timestamptz{Time: nextDue, Valid: true},
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (s *svc) ListPeriodicExpenses(ctx context.Context) ([]repo.PeriodicExpense, error) {
 	user, err := currentUser(ctx)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.checkAndGeneratePeriodicExpenses(ctx, user.ID); err != nil {
 		return nil, err
 	}
 	return s.repo.ListPeriodicExpensesByUserID(ctx, user.ID)
@@ -525,25 +503,28 @@ func (s *svc) CreatePeriodicExpense(ctx context.Context, params createPeriodicEx
 	if params.Name == "" {
 		return repo.PeriodicExpense{}, fmt.Errorf("name is required")
 	}
-	if params.Amount <= 0 {
+	if params.Amount <= 0 || math.IsNaN(params.Amount) || math.IsInf(params.Amount, 0) {
 		return repo.PeriodicExpense{}, fmt.Errorf("amount must be greater than zero")
 	}
 	if params.CategoryID <= 0 {
 		return repo.PeriodicExpense{}, fmt.Errorf("category_id is required")
 	}
-	if params.PeriodInterval <= 0 {
+	if params.PeriodInterval == 0 {
 		params.PeriodInterval = 1
 	}
 	if params.PeriodUnit == "" {
 		params.PeriodUnit = "months"
+	}
+	if err := validateRecurrence(params.PeriodInterval, params.PeriodUnit); err != nil {
+		return repo.PeriodicExpense{}, err
 	}
 
 	user, err := currentUser(ctx)
 	if err != nil {
 		return repo.PeriodicExpense{}, err
 	}
-	
-	if _, err := s.repo.FindCategoryByIDAndCreatorID(ctx, repo.FindCategoryByIDAndCreatorIDParams{
+
+	if category, err := s.repo.FindCategoryByIDAndCreatorID(ctx, repo.FindCategoryByIDAndCreatorIDParams{
 		ID:        params.CategoryID,
 		CreatorID: user.ID,
 	}); err != nil {
@@ -551,6 +532,8 @@ func (s *svc) CreatePeriodicExpense(ctx context.Context, params createPeriodicEx
 			return repo.PeriodicExpense{}, ErrCategoryNotFound
 		}
 		return repo.PeriodicExpense{}, err
+	} else if category.Type != "expense" {
+		return repo.PeriodicExpense{}, fmt.Errorf("category type must be expense")
 	}
 
 	startDate := time.Now()
@@ -580,32 +563,6 @@ func (s *svc) DeletePeriodicExpense(ctx context.Context, id int64) error {
 	return s.repo.DeletePeriodicExpense(ctx, repo.DeletePeriodicExpenseParams{
 		ID:     id,
 		UserID: user.ID,
-	})
-}
-
-func (s *svc) UpdatePeriodicExpense(ctx context.Context, params updatePeriodicExpenseParams) (repo.PeriodicExpense, error) {
-	if params.PeriodInterval <= 0 {
-		return repo.PeriodicExpense{}, fmt.Errorf("period_interval must be greater than zero")
-	}
-	if params.PeriodUnit == "" {
-		return repo.PeriodicExpense{}, fmt.Errorf("period_unit is required")
-	}
-	user, err := currentUser(ctx)
-	if err != nil {
-		return repo.PeriodicExpense{}, err
-	}
-	
-	nextDue := time.Now()
-	if params.NextDueDate != nil {
-		nextDue = *params.NextDueDate
-	}
-
-	return s.repo.UpdatePeriodicExpense(ctx, repo.UpdatePeriodicExpenseParams{
-		ID:             params.ID,
-		UserID:         user.ID,
-		PeriodInterval: params.PeriodInterval,
-		PeriodUnit:     params.PeriodUnit,
-		NextDueDate:    pgtype.Timestamptz{Time: nextDue, Valid: true},
 	})
 }
 
@@ -642,6 +599,9 @@ func (s *svc) GetExpensesByCategory(ctx context.Context, startDate, endDate time
 	if err != nil {
 		return nil, err
 	}
+	if err := s.checkAndGeneratePeriodicExpenses(ctx, user.ID); err != nil {
+		return nil, err
+	}
 	return s.repo.GetExpensesByCategory(ctx, repo.GetExpensesByCategoryParams{
 		UserID:    user.ID,
 		SpentOn:   timestamptzFromTime(&startDate),
@@ -654,6 +614,9 @@ func (s *svc) GetMonthlyExpenseTotals(ctx context.Context, startDate, endDate ti
 	if err != nil {
 		return nil, err
 	}
+	if err := s.checkAndGeneratePeriodicExpenses(ctx, user.ID); err != nil {
+		return nil, err
+	}
 	return s.repo.GetMonthlyExpenseTotals(ctx, repo.GetMonthlyExpenseTotalsParams{
 		UserID:    user.ID,
 		SpentOn:   timestamptzFromTime(&startDate),
@@ -664,6 +627,9 @@ func (s *svc) GetMonthlyExpenseTotals(ctx context.Context, startDate, endDate ti
 func (s *svc) GetMonthlyIncomeTotals(ctx context.Context, startDate, endDate time.Time) ([]repo.GetMonthlyIncomeTotalsRow, error) {
 	user, err := currentUser(ctx)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.checkAndGeneratePeriodicExpenses(ctx, user.ID); err != nil {
 		return nil, err
 	}
 	return s.repo.GetMonthlyIncomeTotals(ctx, repo.GetMonthlyIncomeTotalsParams{

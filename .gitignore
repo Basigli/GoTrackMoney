@@ -6,3 +6,7 @@ frontend/dist
 node_modules
 frontend/dist
 *.csv
+
+# Browser test artifacts
+frontend/test-results/
+frontend/playwright-report/

@@ -1,13 +1,15 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 import { API_BASE } from '@/utils/api';
 
 export interface Category { id: number; name: string; emoji: string; type: string; color?: string; }
 export interface Income { id: number; name: string; amount: number; description: string; category_id: number; received_on: string; }
 export interface Expense { id: number; name: string; amount: number; description: string; category_id: number; spent_on: string; is_periodic?: boolean; }
-export interface PeriodicExpense { id: number; name: string; amount: number; description: string; category_id: number; period_interval: number; period_unit: string; start_date: string; next_due_date: string; }
+export interface PeriodicExpense { paused: boolean; schedule_anchor: string; id: number; name: string; amount: number; description: string; category_id: number; period_interval: number; period_unit: string; start_date: string; next_due_date: string; }
 
 export function useData(token: string | null) {
+  const incomeRequest = useRef(0);
+  const expenseRequest = useRef(0);
   const [categories, setCategories] = useState<Category[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -51,24 +53,26 @@ export function useData(token: string | null) {
 
   const fetchIncomesByDate = useCallback(async (year: number, month: number) => {
     if (!token) return;
+    const request = ++incomeRequest.current;
     const res = await fetch(`${API_BASE}/incomes/filter?year=${year}&month=${month}`, { headers: { Authorization: `Bearer ${token}` } });
     if (res.ok) {
       const data = await res.json() || [];
-      setIncomes(data);
+      if (request === incomeRequest.current) setIncomes(data);
       return data;
     }
-    return [];
+    throw new Error("Unable to load transactions");
   }, [token]);
 
   const fetchExpensesByDate = useCallback(async (year: number, month: number) => {
     if (!token) return;
+    const request = ++expenseRequest.current;
     const res = await fetch(`${API_BASE}/expenses/filter?year=${year}&month=${month}`, { headers: { Authorization: `Bearer ${token}` } });
     if (res.ok) {
       const data = await res.json() || [];
-      setExpenses(data);
+      if (request === expenseRequest.current) setExpenses(data);
       return data;
     }
-    return [];
+    throw new Error("Unable to load transactions");
   }, [token]);
 
   return { categories, incomes, expenses, periodicExpenses, fetchCategories, fetchIncomes, fetchExpenses, fetchPeriodicExpenses, fetchIncomesByDate, fetchExpensesByDate };

@@ -53,6 +53,8 @@ type PeriodicExpense struct {
 	LastGeneratedDate pgtype.Timestamptz `json:"last_generated_date"`
 	NextDueDate       pgtype.Timestamptz `json:"next_due_date"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	Paused            bool               `json:"paused"`
+	ScheduleAnchor    pgtype.Timestamptz `json:"schedule_anchor"`
 }
 
 type User struct {
