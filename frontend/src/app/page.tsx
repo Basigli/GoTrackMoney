@@ -3,9 +3,6 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useData, Income, Expense } from '@/hooks/useData';
 import Navbar from '@/components/Navbar';
-import { HeaderDateInput } from '@/components/DateInputs';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
 import { format } from 'date-fns';
 import { it, enUS } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -209,22 +206,8 @@ export default function Home() {
 
         <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
         
-        <div className="header-area">
-          <DatePicker
-            selected={filterDate}
-            onChange={(date: Date | null) => date && setFilterDate(date)}
-            dateFormat={filterMode === 'month' ? 'MMM yyyy' : 'yyyy'}
-            showMonthYearPicker={filterMode === 'month'}
-            showYearPicker={filterMode === 'year'}
-            customInput={
-              <HeaderDateInput 
-                extraText={`${t('dashboard.filter_by')} ${filterMode === 'month' ? t('dashboard.filter_month').toLowerCase() : t('dashboard.filter_year').toLowerCase()}`} 
-              />
-            }
-            locale={dateLocale}
-            withPortal
-          />
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div className="dashboard-actions">
+          <div className="dashboard-action-buttons">
             <button 
               onClick={() => setFilterMode(m => m === 'month' ? 'year' : 'month')}
               style={{ padding: '10px 16px', borderRadius: '20px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}

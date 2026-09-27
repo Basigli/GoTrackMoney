@@ -1,17 +1,12 @@
 import { forwardRef } from 'react';
 
-export const HeaderDateInput = forwardRef(({ value, onClick, extraText }: any, ref: any) => (
-  <div className="date-display" onClick={onClick} ref={ref} style={{ cursor: 'pointer' }}>
-    <span className="date-icon">📅</span>
-    <div className="date-text">
-      <h2>{value}</h2>
-      {extraText && <p>{extraText}</p>}
-    </div>
-  </div>
-));
-HeaderDateInput.displayName = 'HeaderDateInput';
+type ModalDateInputProps = {
+  value?: string;
+  onClick?: () => void;
+  labelText?: string;
+};
 
-export const ModalDateInput = forwardRef(({ value, onClick, labelText }: any, ref: any) => (
+export const ModalDateInput = forwardRef<HTMLDivElement, ModalDateInputProps>(({ value, onClick, labelText }, ref) => (
   <div className="modal-header" onClick={onClick} ref={ref} style={{ cursor: 'pointer' }}>
     <span className="date-icon">📅</span>
     <div className="date-text">

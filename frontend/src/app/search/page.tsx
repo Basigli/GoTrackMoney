@@ -21,9 +21,11 @@ function SearchContent() {
   const [failure, setFailure] = useState('');
   const [revision, setRevision] = useState(0);
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const key = token + ':' + query + ':' + revision;
   const ready = snapshot?.key === key;
   const failed = failure === key;
+  const advancedFilterCount = ['type', 'category_id', 'from', 'to', 'min_amount', 'max_amount'].filter(field => Boolean(params.get(field))).length;
   useEffect(() => {
     if (!token) return;
     const controller = new AbortController();
@@ -53,20 +55,27 @@ function SearchContent() {
     <main className="page-content">
       <h1>{t('nav.search')}</h1>
       <p className="analytics-note">{t('search.history')}</p>
-      <div className="search-filters">
+      <div className="search-primary">
         <label>{t('dashboard.search')}<input className="input-field" type="search" value={params.get('q') || ''} onChange={e => change('q', e.target.value)} /></label>
-        <label>{t('record.type')}<select className="input-field" value={params.get('type') || ''} onChange={e => { const next = new URLSearchParams(query); next.delete('category_id'); next.delete('offset'); if (e.target.value) next.set('type', e.target.value); else next.delete('type'); window.history.replaceState(null, '', '/search?' + next); }}>
-          <option value="">{t('search.all')}</option><option value="expense">{t('record.expense')}</option><option value="income">{t('record.income')}</option>
-        </select></label>
-        <label>{t('record.category')}<select className="input-field" value={params.get('category_id') || ''} onChange={e => change('category_id', e.target.value)}>
-          <option value="">{t('search.all')}</option>
-          {categories.filter(c => !params.get('type') || c.type === params.get('type')).sort((a,b) => a.name.localeCompare(b.name, language, { sensitivity:'base' })).map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
-        </select></label>
-        {(['from','to','min_amount','max_amount'] as const).map(field => <label key={field}>{t('search.' + field)}
-          <input className="input-field" type={field === 'from' || field === 'to' ? 'date' : 'number'} min="0" step="0.01" value={params.get(field) || ''} onChange={e => change(field, e.target.value)} />
-        </label>)}
+        <button type="button" className="secondary-btn search-filter-toggle" aria-expanded={showMobileFilters} aria-controls="search-advanced-filters" onClick={() => setShowMobileFilters(open => !open)}>
+          {t(showMobileFilters ? 'search.hide_filters' : 'search.show_filters')}{advancedFilterCount > 0 && <span className="filter-count">{advancedFilterCount}</span>}
+        </button>
       </div>
-      <button className="secondary-btn" onClick={() => window.history.replaceState(null, '', '/search')}>{t('search.clear')}</button>
+      <div id="search-advanced-filters" className={`search-advanced${showMobileFilters ? ' open' : ''}`}>
+        <div className="search-filters">
+          <label>{t('record.type')}<select className="input-field" value={params.get('type') || ''} onChange={e => { const next = new URLSearchParams(query); next.delete('category_id'); next.delete('offset'); if (e.target.value) next.set('type', e.target.value); else next.delete('type'); window.history.replaceState(null, '', '/search?' + next); }}>
+            <option value="">{t('search.all')}</option><option value="expense">{t('record.expense')}</option><option value="income">{t('record.income')}</option>
+          </select></label>
+          <label>{t('record.category')}<select className="input-field" value={params.get('category_id') || ''} onChange={e => change('category_id', e.target.value)}>
+            <option value="">{t('search.all')}</option>
+            {categories.filter(c => !params.get('type') || c.type === params.get('type')).sort((a,b) => a.name.localeCompare(b.name, language, { sensitivity:'base' })).map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
+          </select></label>
+          {(['from','to','min_amount','max_amount'] as const).map(field => <label key={field}>{t('search.' + field)}
+            <input className="input-field" type={field === 'from' || field === 'to' ? 'date' : 'number'} min="0" step="0.01" value={params.get(field) || ''} onChange={e => change(field, e.target.value)} />
+          </label>)}
+        </div>
+        <button type="button" className="secondary-btn" onClick={() => window.history.replaceState(null, '', '/search')}>{t('search.clear')}</button>
+      </div>
       {!ready && <p role={failed ? 'alert' : 'status'}>{t(failed ? 'search.error' : 'analytics.loading')}
         {failed && <button className="secondary-btn" onClick={() => setRevision(n => n + 1)}>{t('analytics.retry')}</button>}
       </p>}

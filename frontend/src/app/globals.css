@@ -180,15 +180,14 @@ input[type="color"]::-moz-color-swatch {
   font-size: 14px;
 }
 
-/* Header Area */
-.header-area {
-  padding: 20px;
+/* Dashboard actions and modal date */
+.dashboard-actions {
+  padding: 16px 20px 0;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: flex-end;
 }
 
-.date-display {
+.dashboard-action-buttons {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -719,6 +718,9 @@ input[type="datetime-local"]::-webkit-datetime-edit {
 .analytics-table th:first-child { text-align: left; overflow-wrap: anywhere; }
 .analytics-table tbody th { font-weight: 400; }
 .analytics-grid > div { min-width: 0; }
+.analytics-page-content { padding: 24px 20px; }
+.analytics-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.analytics-export { width: auto; margin: 0; padding: 8px 16px; font-size: 14px; }
 
 /* Shared transaction workflows */
 .page-content { padding: 24px 20px; }
@@ -730,9 +732,14 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px soli
 .danger, .field-error, .amount-expense { color: var(--danger-color); }
 .amount-income { color: var(--success-color); }
 .field-error { font-size: 14px; margin: 4px 0 12px; }
-.form-row, .month-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0; }
+.form-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0; }
 .form-row > label { flex: 1; min-width: 120px; }
-.month-navigation { justify-content: center; }
+.month-navigation { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 16px auto 20px; }
+.month-navigation-main { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; width: min(100%, 340px); }
+.month-navigation-main .react-datepicker-wrapper, .month-navigation-main .react-datepicker__input-container { width: 100%; min-width: 0; }
+.month-arrow { min-width: 44px; min-height: 44px; padding: 8px; font-size: 20px; }
+.period-picker-button { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; padding: 8px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-color); color: var(--text-color); font: inherit; font-size: 17px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.period-reset { padding: 4px 10px; border: 0; background: transparent; color: var(--primary-hover); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .editor-dialog { padding: 0; border: 1px solid var(--border-color); border-radius: 20px; width: min(520px, calc(100% - 24px)); max-height: 90dvh; background: var(--surface-color); color: var(--text-color); margin: auto; }
 .editor-dialog::backdrop { background: rgba(0,0,0,.5); }
 .editor-body { position: relative; padding: 28px; }
@@ -741,9 +748,17 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px soli
 .editor-body label { display: block; font-size: 14px; margin-top: 12px; }
 .editor-body .input-field { margin: 6px 0 8px; }
 .editor-body .submit-btn { margin: 12px 0; }
+.search-primary label { display: block; font-size: 14px; }
+.search-primary .input-field { margin: 6px 0 0; }
+.search-filter-toggle { display: none; align-items: center; gap: 8px; }
+.filter-count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 12px; background: var(--primary-color); font-size: 12px; font-weight: 700; }
 .search-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 16px 0; }
 .search-filters label { font-size: 14px; }
 .search-filters .input-field { margin: 6px 0; }
+@media (max-width: 639px) {
+  .search-filter-toggle { display: inline-flex; margin-top: 10px; }
+  .search-advanced:not(.open) { display: none; }
+}
 .transaction-row { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 16px; padding: 16px; text-align: left; color: var(--text-color); background: transparent; border: 0; font: inherit; }
 button.transaction-row { cursor: pointer; }
 .transaction-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }

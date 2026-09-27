@@ -11,12 +11,9 @@ import type { Category, Income, Expense } from '@/hooks/useData';
 import { API_BASE } from '@/utils/api';
 import toast from 'react-hot-toast';
 import Navbar from '@/components/Navbar';
-import { HeaderDateInput } from '@/components/DateInputs';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { format, subMonths } from 'date-fns';
 import { it, enUS } from 'date-fns/locale';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
 import {
   PieChart, Pie, Cell, Tooltip as PieTooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as BarTooltip, Legend
@@ -167,31 +164,14 @@ export default function AnalyticsPage() {
     <div className="app-container">
       <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
 
-      <div style={{ padding: '24px 20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="analytics-page-content">
+        <div className="analytics-header">
           <h1 style={{ fontSize: '24px', fontWeight: 700 }}>{t('analytics.title')}</h1>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <DatePicker
-              selected={filterDate}
-              onChange={(date: Date | null) => date && setFilterDate(date)}
-              dateFormat="MMM yyyy"
-              showMonthYearPicker
-              customInput={
-                <HeaderDateInput
-                  extraText={`${t('dashboard.filter_by')} ${t('dashboard.filter_month').toLowerCase()}`}
-                />
-              }
-              locale={dateLocale}
-              withPortal
-            />
-
-            <MonthNavigation date={filterDate} onChange={setFilterDate} />
-            <button disabled={isExporting || !isReady} onClick={exportToCSV} className="submit-btn" style={{ margin: 0, padding: '8px 16px', width: 'auto', fontSize: '14px', borderRadius: '12px' }}>
-              {t(isExporting ? 'analytics.exporting' : 'analytics.export_csv')}
-            </button>
-          </div>
+          <button disabled={isExporting || !isReady} onClick={exportToCSV} className="submit-btn analytics-export">
+            {t(isExporting ? 'analytics.exporting' : 'analytics.export_csv')}
+          </button>
         </div>
+        <MonthNavigation date={filterDate} onChange={setFilterDate} />
 
         {!isReady && (
           <div role={hasError ? 'alert' : 'status'} className="analytics-card">
