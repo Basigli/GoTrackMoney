@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { it, enUS } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { useTheme } from '@/i18n/ThemeContext';
 
 import TransactionEditor, { type SavedTransaction } from '@/components/TransactionEditor';
 import SafeDialog from '@/components/SafeDialog';
@@ -36,6 +37,7 @@ export default function Home() {
   const [filterMode, setFilterMode] = useState<'month' | 'year'>('month');
 
   const { t, language } = useLanguage();
+  const { setActiveUser, clearActiveUser } = useTheme();
   const dateLocale = language === 'it' ? it : enUS;
 
   const [editingItem, setEditingItem] = useState<Transaction | null>(null);
@@ -58,12 +60,12 @@ export default function Home() {
         const response = await fetch(API_BASE + '/auth/me', { headers: { Authorization: 'Bearer ' + savedToken } });
         if (!response.ok) throw new Error();
         const current = await response.json();
-        if (!cancelled) { setUser(current); setToken(savedToken); }
-      } catch { if (!cancelled) localStorage.removeItem('auth_token'); }
+        if (!cancelled) { setActiveUser(current.id); setUser(current); setToken(savedToken); }
+      } catch { if (!cancelled) { localStorage.removeItem('auth_token'); clearActiveUser(); } }
       finally { if (!cancelled) setLoading(false); }
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [setActiveUser, clearActiveUser]);
 
   useEffect(() => {
     if (token) {
@@ -101,6 +103,7 @@ export default function Home() {
       if (res.ok) {
         const data = await res.json();
         localStorage.setItem('auth_token', data.token);
+        setActiveUser(data.user.id);
         setToken(data.token);
         setUser(data.user);
         toast.success(isLogin ? t('auth.login_success') : t('auth.register_success'));
@@ -122,6 +125,7 @@ export default function Home() {
 
   const logout = () => {
     localStorage.removeItem('auth_token');
+    clearActiveUser();
     setToken(null);
     setUser(null);
   };
@@ -208,9 +212,10 @@ export default function Home() {
         
         <div className="dashboard-actions">
           <div className="dashboard-action-buttons">
-            <button 
+            <button
+              type="button"
+              className="secondary-btn period-mode-toggle"
               onClick={() => setFilterMode(m => m === 'month' ? 'year' : 'month')}
-              style={{ padding: '10px 16px', borderRadius: '20px', border: '1px solid var(--border-color)', background: 'var(--surface-color)', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}
             >
               {filterMode === 'month' ? t('dashboard.filter_year') : t('dashboard.filter_month')}
             </button>

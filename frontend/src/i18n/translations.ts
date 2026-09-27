@@ -60,6 +60,12 @@ export const translations = {
     'nav.search': 'Cerca',
     'nav.analytics': 'Analisi',
     'nav.logout': 'Esci',
+    'nav.open_menu': 'Apri menu',
+    'nav.close_menu': 'Chiudi menu',
+    'profile.theme': 'Tema',
+    'profile.light': 'Chiaro',
+    'profile.dark': 'Scuro',
+    'profile.theme_note': 'La scelta si applica subito e resta su questo browser.',
 
     // Dashboard
     'dashboard.welcome': 'Ciao, {name}!',
@@ -241,6 +247,12 @@ export const translations = {
     'nav.search': 'Search',
     'nav.analytics': 'Analytics',
     'nav.logout': 'Logout',
+    'nav.open_menu': 'Open menu',
+    'nav.close_menu': 'Close menu',
+    'profile.theme': 'Theme',
+    'profile.light': 'Light',
+    'profile.dark': 'Dark',
+    'profile.theme_note': 'Your choice applies immediately and stays on this browser.',
 
     // Dashboard
     'dashboard.welcome': 'Hello, {name}!',

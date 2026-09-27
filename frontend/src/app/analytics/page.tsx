@@ -208,7 +208,8 @@ export default function AnalyticsPage() {
                     </Pie>
                     <PieTooltip
                       formatter={value => money(Number(value))}
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                      contentStyle={{ borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--surface-elevated)', color: 'var(--text-color)' }}
+                      itemStyle={{ color: 'var(--text-color)' }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -246,10 +247,12 @@ export default function AnalyticsPage() {
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} tickFormatter={(value) => `${value}€`} />
                   <BarTooltip
                     cursor={{ fill: 'var(--bg-color)' }}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
+                    contentStyle={{ borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--surface-elevated)', color: 'var(--text-color)' }}
+                    itemStyle={{ color: 'var(--text-color)' }}
+                    labelStyle={{ color: 'var(--text-muted)' }}
                     formatter={value => money(Number(value))}
                   />
-                  <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                  <Legend wrapperStyle={{ paddingTop: '20px', color: 'var(--text-muted)' }} />
                   <Bar onClick={(_, index) => router.push(transactionSearchLink(barData[index].date, "income"))} style={{ cursor: "pointer" }} dataKey="income" name={t('dashboard.incomes')} fill="var(--success-color)" radius={[4, 4, 0, 0]} maxBarSize={40} />
                   <Bar onClick={(_, index) => router.push(transactionSearchLink(barData[index].date, "expense"))} style={{ cursor: "pointer" }} dataKey="expense" name={t('dashboard.expenses')} fill="var(--danger-color)" radius={[4, 4, 0, 0]} maxBarSize={40} />
                 </BarChart>

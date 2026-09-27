@@ -116,7 +116,7 @@ export default function AdminPage() {
                 {users.map(u => (
                   <tr key={u.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                     <td style={{ padding: '12px' }}>{u.id}</td>
-                    <td style={{ padding: '12px' }}>{u.username} {u.is_admin && <span style={{fontSize: '12px', padding: '2px 6px', background: 'var(--primary-color)', color: 'white', borderRadius: '10px', marginLeft: '8px'}}>ADMIN</span>}</td>
+                    <td style={{ padding: '12px' }}>{u.username} {u.is_admin && <span style={{fontSize: '12px', padding: '2px 6px', background: 'var(--primary-color)', color: 'var(--primary-on)', borderRadius: '10px', marginLeft: '8px'}}>ADMIN</span>}</td>
                     <td style={{ padding: '12px', display: 'flex', gap: '8px' }}>
                       <button 
                         onClick={() => handleResetPassword(u.id)}

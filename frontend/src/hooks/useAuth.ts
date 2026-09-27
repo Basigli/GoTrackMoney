@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { API_BASE } from '@/utils/api';
+import { useTheme } from '@/i18n/ThemeContext';
 
 export function useAuth() {
+  const { setActiveUser, clearActiveUser } = useTheme();
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<{id: number, username: string, session_duration_hours: number, is_admin: boolean} | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,7 +28,9 @@ export function useAuth() {
         headers: { Authorization: `Bearer ${authToken}` }
       });
       if (res.ok) {
-        setUser(await res.json());
+        const current = await res.json();
+        setActiveUser(current.id);
+        setUser(current);
       } else {
         logout();
       }
@@ -39,6 +43,7 @@ export function useAuth() {
 
   const logout = () => {
     localStorage.removeItem('auth_token');
+    clearActiveUser();
     setToken(null);
     setUser(null);
     router.push('/');

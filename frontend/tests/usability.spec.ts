@@ -20,7 +20,7 @@ async function expense(request:APIRequestContext, headers:Record<string,string>,
 }
 async function nav(page:Page, name:string) {
   const link = page.getByRole('link',{ name, exact:true });
-  if (!await link.isVisible()) await page.getByRole('button',{ name:'☰' }).click();
+  if (!await link.isVisible()) await page.getByRole('button',{ name:'Open menu' }).click();
   const target = await link.getAttribute("href");
   await link.click();
   await expect(page).toHaveURL(new RegExp(target! + "(?:\\?|$)"));
@@ -158,4 +158,3 @@ test('stale search responses cannot replace newer results', async ({page,request
   await expect(page.getByRole('button',{name:/Banana dinner/})).toBeVisible();
   await expect(page.getByRole('button',{name:/Apple dinner/})).not.toBeVisible();
 });
-

@@ -14,7 +14,7 @@ export default function Navbar({ username, onLogout, isAdmin }: { username: stri
     <div className="navbar">
       <div className="navbar-header">
         <div className="mobile-only" style={{ fontWeight: 700, fontSize: '18px', color: 'var(--primary-color)' }}>GoTrackMoney</div>
-        <button className="mobile-menu-btn" onClick={() => setIsOpen(!isOpen)}>
+        <button className="mobile-menu-btn" type="button" aria-label={t(isOpen ? 'nav.close_menu' : 'nav.open_menu')} aria-expanded={isOpen} onClick={() => setIsOpen(!isOpen)}>
           {isOpen ? '✕' : '☰'}
         </button>
       </div>
@@ -29,8 +29,8 @@ export default function Navbar({ username, onLogout, isAdmin }: { username: stri
           {isAdmin && <Link href="/admin" className={`nav-link ${pathname === '/admin' ? 'active' : ''}`}>{t('nav.admin')}</Link>}
         </div>
         <div className="nav-right">
-          <Link href="/profile" style={{ color: '#94a3b8', textDecoration: 'none', fontWeight: 600 }}>{username}</Link>
-          <button onClick={onLogout} className="logout-btn">{t('nav.logout')}</button>
+          <Link href="/profile" className="profile-link" title={username}><span className="profile-name">{username}</span></Link>
+          <button type="button" onClick={onLogout} className="logout-btn">{t('nav.logout')}</button>
         </div>
       </div>
     </div>

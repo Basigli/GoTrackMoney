@@ -114,7 +114,7 @@ export default function CategoriesPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '12px' }}>
-            <button type="submit" className="submit-btn" style={{ background: 'var(--primary-color)', color: 'white', flex: 1, padding: '16px', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}>
+            <button type="submit" className="submit-btn" style={{ background: 'var(--primary-color)', color: 'var(--primary-on)', flex: 1, padding: '16px', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}>
               {editingCategory ? t('categories.save_btn') : t('categories.add_btn')}
             </button>
             {editingCategory && (

@@ -4,13 +4,15 @@ import { useState, useEffect, FormEvent } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Navbar from '@/components/Navbar';
 import { useLanguage } from '@/i18n/LanguageContext';
-import toast, { Toaster } from 'react-hot-toast';
+import { useTheme } from '@/i18n/ThemeContext';
+import toast from 'react-hot-toast';
 
 import { API_BASE } from '@/utils/api';
 
 export default function ProfilePage() {
   const { token, user, loading, logout } = useAuth();
   const { t, language, setLanguage } = useLanguage();
+  const { theme, setTheme } = useTheme();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -42,9 +44,7 @@ export default function ProfilePage() {
       });
 
       if (res.ok) {
-        toast.success(t('auth.update_success'), {
-          style: { borderRadius: '12px', background: '#333', color: '#fff' }
-        });
+        toast.success(t('auth.update_success'));
         // Clear password field after success
         setPassword('');
         // Update local storage user data optionally (handled by re-fetching on next load or context)
@@ -90,7 +90,6 @@ export default function ProfilePage() {
 
   return (
     <div className="app-container">
-      <Toaster position="bottom-center" />
       <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
       
       <div style={{ padding: '40px 20px', maxWidth: '500px', margin: '0 auto' }}>
@@ -146,6 +145,15 @@ export default function ProfilePage() {
                 <button type="button" onClick={() => setLanguage('it')} style={{ padding: '8px 16px', border: 'none', background: language === 'it' ? 'var(--surface-color)' : 'transparent', borderRadius: '12px', cursor: 'pointer', color: 'var(--text-color)', fontWeight: language === 'it' ? 'bold' : 'normal' }}>Italiano</button>
                 <button type="button" onClick={() => setLanguage('en')} style={{ padding: '8px 16px', border: 'none', background: language === 'en' ? 'var(--surface-color)' : 'transparent', borderRadius: '12px', cursor: 'pointer', color: 'var(--text-color)', fontWeight: language === 'en' ? 'bold' : 'normal' }}>English</button>
               </div>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <span className="profile-setting-label">{t('profile.theme')}</span>
+              <div className="theme-switcher" role="group" aria-label={t('profile.theme')}>
+                <button type="button" className={theme === 'light' ? 'active' : ''} aria-pressed={theme === 'light'} onClick={() => setTheme('light')}>{t('profile.light')}</button>
+                <button type="button" className={theme === 'dark' ? 'active' : ''} aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')}>{t('profile.dark')}</button>
+              </div>
+              <p className="profile-setting-note">{t('profile.theme_note')}</p>
             </div>
 
             <button type="submit" className="submit-btn" style={{ background: 'var(--success-color)' }}>{t('auth.save_profile')}</button>

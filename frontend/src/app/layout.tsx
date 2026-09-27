@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,8 +26,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body>
+        <Script id="theme-bootstrap" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `
+          try {
+            var userId = localStorage.getItem('app_theme_active_user');
+            if (localStorage.getItem('auth_token') && userId && localStorage.getItem('app_theme:' + userId) === 'dark') {
+              document.documentElement.dataset.theme = 'dark';
+            }
+          } catch (_) {}
+        ` }} />
         <Providers>
           {children}
         </Providers>
