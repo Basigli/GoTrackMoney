@@ -1,64 +1,52 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, FormEvent } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import Navbar from '@/components/Navbar';
+import { useSession } from '@/auth/SessionContext';
+import AppShell from '@/components/AppShell';
+import SafeDialog from '@/components/SafeDialog';
+import styles from './Profile.module.css';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { useTheme } from '@/i18n/ThemeContext';
 import toast from 'react-hot-toast';
 
-import { API_BASE } from '@/utils/api';
+import { apiRequest, ApiError } from '@/utils/api';
+import type { SessionUser } from '@/types/domain';
 
 export default function ProfilePage() {
   const { token, user, loading, logout } = useAuth();
+  if (loading || !user || !token) return null;
+  return <ProfileContent key={user.id} token={token} user={user} logout={logout} />;
+}
+
+function ProfileContent({ token, user, logout }: { token: string; user: SessionUser; logout: () => void }) {
+  const { updateUser } = useSession();
   const { t, language, setLanguage } = useLanguage();
   const { theme, setTheme } = useTheme();
 
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(user.username);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [sessionDurationHours, setSessionDurationHours] = useState<number>(24);
+  const [sessionDurationHours, setSessionDurationHours] = useState<number>(user.session_duration_hours || 24);
   
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
-
-  useEffect(() => {
-    if (user) {
-      setUsername(user.username);
-      setSessionDurationHours(user.session_duration_hours || 24);
-    }
-  }, [user]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!token) return;
 
     try {
-      const res = await fetch(`${API_BASE}/users/me`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ username, password, session_duration_hours: Number(sessionDurationHours) })
+      const updated = await apiRequest<SessionUser>('/users/me', {
+        method: 'PUT', token,
+        body: { username, password, session_duration_hours: Number(sessionDurationHours) },
       });
-
-      if (res.ok) {
-        toast.success(t('auth.update_success'));
-        // Clear password field after success
-        setPassword('');
-        // Update local storage user data optionally (handled by re-fetching on next load or context)
-      } else {
-        const text = await res.text();
-        if (res.status === 409) {
-          toast.error(t('auth.username_taken'));
-        } else {
-          toast.error(text || t('record.error_save'));
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error(t('record.error_conn'));
+      updateUser(updated);
+      toast.success(t('auth.update_success'));
+      setPassword('');
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) toast.error(t('auth.username_taken'));
+      else toast.error(error instanceof ApiError ? error.body || t('record.error_save') : t('record.error_conn'));
     }
   };
 
@@ -70,37 +58,27 @@ export default function ProfilePage() {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/users/me`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        toast.success(t('auth.delete_success') || 'Account deleted');
-        logout();
-      } else {
-        toast.error('Error deleting account');
-      }
-    } catch (err) {
-      console.error(err);
+      await apiRequest<void>('/users/me', { method: 'DELETE', token });
+      toast.success(t('auth.delete_success') || 'Account deleted');
+      logout();
+    } catch {
       toast.error(t('record.error_conn'));
     }
   };
 
-  if (loading || !user) return null;
-
   return (
-    <div className="app-container">
-      <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
+    <AppShell>
       
-      <div style={{ padding: '40px 20px', maxWidth: '500px', margin: '0 auto' }}>
-        <div className="glass-container" style={{ margin: 0, maxWidth: '100%' }}>
+      <div className={styles.content}>
+        <div className={`glass-container ${styles.card}`}>
           <h1 className="form-title">{t('auth.profile')}</h1>
           <p className="form-subtitle">Aggiorna le tue informazioni (Update your info)</p>
           
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>{t('auth.username')}</label>
+            <div className={styles.firstField}>
+              <label className={styles.label} htmlFor="profile-username">{t('auth.username')}</label>
               <input 
+                id="profile-username"
                 className="input-field" 
                 type="text" 
                 value={username} 
@@ -109,26 +87,27 @@ export default function ProfilePage() {
               />
             </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>{t('auth.password')} (Lascia vuoto per non cambiare / Leave blank to keep)</label>
-              <div style={{ position: 'relative' }}>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="profile-password">{t('auth.password')} (Lascia vuoto per non cambiare / Leave blank to keep)</label>
+              <div className={styles.passwordField}>
                 <input 
-                  className="input-field" 
+                  id="profile-password"
                   type={showPassword ? "text" : "password"} 
                   value={password} 
                   onChange={e => setPassword(e.target.value)} 
                   placeholder="Nuova password..."
-                  style={{ margin: 0 }}
+                  className={`input-field ${styles.passwordInput}`}
                 />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6 }}>
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className={styles.passwordToggle} aria-label={t(showPassword ? 'auth.hide_password' : 'auth.show_password')}>
                   {showPassword ? '👁️' : '👁️‍🗨️'}
                 </button>
               </div>
             </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>{t('auth.session_duration')} (Ore / Hours)</label>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="profile-session-duration">{t('auth.session_duration')} (Ore / Hours)</label>
               <input 
+                id="profile-session-duration"
                 className="input-field" 
                 type="number" 
                 min="1"
@@ -139,32 +118,33 @@ export default function ProfilePage() {
               />
             </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-muted)' }}>Lingua / Language</label>
-              <div className="lang-switcher" style={{ display: 'flex', background: 'var(--input-bg)', borderRadius: '16px', padding: '4px', width: 'fit-content' }}>
-                <button type="button" onClick={() => setLanguage('it')} style={{ padding: '8px 16px', border: 'none', background: language === 'it' ? 'var(--surface-color)' : 'transparent', borderRadius: '12px', cursor: 'pointer', color: 'var(--text-color)', fontWeight: language === 'it' ? 'bold' : 'normal' }}>Italiano</button>
-                <button type="button" onClick={() => setLanguage('en')} style={{ padding: '8px 16px', border: 'none', background: language === 'en' ? 'var(--surface-color)' : 'transparent', borderRadius: '12px', cursor: 'pointer', color: 'var(--text-color)', fontWeight: language === 'en' ? 'bold' : 'normal' }}>English</button>
+            <div className={styles.field}>
+              <span className={styles.label}>Lingua / Language</span>
+              <div className={styles.choiceGroup} role="group" aria-label="Lingua / Language">
+                <button type="button" onClick={() => setLanguage('it')} className={language === 'it' ? styles.active : ''}>Italiano</button>
+                <button type="button" onClick={() => setLanguage('en')} className={language === 'en' ? styles.active : ''}>English</button>
               </div>
             </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <span className="profile-setting-label">{t('profile.theme')}</span>
-              <div className="theme-switcher" role="group" aria-label={t('profile.theme')}>
-                <button type="button" className={theme === 'light' ? 'active' : ''} aria-pressed={theme === 'light'} onClick={() => setTheme('light')}>{t('profile.light')}</button>
-                <button type="button" className={theme === 'dark' ? 'active' : ''} aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')}>{t('profile.dark')}</button>
+            <div className={styles.field}>
+              <span className={styles.label}>{t('profile.theme')}</span>
+              <div className={styles.choiceGroup} role="group" aria-label={t('profile.theme')}>
+                <button type="button" className={theme === 'light' ? styles.active : ''} aria-pressed={theme === 'light'} onClick={() => setTheme('light')}>{t('profile.light')}</button>
+                <button type="button" className={theme === 'dark' ? styles.active : ''} aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')}>{t('profile.dark')}</button>
               </div>
-              <p className="profile-setting-note">{t('profile.theme_note')}</p>
+              <p className={styles.note}>{t('profile.theme_note')}</p>
             </div>
 
-            <button type="submit" className="submit-btn" style={{ background: 'var(--success-color)' }}>{t('auth.save_profile')}</button>
+            <button type="submit" className={`submit-btn ${styles.saveButton}`}>{t('auth.save_profile')}</button>
           </form>
 
-          <div style={{ marginTop: '40px', paddingTop: '20px', borderTop: '1px solid var(--border-color)' }}>
-            <h2 style={{ fontSize: '1.2rem', color: 'var(--danger-color)', marginBottom: '8px' }}>Zona Pericolosa</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '16px' }}>{t('auth.delete_warning') || 'Warning: This action is irreversible and will delete all your data.'}</p>
+          <div className={styles.dangerZone}>
+            <h2 className={styles.dangerTitle}>Zona Pericolosa</h2>
+            <p className={styles.dangerNote}>{t('auth.delete_warning') || 'Warning: This action is irreversible and will delete all your data.'}</p>
             <button 
+              type="button"
               onClick={() => setShowDeleteModal(true)} 
-              style={{ background: 'var(--danger-color)', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, width: '100%' }}
+              className={styles.deleteButton}
             >
               {t('auth.delete_account') || 'Delete Account'}
             </button>
@@ -173,40 +153,39 @@ export default function ProfilePage() {
       </div>
 
       {showDeleteModal && (
-        <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
-            <h2 style={{ color: 'var(--danger-color)', marginBottom: '16px' }}>{t('auth.delete_account') || 'Delete Account'}</h2>
-            <p style={{ marginBottom: '16px', color: 'var(--text-muted)' }}>
+        <SafeDialog title={t('auth.delete_account')} onClose={() => setShowDeleteModal(false)} dirty={deleteConfirmText.length > 0} showCancel={false} className={styles.deleteDialog}>
+            <p className={styles.deleteWarning}>
               {t('auth.delete_warning') || 'Warning: This action is irreversible and will delete all your data.'}
             </p>
-            <p style={{ marginBottom: '8px', fontWeight: 500 }}>
+            <p className={styles.deleteInstructions}>
               {(t('auth.delete_instructions') || 'Type "%{phrase}" to confirm:').replace('%{phrase}', language === 'it' ? 'elimina il mio account' : 'delete my account')}
             </p>
             <input 
               type="text" 
-              className="input-field" 
+              data-initial-focus
               value={deleteConfirmText}
               onChange={e => setDeleteConfirmText(e.target.value)}
               placeholder={language === 'it' ? 'elimina il mio account' : 'delete my account'}
-              style={{ marginBottom: '24px' }}
+              className={`input-field ${styles.deleteInput}`}
             />
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div className={styles.deleteActions}>
               <button 
+                type="button"
                 onClick={() => setShowDeleteModal(false)}
-                style={{ flex: 1, padding: '12px', background: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '12px', color: 'var(--text-color)', cursor: 'pointer' }}
+                className={styles.cancelDelete}
               >
                 {t('auth.cancel') || 'Cancel'}
               </button>
               <button 
+                type="button"
                 onClick={handleDeleteAccount}
-                style={{ flex: 1, padding: '12px', background: 'var(--danger-color)', border: 'none', borderRadius: '12px', color: 'white', cursor: 'pointer', fontWeight: 600 }}
+                className={styles.confirmDelete}
               >
                 {t('auth.delete_account') || 'Delete Account'}
               </button>
             </div>
-          </div>
-        </div>
+        </SafeDialog>
       )}
-    </div>
+    </AppShell>
   );
 }

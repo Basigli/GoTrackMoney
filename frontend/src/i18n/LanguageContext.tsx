@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useSyncExternalStore } from 'react';
 import { translations, Language } from './translations';
 
 interface LanguageContextType {
@@ -10,27 +10,33 @@ interface LanguageContextType {
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+const languageChangeEvent = 'app-language-change';
+
+function getLanguage(): Language {
+  if (typeof window === 'undefined') return 'en';
+  try {
+    const saved = localStorage.getItem('app_language');
+    if (saved === 'it' || saved === 'en') return saved;
+  } catch {}
+  return navigator.language.split('-')[0] === 'it' ? 'it' : 'en';
+}
+function getServerLanguage(): Language { return 'en'; }
+
+function subscribe(listener: () => void) {
+  window.addEventListener(languageChangeEvent, listener);
+  window.addEventListener('storage', listener);
+  return () => {
+    window.removeEventListener(languageChangeEvent, listener);
+    window.removeEventListener('storage', listener);
+  };
+}
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguage] = useState<Language>('en'); // Default to en
-
-  useEffect(() => {
-    // Load from local storage if available
-    const saved = localStorage.getItem('app_language') as Language;
-    if (saved && (saved === 'it' || saved === 'en')) {
-      setLanguage(saved);
-    } else {
-      // Auto-detect browser language
-      const browserLang = navigator.language.split('-')[0];
-      if (browserLang === 'it') {
-        setLanguage('it');
-      }
-    }
-  }, []);
+  const language = useSyncExternalStore(subscribe, getLanguage, getServerLanguage);
 
   const changeLanguage = (lang: Language) => {
-    setLanguage(lang);
     localStorage.setItem('app_language', lang);
+    window.dispatchEvent(new Event(languageChangeEvent));
   };
 
   const t = (key: string, params?: Record<string, string>): string => {

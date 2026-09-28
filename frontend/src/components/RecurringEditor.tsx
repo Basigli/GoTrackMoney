@@ -1,9 +1,9 @@
 'use client';
 import { useRef, useState, type FormEvent } from 'react';
 import { format } from 'date-fns';
-import type { Category, PeriodicExpense } from '@/hooks/useData';
+import type { Category, PeriodicExpense } from '@/types/domain';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { API_BASE } from '@/utils/api';
+import { apiRequest } from '@/utils/api';
 import SafeDialog from './SafeDialog';
 
 export default function RecurringEditor({ item, token, categories, onClose, onSaved }: {
@@ -37,15 +37,14 @@ export default function RecurringEditor({ item, token, categories, onClose, onSa
     if (Object.keys(invalid).length) return;
     submitting.current = true; setBusy(true); setFailure('');
     try {
-      const res = await fetch(API_BASE + '/periodic-expenses/' + item.id, {
-        method:'PUT', headers: { Authorization:'Bearer ' + token, 'Content-Type':'application/json' },
-        body:JSON.stringify({
+      await apiRequest<void>('/periodic-expenses/' + item.id, {
+        method: 'PUT', token,
+        body: {
           name:form.name.trim(), description:form.description, amount, category_id:Number(form.category_id),
           period_interval:interval, period_unit:form.period_unit,
           ...(dateChanged ? { next_due_date: new Date(form.next_due_date).toISOString() } : {}),
-        }),
+        },
       });
-      if (!res.ok) throw new Error();
       onSaved();
     } catch { setFailure(t('form.save_error')); }
     finally { submitting.current = false; setBusy(false); }

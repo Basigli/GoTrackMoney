@@ -1,0 +1,25 @@
+.content { padding: 40px 20px; max-width: 500px; margin: 0 auto; }
+.card { margin: 0; max-width: 100%; }
+.field { margin-bottom: 24px; }
+.firstField { margin-bottom: 16px; }
+.label { display: block; margin-bottom: 8px; color: var(--text-muted); }
+.passwordField { position: relative; }
+.passwordInput { margin: 0; }
+.passwordToggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; opacity: .6; }
+.choiceGroup { display: inline-flex; gap: 4px; padding: 4px; border-radius: 16px; background: var(--input-bg); }
+.choiceGroup button { padding: 8px 16px; border: 0; border-radius: 12px; background: transparent; color: var(--text-color); font: inherit; cursor: pointer; }
+.choiceGroup button.active { background: var(--surface-elevated); color: var(--accent-color); font-weight: 700; }
+.note { margin-top: 8px; color: var(--text-muted); font-size: 13px; }
+.saveButton { background: var(--success-color); }
+.dangerZone { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+.dangerTitle { font-size: 1.2rem; color: var(--danger-color); margin-bottom: 8px; }
+.dangerNote { color: var(--text-muted); font-size: .9rem; margin-bottom: 16px; }
+.deleteButton { background: var(--danger-color); color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; }
+.deleteDialog { width: min(400px, calc(100% - 24px)); }
+.deleteWarning { margin-bottom: 16px; color: var(--text-muted); }
+.deleteInstructions { margin-bottom: 8px; font-weight: 500; }
+.deleteInput { margin-bottom: 24px; }
+.deleteActions { display: flex; gap: 12px; }
+.deleteActions button { flex: 1; padding: 12px; border-radius: 12px; cursor: pointer; }
+.cancelDelete { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-color); }
+.confirmDelete { background: var(--danger-color); border: 0; color: white; font-weight: 600; }

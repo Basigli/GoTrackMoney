@@ -1,43 +1,45 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
-import { useData, Income, Expense } from '@/hooks/useData';
-import Navbar from '@/components/Navbar';
+import { useState, useEffect } from 'react';
+import { useCategories } from '@/hooks/useCategories';
+import { usePeriodTransactions } from '@/hooks/usePeriodTransactions';
+import type { Income, Expense, SessionUser } from '@/types/domain';
+import AppShell from '@/components/AppShell';
+import AuthScreen from '@/components/AuthScreen';
+import DashboardBalance from './DashboardBalance';
+import DashboardCategories from './DashboardCategories';
+import DashboardCategoryDetails from './DashboardCategoryDetails';
+import styles from './Dashboard.module.css';
 import { format } from 'date-fns';
 import { it, enUS } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { useTheme } from '@/i18n/ThemeContext';
+import { useSession } from '@/auth/SessionContext';
 
 import TransactionEditor, { type SavedTransaction } from '@/components/TransactionEditor';
-import SafeDialog from '@/components/SafeDialog';
 import MonthNavigation from '@/components/MonthNavigation';
 import { useSelectedMonth } from '@/hooks/useSelectedMonth';
 import type { Transaction, TransactionType } from '@/utils/transactions';
-import { API_BASE } from '@/utils/api';
 
 export default function Home() {
-  const [token, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<{id: number, username: string, session_duration_hours: number, is_admin: boolean} | null>(null);
-  const [isLogin, setIsLogin] = useState(true);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { session } = useSession();
+  if (session.status === 'loading') return null;
+  if (session.status === 'anonymous') return <AuthScreen />;
+  return <Dashboard key={session.user.id} token={session.token} user={session.user} />;
+}
 
-  const { categories, fetchCategories, incomes, expenses, fetchIncomesByDate, fetchExpensesByDate } = useData(token);
+function Dashboard({ token, user }: { token: string; user: SessionUser }) {
+  const { categories, ready: categoriesReady, failed: categoriesFailed, fetchCategories } = useCategories(token);
+  const { incomes, expenses, fetchPeriod } = usePeriodTransactions(token);
 
   const [activeTab, setActiveTab] = useState<'uscite' | 'entrate'>('uscite');
   const [showAddModal, setShowAddModal] = useState(false);
   
   // Filtering state
-  const [filterDate, setFilterDate] = useSelectedMonth(user?.id);
+  const [filterDate, setFilterDate] = useSelectedMonth(user.id);
   const [filterMode, setFilterMode] = useState<'month' | 'year'>('month');
 
   const { t, language } = useLanguage();
-  const { setActiveUser, clearActiveUser } = useTheme();
   const dateLocale = language === 'it' ? it : enUS;
 
   const [editingItem, setEditingItem] = useState<Transaction | null>(null);
@@ -52,24 +54,8 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    Promise.resolve().then(async () => {
-      const savedToken = localStorage.getItem('auth_token');
-      if (!savedToken) { if (!cancelled) setLoading(false); return; }
-      try {
-        const response = await fetch(API_BASE + '/auth/me', { headers: { Authorization: 'Bearer ' + savedToken } });
-        if (!response.ok) throw new Error();
-        const current = await response.json();
-        if (!cancelled) { setActiveUser(current.id); setUser(current); setToken(savedToken); }
-      } catch { if (!cancelled) { localStorage.removeItem('auth_token'); clearActiveUser(); } }
-      finally { if (!cancelled) setLoading(false); }
-    });
-    return () => { cancelled = true; };
-  }, [setActiveUser, clearActiveUser]);
-
-  useEffect(() => {
     if (token) {
-      fetchCategories();
+      void fetchCategories().catch(() => {});
     }
   }, [token, fetchCategories]);
 
@@ -78,57 +64,12 @@ export default function Home() {
       const year = filterDate.getFullYear();
       const month = filterMode === 'month' ? filterDate.getMonth() + 1 : 0;
       let cancelled = false;
-      Promise.all([fetchIncomesByDate(year, month), fetchExpensesByDate(year, month)])
+      fetchPeriod(year, month)
         .then(() => { if (!cancelled) setDataReadyKey(periodKey); })
         .catch(() => { if (!cancelled) setDataErrorKey(periodKey); });
       return () => { cancelled = true; };
     }
-  }, [token, filterDate, filterMode, fetchIncomesByDate, fetchExpensesByDate, dataRevision, periodKey]);
-
-  const handleAuth = async (e: FormEvent) => {
-    e.preventDefault();
-    
-    if (!isLogin && password !== confirmPassword) {
-      toast.error(t('auth.passwords_do_not_match'));
-      return;
-    }
-
-    const endpoint = isLogin ? '/auth/login' : '/users';
-    try {
-      const res = await fetch(`${API_BASE}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem('auth_token', data.token);
-        setActiveUser(data.user.id);
-        setToken(data.token);
-        setUser(data.user);
-        toast.success(isLogin ? t('auth.login_success') : t('auth.register_success'));
-      } else {
-        const text = await res.text();
-        if (res.status === 401) {
-          toast.error(t('auth.invalid_credentials'));
-        } else if (res.status === 409) {
-          toast.error(t('auth.username_taken'));
-        } else {
-          toast.error(text || t('record.error_conn'));
-        }
-      }
-    } catch (err) { 
-      console.error(err);
-      toast.error(t('record.error_conn'));
-    }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('auth_token');
-    clearActiveUser();
-    setToken(null);
-    setUser(null);
-  };
+  }, [token, filterDate, filterMode, fetchPeriod, dataRevision, periodKey]);
 
   const openAddModal = (category?: number) => {
     setEditingItem(null);
@@ -156,7 +97,7 @@ export default function Home() {
     setDataReadyKey('');
     const year = filterDate.getFullYear();
     const month = filterMode === 'month' ? filterDate.getMonth() + 1 : 0;
-    void Promise.all([fetchIncomesByDate(year, month), fetchExpensesByDate(year, month)])
+    void fetchPeriod(year, month)
       .then(() => { setDataReadyKey(periodKey); setSelectedCategory(returnCategory); })
       .catch(() => { setDataErrorKey(periodKey); toast.error(t('analytics.load_error')); });
     const date = new Date(record.date);
@@ -165,193 +106,60 @@ export default function Home() {
     }
   };
 
-  if (loading) return null;
+  const dataReady = dataReadyKey === periodKey && categoriesReady;
+  const filteredIncomes = dataReady ? incomes : [];
+  const filteredExpenses = dataReady ? expenses : [];
 
-  if (token && user) {
-    const dataReady = dataReadyKey === periodKey;
-    const filteredIncomes = dataReady ? incomes : [];
-    const filteredExpenses = dataReady ? expenses : [];
+  const totalIncome = filteredIncomes.reduce((sum, i) => sum + i.amount, 0);
+  const totalExpense = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-    const totalIncome = filteredIncomes.reduce((sum, i) => sum + i.amount, 0);
-    const totalExpense = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
-    const balance = totalIncome - totalExpense;
+  const groupedExpenses = filteredExpenses.reduce((acc, exp) => {
+    if (!acc[exp.category_id]) acc[exp.category_id] = [];
+    acc[exp.category_id].push(exp);
+    return acc;
+  }, {} as Record<number, Expense[]>);
 
-    const groupedExpenses = filteredExpenses.reduce((acc, exp) => {
-      if (!acc[exp.category_id]) acc[exp.category_id] = [];
-      acc[exp.category_id].push(exp);
-      return acc;
-    }, {} as Record<number, Expense[]>);
+  const groupedIncomes = filteredIncomes.reduce((acc, inc) => {
+    if (!acc[inc.category_id]) acc[inc.category_id] = [];
+    acc[inc.category_id].push(inc);
+    return acc;
+  }, {} as Record<number, Income[]>);
 
-    const groupedIncomes = filteredIncomes.reduce((acc, inc) => {
-      if (!acc[inc.category_id]) acc[inc.category_id] = [];
-      acc[inc.category_id].push(inc);
-      return acc;
-    }, {} as Record<number, Income[]>);
+  const activeGroups = activeTab === 'uscite' ? groupedExpenses : groupedIncomes;
+  const activeTotal = activeTab === 'uscite' ? totalExpense : totalIncome;
 
-    const activeGroups = activeTab === 'uscite' ? groupedExpenses : groupedIncomes;
-    const activeTotal = activeTab === 'uscite' ? totalExpense : totalIncome;
-
-    const getIconForCategory = (catId: number) => {
-      const category = categories.find(c => c.id === catId);
-      return category?.emoji || '📝';
-    };
-
-    const getCategoryColor = (catId: number) => {
-      const category = categories.find(c => c.id === catId);
-      if (category?.color) return category.color;
-      const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#eab308', '#ec4899', '#f97316', '#ef4444', '#14b8a6', '#f43f5e', '#84cc16'];
-      return colors[catId % colors.length];
-    };
-
-
-
-    return (
-      <div className="app-container">
-
-        <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
-        
-        <div className="dashboard-actions">
-          <div className="dashboard-action-buttons">
-            <button
-              type="button"
-              className="secondary-btn period-mode-toggle"
-              onClick={() => setFilterMode(m => m === 'month' ? 'year' : 'month')}
-            >
-              {filterMode === 'month' ? t('dashboard.filter_year') : t('dashboard.filter_month')}
-            </button>
-            <button className="add-btn" aria-label={t("record.new")} onClick={() => openAddModal()}>+</button>
-          </div>
-        </div>
-
-        <MonthNavigation date={filterDate} onChange={setFilterDate} mode={filterMode} />
-
-        {!dataReady && (dataErrorKey === periodKey ? <p role="alert">{t('analytics.load_error')} <button className="secondary-btn" onClick={() => { setDataErrorKey(''); setDataRevision(n => n+1); }}>{t('analytics.retry')}</button></p> : <p role="status">{t('analytics.loading')}</p>)}
-        {dataReady && <>
-        <div className="balance-banner">
-          <p className="balance-title">{t('dashboard.total_balance')}</p>
-          <h1 className="balance-amount">{balance.toFixed(2)} €</h1>
-          <div className="balance-stats">
-            <div className="stat-item">
-              <div className="stat-icon expense">↓</div>
-              <div className="stat-details">
-                <p>{t('dashboard.expenses')}</p>
-                <h4>{totalExpense.toFixed(2)} €</h4>
-              </div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-icon income">↑</div>
-              <div className="stat-details">
-                <p>{t('dashboard.incomes')}</p>
-                <h4>{totalIncome.toFixed(2)} €</h4>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="tabs">
-          <div className={`tab ${activeTab === 'uscite' ? 'active' : ''}`} onClick={() => setActiveTab('uscite')}>{t('dashboard.expenses')}</div>
-          <div className={`tab ${activeTab === 'entrate' ? 'active' : ''}`} onClick={() => setActiveTab('entrate')}>{t('dashboard.incomes')}</div>
-        </div>
-
-        <div className="list-container">
-          {Object.entries(activeGroups).map(([catId, items]) => {
-            const category = categories.find(c => c.id === parseInt(catId));
-            const catTotal = items.reduce((sum: number, i: Income | Expense) => sum + i.amount, 0);
-            const percentage = activeTotal > 0 ? (catTotal / activeTotal) * 100 : 0;
-            const catName = category?.name || t('dashboard.unknown');
-            
-            return (
-              <div key={catId} className="list-item" role="button" tabIndex={0} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedCategory(parseInt(catId)); } }} onClick={() => setSelectedCategory(parseInt(catId))}>
-                <div className="item-icon">{getIconForCategory(parseInt(catId))}</div>
-                <div className="item-content">
-                  <div className="item-header">
-                    <div className="item-title">{catName}</div>
-                    <div className="item-amount">{catTotal.toFixed(2)} €</div>
-                  </div>
-                  <div className="item-progress-container">
-                    <div className="progress-bar-bg">
-                      <div className="progress-bar-fill" style={{ width: `${percentage}%`, backgroundColor: getCategoryColor(parseInt(catId)) }}></div>
-                    </div>
-                    <div className="progress-text">{percentage.toFixed(2)} {t('dashboard.percentage_total')}</div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        </>}
-        {/* Add Income/Expense Modal */}
-        {showAddModal && <TransactionEditor token={token} categories={categories} item={editingItem}
-          initialType={initialEntry.type} initialCategory={initialEntry.category} initialDate={initialEntry.date}
-          onClose={closeEditor} onSaved={saved} />}
-
-        {/* Category Details Modal */}
-        {selectedCategory !== null && (
-          <SafeDialog title={t('dashboard.details_for', { category: categories.find(c => c.id === selectedCategory)?.name || '' })} onClose={() => setSelectedCategory(null)}>
-            {activeTab === 'uscite' && <button className="submit-btn" onClick={() => openAddModal(selectedCategory)}>{t('form.add_expense')}</button>}
-              <div style={{ maxHeight: '60vh', overflowY: 'auto', paddingRight: '8px' }}>
-                {(activeGroups[selectedCategory] || []).map((item: Income | Expense) => (
-                  <div key={item.id} role="button" tabIndex={0} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedCategory(null); openEditModal(item); } }} className="list-item" style={{ padding: '12px 16px', cursor: 'pointer', marginBottom: '8px', borderRadius: '12px' }} onClick={() => {
-                    setSelectedCategory(null);
-                    openEditModal(item);
-                  }}>
-                    <div className="item-content">
-                      <div className="item-header" style={{ marginBottom: '4px' }}>
-                        <div className="item-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ color: 'inherit' }}>{item.description || item.name}</span>
-                          {('is_periodic' in item && item.is_periodic) && <span style={{ color: 'var(--primary-color)', fontSize: '12px', fontWeight: 'bold', padding: '2px 6px', background: 'var(--input-bg)', borderRadius: '8px' }}>{t('record.periodic') || 'Periodica'}</span>}
-                        </div>
-                        <div className="item-amount" style={{ color: activeTab === 'uscite' ? 'var(--danger-color)' : 'var(--success-color)' }}>
-                          {activeTab === 'uscite' ? '-' : '+'}{item.amount.toFixed(2)} €
-                        </div>
-                      </div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                        {format(new Date('spent_on' in item ? item.spent_on : item.received_on), 'd MMM yyyy, HH:mm', { locale: dateLocale })}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-          </SafeDialog>
-        )}
-      </div>
-    );
-  }
-
-  // Login UI
   return (
-    <div className="auth-wrapper">
-
-      <div className="glass-container">
-        <h1 className="form-title">{isLogin ? t('auth.login') : t('auth.register')}</h1>
-        <p className="form-subtitle">
-          {isLogin ? t('auth.login_subtitle') || 'Bentornato! Accedi per continuare.' : t('auth.register_subtitle') || 'Crea un account per iniziare!'}
-        </p>
-        <form onSubmit={handleAuth}>
-          <input className="input-field" type="text" placeholder={t('auth.username')} value={username} onChange={e => setUsername(e.target.value)} required />
-          <div style={{ position: 'relative' }}>
-            <input className="input-field" type={showPassword ? "text" : "password"} placeholder={t('auth.password')} value={password} onChange={e => setPassword(e.target.value)} required />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6 }}>
-              {showPassword ? '👁️' : '👁️‍🗨️'}
-            </button>
-          </div>
-          {!isLogin && (
-            <div style={{ position: 'relative', marginTop: '12px' }}>
-              <input className="input-field" type={showConfirmPassword ? "text" : "password"} placeholder={t('auth.confirm_password')} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required style={{ margin: 0 }} />
-              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6 }}>
-                {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
-              </button>
-            </div>
-          )}
-          <button type="submit" className="submit-btn">{isLogin ? t('auth.login') : t('auth.register')}</button>
-        </form>
-        <div style={{ textAlign: 'center', marginTop: '24px' }}>
-          <button onClick={() => setIsLogin(!isLogin)} className="toggle-auth-btn">
-            {isLogin ? t('auth.no_account') : t('auth.have_account')}
+    <AppShell>
+      <div className={styles.actions}>
+        <div className={styles.actionButtons}>
+          <button
+            type="button"
+            className={`secondary-btn ${styles.modeToggle}`}
+            onClick={() => setFilterMode(m => m === 'month' ? 'year' : 'month')}
+          >
+            {filterMode === 'month' ? t('dashboard.filter_year') : t('dashboard.filter_month')}
           </button>
+          <button className={styles.addButton} aria-label={t('record.new')} onClick={() => openAddModal()}>+</button>
         </div>
       </div>
-    </div>
+
+      <MonthNavigation date={filterDate} onChange={setFilterDate} mode={filterMode} />
+
+      {!dataReady && (dataErrorKey === periodKey || categoriesFailed ? <p role="alert">{t('analytics.load_error')} <button className="secondary-btn" onClick={() => { setDataErrorKey(''); setDataRevision(n => n + 1); void fetchCategories().catch(() => {}); }}>{t('analytics.retry')}</button></p> : <p role="status">{t('analytics.loading')}</p>)}
+      {dataReady && <>
+        <DashboardBalance income={totalIncome} expense={totalExpense} />
+        <DashboardCategories tab={activeTab} onTabChange={setActiveTab} groups={activeGroups} categories={categories} total={activeTotal} onSelect={setSelectedCategory} />
+      </>}
+      {showAddModal && <TransactionEditor token={token} categories={categories} item={editingItem}
+        initialType={initialEntry.type} initialCategory={initialEntry.category} initialDate={initialEntry.date}
+        onClose={closeEditor} onSaved={saved} />}
+
+      {selectedCategory !== null && <DashboardCategoryDetails
+        categoryId={selectedCategory} categories={categories} tab={activeTab}
+        items={activeGroups[selectedCategory] || []} locale={dateLocale}
+        onClose={() => setSelectedCategory(null)} onAddExpense={openAddModal}
+        onEdit={item => { setSelectedCategory(null); openEditModal(item); }}
+      />}
+    </AppShell>
   );
 }

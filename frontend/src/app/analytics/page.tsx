@@ -1,16 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import MonthNavigation from '@/components/MonthNavigation';
 import { useSelectedMonth } from '@/hooks/useSelectedMonth';
+import { useAnalyticsData } from '@/hooks/useAnalyticsData';
 import { transactionSearchLink } from '@/utils/transactions';
 import { useAuth } from '@/hooks/useAuth';
-import type { Category, Income, Expense } from '@/hooks/useData';
-import { API_BASE } from '@/utils/api';
+import type { Income, Expense } from '@/types/domain';
+import { apiRequest } from '@/utils/api';
+import { categoryColor } from '@/utils/categoryColors';
 import toast from 'react-hot-toast';
-import Navbar from '@/components/Navbar';
+import AppShell from '@/components/AppShell';
+import styles from './Analytics.module.css';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { format, subMonths } from 'date-fns';
 import { it, enUS } from 'date-fns/locale';
@@ -18,18 +21,6 @@ import {
   PieChart, Pie, Cell, Tooltip as PieTooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as BarTooltip, Legend
 } from 'recharts';
-
-interface CategoryTotal { category_id: number; total_amount: number }
-interface MonthlyTotal { year: number; month: number; total_amount: number }
-interface MonthlyTotals { incomes: MonthlyTotal[]; expenses: MonthlyTotal[] }
-
-async function fetchJSON<T>(path: string, token: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    headers: { Authorization: `Bearer ${token}` }, signal,
-  });
-  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-  return response.json();
-}
 
 // Quote all fields and prevent text from being interpreted as spreadsheet formulas.
 function csvCell(value: string | number): string {
@@ -39,60 +30,25 @@ function csvCell(value: string | number): string {
 }
 
 export default function AnalyticsPage() {
-  const { token, user, loading, logout } = useAuth();
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { token, user, loading } = useAuth();
   const { t, language } = useLanguage();
   const dateLocale = language === 'it' ? it : enUS;
   const [filterDate, setFilterDate] = useSelectedMonth(user?.id);
   const router = useRouter();
 
-  const [snapshot, setSnapshot] = useState<{
-    key: string; categories: CategoryTotal[]; totals: MonthlyTotals;
-  } | null>(null);
-  const [failedKey, setFailedKey] = useState<string | null>(null);
-  const [retry, setRetry] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
   const monthKey = format(filterDate, 'yyyy-MM');
-  const requestKey = `${token}:${monthKey}:${retry}`;
-
-  useEffect(() => {
-    if (!token) return;
-    const controller = new AbortController();
-    const [year, month] = monthKey.split('-');
-    const query = `?year=${year}&month=${month}`;
-    Promise.all([
-      fetchJSON<Category[]>('/categories', token, controller.signal),
-      fetchJSON<CategoryTotal[]>(`/analytics/expenses-by-category${query}`, token, controller.signal),
-      fetchJSON<MonthlyTotals>(`/analytics/income-vs-expense${query}`, token, controller.signal),
-    ]).then(([categoryList, pie, totals]) => {
-      if (controller.signal.aborted) return;
-      setCategories(categoryList || []);
-      setSnapshot({ key: requestKey, categories: pie || [], totals: {
-        incomes: totals.incomes || [], expenses: totals.expenses || [],
-      } });
-    }).catch(() => {
-      if (!controller.signal.aborted) setFailedKey(requestKey);
-    });
-    return () => controller.abort();
-  }, [token, monthKey, requestKey]);
-
-  const hasError = failedKey === requestKey;
-  const isReady = snapshot?.key === requestKey;
-  const rawPieData = isReady ? snapshot.categories : [];
-  const rawBarData = isReady ? snapshot.totals : { incomes: [], expenses: [] };
+  const { categories, categoryTotals: rawPieData, monthlyTotals: rawBarData, ready: isReady, failed: hasError, retry } = useAnalyticsData(token, monthKey);
   const money = (value: number) => new Intl.NumberFormat(language === 'it' ? 'it-IT' : 'en-IE', {
     style: 'currency', currency: 'EUR',
   }).format(value);
 
   if (loading || !user) return null;
 
-  const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#eab308', '#ec4899', '#f97316', '#14b8a6', '#f43f5e', '#84cc16'];
-  const getStableColor = (id: number) => COLORS[id % COLORS.length];
-
   const pieData = rawPieData.map((d) => {
     const cat = categories.find(c => c.id === d.category_id);
     const name = cat ? `${cat.emoji} ${cat.name}` : t('dashboard.unknown');
-    const color = cat?.color || getStableColor(d.category_id);
+    const color = categoryColor({ id: d.category_id, color: cat?.color });
     return { id: d.category_id, name, value: d.total_amount, color };
   }).sort((a, b) => b.value - a.value);
 
@@ -121,8 +77,8 @@ export default function AnalyticsPage() {
 
       const query = `?year=${year}&month=${month}`;
       const [monthIncomes, monthExpenses] = await Promise.all([
-        fetchJSON<Income[]>(`/incomes/filter${query}`, token),
-        fetchJSON<Expense[]>(`/expenses/filter${query}`, token),
+        apiRequest<Income[]>(`/incomes/filter${query}`, { token }),
+        apiRequest<Expense[]>(`/expenses/filter${query}`, { token }),
       ]);
       const rows: (string | number)[][] = [
         [t('record.type'), t('record.date'), t('record.category'), t('record.amount'), t('record.description')],
@@ -161,13 +117,12 @@ export default function AnalyticsPage() {
   const expenseTotal = pieData.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <div className="app-container">
-      <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
+    <AppShell>
 
-      <div className="analytics-page-content">
-        <div className="analytics-header">
-          <h1 style={{ fontSize: '24px', fontWeight: 700 }}>{t('analytics.title')}</h1>
-          <button disabled={isExporting || !isReady} onClick={exportToCSV} className="submit-btn analytics-export">
+      <div className={styles.content}>
+        <div className={styles.header}>
+          <h1 className={styles.title}>{t('analytics.title')}</h1>
+          <button disabled={isExporting || !isReady} onClick={exportToCSV} className={`submit-btn ${styles.exportButton}`}>
             {t(isExporting ? 'analytics.exporting' : 'analytics.export_csv')}
           </button>
         </div>
@@ -176,7 +131,7 @@ export default function AnalyticsPage() {
         {!isReady && (
           <div role={hasError ? 'alert' : 'status'} className="analytics-card">
             {t(hasError ? 'analytics.load_error' : 'analytics.loading')}
-            {hasError && <button className="submit-btn" onClick={() => setRetry(value => value + 1)}>{t('analytics.retry')}</button>}
+            {hasError && <button className="submit-btn" onClick={retry}>{t('analytics.retry')}</button>}
           </div>
         )}
         {isReady && <>
@@ -191,14 +146,14 @@ export default function AnalyticsPage() {
           ))}
         </div>
         <p className="analytics-note">{format(filterDate, 'MMMM yyyy', { locale: dateLocale })} · {t('analytics.rate_note')}</p>
-        <div className="analytics-grid">
+        <div className={styles.grid}>
           {/* Expenses by Category (Pie Chart) */}
-          <div style={{ background: 'var(--surface-color)', padding: '24px', borderRadius: '24px', border: '1px solid var(--border-color)' }}>
-            <h3 style={{ fontSize: '18px', marginBottom: '24px', color: 'var(--text-color)' }}>
+          <div className={styles.chartPanel}>
+            <h3 className={styles.chartTitle}>
               {t('analytics.expenses_by_category')} ({format(filterDate, 'MMMM yyyy', { locale: dateLocale })})
             </h3>
             {pieData.length > 0 ? (
-              <div style={{ height: 300 }}>
+              <div className={styles.chartArea}>
                 <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 320, height: 300 }}>
                   <PieChart>
                     <Pie onClick={(_, index) => router.push(transactionSearchLink(filterDate, "expense", pieData[index].id))} style={{ cursor: "pointer" }} data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5}>
@@ -215,12 +170,12 @@ export default function AnalyticsPage() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+              <div className={styles.emptyChart}>
                 {t('analytics.no_data')}
               </div>
             )}
             {pieData.length > 0 && (
-              <table className="analytics-table">
+              <table className={styles.table}>
                 <caption>{t('analytics.breakdown')}</caption>
                 <thead><tr><th>{t('record.category')}</th><th>{t('record.amount')}</th><th>%</th></tr></thead>
                 <tbody>{pieData.map(item => (
@@ -235,11 +190,11 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Income vs Expense (Bar Chart) */}
-          <div style={{ background: 'var(--surface-color)', padding: '24px', borderRadius: '24px', border: '1px solid var(--border-color)', overflowX: 'auto' }}>
-            <h3 style={{ fontSize: '18px', marginBottom: '24px', color: 'var(--text-color)' }}>
+          <div className={`${styles.chartPanel} ${styles.chartPanelScrollable}`}>
+            <h3 className={styles.chartTitle}>
               {t('analytics.income_vs_expense')}
             </h3>
-            <div style={{ height: 300, width: '100%' }}>
+            <div className={styles.chartArea}>
               <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 320, height: 300 }}>
                 <BarChart data={barData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
@@ -258,7 +213,7 @@ export default function AnalyticsPage() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div className="chart-links">{barData.map(month => <div key={month.name}>
+            <div className={styles.chartLinks}>{barData.map(month => <div key={month.name}>
               <strong>{month.name}</strong>{' · '}
               <Link href={transactionSearchLink(month.date, 'income')}>{t('dashboard.incomes')}</Link>{' · '}
               <Link href={transactionSearchLink(month.date, 'expense')}>{t('dashboard.expenses')}</Link>
@@ -267,6 +222,6 @@ export default function AnalyticsPage() {
         </div>
         </>}
       </div>
-    </div>
+    </AppShell>
   );
 }

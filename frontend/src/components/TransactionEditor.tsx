@@ -2,9 +2,9 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import type { Category } from '@/hooks/useData';
+import type { Category } from '@/types/domain';
 import type { Transaction, TransactionType } from '@/utils/transactions';
-import { API_BASE } from '@/utils/api';
+import { apiRequest } from '@/utils/api';
 import { useLanguage } from '@/i18n/LanguageContext';
 import SafeDialog from './SafeDialog';
 
@@ -49,10 +49,7 @@ export default function TransactionEditor({ token, categories, item, initialType
         : { [form.type === 'expense' ? 'spent_on' : 'received_on']: date.toISOString() }),
     };
     try {
-      const res = await fetch(API_BASE + endpoint, {
-        method: item ? 'PUT' : 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error();
+      await apiRequest<void>(endpoint, { method: item ? 'PUT' : 'POST', token, body: payload });
       toast.success(t(item ? 'record.success_edit' : form.type === 'expense' ? 'record.success_expense' : 'record.success_income'));
       onSaved({ type: form.type, category_id: Number(form.category), date: date.toISOString() });
     } catch { setFailure(t('form.save_error')); }
@@ -62,8 +59,7 @@ export default function TransactionEditor({ token, categories, item, initialType
     if (!item || submitting.current || !window.confirm(t('form.delete_confirm'))) return;
     submitting.current = true; setBusy(true); setFailure('');
     try {
-      const res = await fetch(API_BASE + '/' + (item.type === 'expense' ? 'expenses' : 'incomes') + '/' + item.id, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
-      if (!res.ok) throw new Error();
+      await apiRequest<void>('/' + (item.type === 'expense' ? 'expenses' : 'incomes') + '/' + item.id, { method: 'DELETE', token });
       toast.success(t('form.deleted'));
       onSaved({ type: item.type, category_id: item.category_id, date: item.date, deleted: true });
     } catch { setFailure(t('form.delete_error')); }

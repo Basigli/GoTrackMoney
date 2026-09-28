@@ -1,0 +1,5 @@
+.passwordField { position: relative; }
+.confirmPasswordField { position: relative; margin-top: 12px; }
+.confirmInput { margin: 0; }
+.passwordToggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; opacity: .6; }
+.footer { text-align: center; margin-top: 24px; }

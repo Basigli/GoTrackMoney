@@ -1,0 +1,41 @@
+.actions { padding: 16px 20px 0; display: flex; justify-content: flex-end; }
+.actionButtons { display: flex; align-items: center; gap: 8px; }
+.modeToggle { font: inherit; font-size: 14px; font-weight: 500; }
+.addButton {
+  background: var(--primary-color); color: var(--primary-on); border: none; border-radius: 14px;
+  width: 48px; height: 48px; font-size: 28px; display: flex; justify-content: center;
+  align-items: center; cursor: pointer; box-shadow: 0 4px 6px var(--primary-shadow);
+}
+.balanceBanner { background: var(--balance-bg); border-radius: 24px; padding: 28px 24px; margin: 0 20px 24px; color: white; }
+.balanceTitle { font-size: 16px; opacity: .9; margin-bottom: 6px; }
+.balanceAmount { font-size: 42px; font-weight: 700; margin-bottom: 28px; }
+.balanceStats { display: flex; justify-content: space-between; }
+.statItem { display: flex; align-items: center; gap: 8px; }
+.statIcon { width: 28px; height: 28px; border-radius: 50%; display: flex; justify-content: center; align-items: center; background: var(--surface-color); font-size: 16px; }
+.expense { color: var(--danger-color); }
+.income { color: var(--success-color); }
+.statDetails p { font-size: 14px; opacity: .9; margin: 0; }
+.statDetails h4 { font-size: 18px; font-weight: 600; margin: 0; }
+.tabs { display: flex; background: var(--input-bg); border-radius: 16px; padding: 6px; margin: 0 20px 24px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { flex: 1; text-align: center; padding: 10px 16px; font: inherit; font-size: 14px; font-weight: 600; color: var(--text-muted); border: 0; border-radius: 12px; cursor: pointer; transition: all .2s; white-space: nowrap; background: transparent; }
+.tabActive { background: var(--surface-color); color: var(--accent-color); box-shadow: 0 2px 4px rgba(0,0,0,.05); }
+.categoryRow { width: 100%; background: transparent; color: var(--text-color); font: inherit; text-align: left; }
+@media (min-width: 1024px) { .categoryRow { background: var(--surface-color); } }
+.itemIcon { font-size: 28px; margin-right: 20px; width: 36px; text-align: center; }
+.itemContent { flex: 1; min-width: 0; }
+.itemHeader { display: flex; justify-content: space-between; margin-bottom: 8px; gap: 12px; }
+.itemTitle { font-weight: 600; font-size: 17px; }
+.itemAmount { font-weight: 700; font-size: 17px; }
+.progressContainer { display: flex; align-items: center; gap: 12px; }
+.progressTrack { flex: 1; height: 8px; background: var(--progress-track); border-radius: 4px; overflow: hidden; border: 1px solid var(--progress-border); }
+.progressFill { height: 100%; border-radius: 4px; }
+.progressText { font-size: 14px; color: var(--text-muted); min-width: 110px; text-align: right; }
+.detailsList { max-height: 60vh; overflow-y: auto; padding-right: 8px; }
+.detailsList .detailRow { width: 100%; padding: 12px 16px; margin-bottom: 8px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-color); color: var(--text-color); font: inherit; text-align: left; }
+.detailHeader { margin-bottom: 4px; }
+.detailTitle { display: flex; align-items: center; gap: 8px; }
+.periodicBadge { color: var(--primary-color); font-size: 12px; font-weight: 700; padding: 2px 6px; background: var(--input-bg); border-radius: 8px; }
+.detailDate { font-size: 12px; color: var(--text-muted); }
+.incomeAmount { color: var(--success-color); }
+.expenseAmount { color: var(--danger-color); }

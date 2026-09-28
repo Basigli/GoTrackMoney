@@ -1,69 +1,59 @@
 'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
-import Navbar from '@/components/Navbar';
+import AppShell from '@/components/AppShell';
+import CategorySection from './CategorySection';
+import styles from './Categories.module.css';
 import { useAuth } from '@/hooks/useAuth';
-import { useData } from '@/hooks/useData';
-import toast, { Toaster } from 'react-hot-toast';
-import { API_BASE } from '@/utils/api';
+import { useCategories } from '@/hooks/useCategories';
+import type { Category } from '@/types/domain';
+import toast from 'react-hot-toast';
+import { apiRequest } from '@/utils/api';
+import { CATEGORY_COLORS, categoryColor } from '@/utils/categoryColors';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 export default function CategoriesPage() {
-  const { token, user, loading, logout } = useAuth();
-  const { categories, fetchCategories } = useData(token);
+  const { token, user, loading } = useAuth();
+  const { categories, ready: categoriesReady, failed: categoriesFailed, fetchCategories } = useCategories(token);
   const { t } = useLanguage();
   
-  const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#eab308', '#ec4899', '#f97316', '#ef4444', '#14b8a6', '#f43f5e', '#84cc16'];
-  const getRandomColor = () => COLORS[Math.floor(Math.random() * COLORS.length)];
-  const getStableColor = (id: number) => COLORS[id % COLORS.length];
-
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState('📝');
   const [type, setType] = useState<'expense' | 'income'>('expense');
-  const [color, setColor] = useState(getRandomColor());
+  const [color, setColor] = useState(CATEGORY_COLORS[0]);
   const [filter, setFilter] = useState('');
-  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   useEffect(() => {
-    if (token) fetchCategories();
+    if (token) void fetchCategories().catch(() => {});
   }, [token, fetchCategories]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!token) return;
     
-    // Using imported API_BASE
-    const endpoint = editingCategory ? `${API_BASE}/categories/${editingCategory.id}` : `${API_BASE}/categories`;
+    const endpoint = editingCategory ? `/categories/${editingCategory.id}` : '/categories';
     const method = editingCategory ? 'PUT' : 'POST';
 
     try {
-      const res = await fetch(endpoint, {
-        method,
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name, emoji, type, color })
-      });
-      if (res.ok) {
-        setName('');
-        setEmoji('📝');
-        setColor(getRandomColor());
-        setEditingCategory(null);
-        toast.success(editingCategory ? t('categories.success_update') : t('categories.success_create'));
-        fetchCategories();
-      } else {
-        toast.error(t('categories.error_save'));
-      }
-    } catch (err) { 
-      console.error(err);
+      await apiRequest<Category>(endpoint, { method, token, body: { name, emoji, type, color } });
+      setName('');
+      setEmoji('📝');
+      setColor(CATEGORY_COLORS[(categories.length + 1) % CATEGORY_COLORS.length]);
+      setEditingCategory(null);
+      toast.success(editingCategory ? t('categories.success_update') : t('categories.success_create'));
+      void fetchCategories().catch(() => {});
+    } catch {
       toast.error(t('categories.error_save'));
     }
   };
 
-  const handleEditClick = (cat: any) => {
+  const handleEditClick = (cat: Category) => {
     setEditingCategory(cat);
     setName(cat.name);
     setEmoji(cat.emoji || '📝');
     setType(cat.type || 'expense');
-    setColor(cat.color || getStableColor(cat.id));
+    setColor(categoryColor(cat));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -75,50 +65,48 @@ export default function CategoriesPage() {
   const expenseCategories = filteredCategories.filter(c => c.type === 'expense');
 
   return (
-    <div className="app-container">
-      <Toaster position="bottom-center" />
-      <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
+    <AppShell>
       
-      <div style={{ padding: '24px 20px', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '20px' }}>
+      <div className={styles.section}>
+        <h2 className={styles.title}>
           {editingCategory ? t('categories.edit') : t('categories.new')}
         </h2>
-        <form onSubmit={handleSubmit} style={{ background: 'var(--surface-color)', padding: '24px', borderRadius: '24px', border: '1px solid var(--border-color)' }}>
+        <form onSubmit={handleSubmit} className={styles.form}>
           
-          <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
-            <div style={{ flex: '0 0 60px' }}>
-              <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px', color: 'var(--text-color)' }}>{t('categories.emoji')}</label>
-              <input type="text" value={emoji} onChange={e => setEmoji(e.target.value)} style={{ width: '100%', padding: '16px 0', textAlign: 'center', background: 'var(--input-bg)', border: 'none', borderRadius: '16px', fontSize: '24px' }} required />
+          <div className={styles.fields}>
+            <div>
+              <label className={styles.label} htmlFor="category-emoji">{t('categories.emoji')}</label>
+              <input id="category-emoji" type="text" value={emoji} onChange={e => setEmoji(e.target.value)} className={styles.emojiInput} required />
             </div>
-            <div style={{ flex: '1' }}>
-              <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px', color: 'var(--text-color)' }}>{t('categories.name')}</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', padding: '16px 20px', background: 'var(--input-bg)', border: 'none', borderRadius: '16px', fontSize: '16px', color: 'var(--text-color)' }} placeholder={t('categories.name_placeholder')} required />
+            <div>
+              <label className={styles.label} htmlFor="category-name">{t('categories.name')}</label>
+              <input id="category-name" type="text" value={name} onChange={e => setName(e.target.value)} className={styles.nameInput} placeholder={t('categories.name_placeholder')} required />
             </div>
-            <div style={{ flex: '0 0 60px' }}>
-              <label style={{ display: 'block', fontSize: '14px', marginBottom: '8px', color: 'var(--text-color)' }}>Colore</label>
-              <div style={{ width: '100%', height: '52px', borderRadius: '16px', overflow: 'hidden', border: 'none', cursor: 'pointer', background: 'none' }}>
-                <input type="color" value={color} onChange={e => setColor(e.target.value)} style={{ width: '100%', height: '100%', padding: '0', background: 'none', border: 'none', cursor: 'pointer' }} />
+            <div>
+              <label className={styles.label} htmlFor="category-color">Colore</label>
+              <div className={styles.colorInputWrap}>
+                <input id="category-color" type="color" value={color} onChange={e => setColor(e.target.value)} className={styles.colorInput} />
               </div>
             </div>
           </div>
 
-          <div className="radio-group" style={{ marginBottom: '24px', display: 'flex', gap: '24px' }}>
-            <label className="radio-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+          <div className={styles.typeOptions}>
+            <label className={styles.typeOption}>
               <input type="radio" name="catType" checked={type === 'expense'} onChange={() => setType('expense')} />
               {t('categories.type_expense')}
             </label>
-            <label className="radio-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+            <label className={styles.typeOption}>
               <input type="radio" name="catType" checked={type === 'income'} onChange={() => setType('income')} />
               {t('categories.type_income')}
             </label>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button type="submit" className="submit-btn" style={{ background: 'var(--primary-color)', color: 'var(--primary-on)', flex: 1, padding: '16px', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}>
+          <div className={styles.actions}>
+            <button type="submit" className={`submit-btn ${styles.saveButton}`}>
               {editingCategory ? t('categories.save_btn') : t('categories.add_btn')}
             </button>
             {editingCategory && (
-              <button type="button" onClick={() => { setEditingCategory(null); setName(''); setEmoji('📝'); setColor(getRandomColor()); }} style={{ background: 'var(--input-bg)', color: 'var(--text-color)', flex: '0 0 auto', padding: '16px 24px', border: 'none', borderRadius: '16px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}>
+              <button type="button" onClick={() => { setEditingCategory(null); setName(''); setEmoji('📝'); setColor(CATEGORY_COLORS[0]); }} className={styles.cancelButton}>
                 {t('categories.cancel_btn')}
               </button>
             )}
@@ -126,50 +114,28 @@ export default function CategoriesPage() {
         </form>
       </div>
 
-      <div style={{ padding: '24px 20px', marginBottom: '40px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '20px' }}>{t('categories.my_categories')}</h2>
+      <div className={styles.listSection}>
+        <h2 className={styles.title}>{t('categories.my_categories')}</h2>
         
-        <div style={{ marginBottom: '20px' }}>
+        <div className={styles.searchWrap}>
           <input 
             type="text" 
+            aria-label={t('categories.search')}
             placeholder={t('categories.search')}
             value={filter}
             onChange={e => setFilter(e.target.value)}
-            style={{ width: '100%', padding: '16px 20px', background: 'var(--input-bg)', border: 'none', borderRadius: '16px', fontSize: '16px', color: 'var(--text-color)' }}
+            className={styles.searchInput}
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '20px', flexDirection: 'column' }}>
-          <div>
-            <h3 style={{ fontSize: '18px', marginBottom: '12px', color: 'var(--danger-color)' }}>{t('categories.expenses_list')}</h3>
-            <div className="list-container">
-              {expenseCategories.map(c => (
-                <div key={c.id} className="list-item" onClick={() => handleEditClick(c)} style={{ padding: '16px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '6px', background: c.color || getStableColor(c.id) }}></div>
-                  <span style={{ fontSize: '24px', marginRight: '16px', marginLeft: '6px' }}>{c.emoji || '📝'}</span>
-                  <span style={{ fontSize: '16px', fontWeight: 500 }}>{c.name}</span>
-                </div>
-              ))}
-              {expenseCategories.length === 0 && <div style={{ color: 'var(--text-muted)', gridColumn: '1 / -1' }}>{t('categories.no_categories')}</div>}
-            </div>
-          </div>
-          
-          <div>
-            <h3 style={{ fontSize: '18px', marginBottom: '12px', color: 'var(--success-color)' }}>{t('categories.incomes_list')}</h3>
-            <div className="list-container">
-              {incomeCategories.map(c => (
-                <div key={c.id} className="list-item" onClick={() => handleEditClick(c)} style={{ padding: '16px 20px', background: 'var(--surface-color)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '6px', background: c.color || getStableColor(c.id) }}></div>
-                  <span style={{ fontSize: '24px', marginRight: '16px', marginLeft: '6px' }}>{c.emoji || '📝'}</span>
-                  <span style={{ fontSize: '16px', fontWeight: 500 }}>{c.name}</span>
-                </div>
-              ))}
-              {incomeCategories.length === 0 && <div style={{ color: 'var(--text-muted)', gridColumn: '1 / -1' }}>{t('categories.no_categories')}</div>}
-            </div>
-          </div>
-        </div>
+        {categoriesFailed && <p role="alert">{t('analytics.load_error')} <button type="button" className="secondary-btn" onClick={() => { void fetchCategories().catch(() => {}); }}>{t('analytics.retry')}</button></p>}
+        {!categoriesReady && !categoriesFailed && <p role="status">{t('analytics.loading')}</p>}
+        {categoriesReady && <div className={styles.groups}>
+          <CategorySection title={t('categories.expenses_list')} kind="expense" categories={expenseCategories} emptyText={t('categories.no_categories')} onEdit={handleEditClick} />
+          <CategorySection title={t('categories.incomes_list')} kind="income" categories={incomeCategories} emptyText={t('categories.no_categories')} onEdit={handleEditClick} />
+        </div>}
 
       </div>
-    </div>
+    </AppShell>
   );
 }

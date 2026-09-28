@@ -1,66 +1,29 @@
-# GoTrackMoney Frontend
+# GoTrackMoney frontend
 
-This is the frontend application for **GoTrackMoney**, built with [Next.js](https://nextjs.org). It provides a responsive, beautiful UI to manage your finances, incomes, and expenses.
+Next.js 16 and React 19 frontend for the dashboard, transactions, categories, recurring payments, search, analytics, profile, and administration.
 
-## Features
-
-- **Dashboard**: Get an overview of your total balance, expenses, and incomes.
-- **Categories Management**: Create custom categories with specific emojis to better organize your transactions.
-- **Periodic Expenses**: Schedule recurring expenses (e.g., daily, weekly, monthly, yearly) and the system will automatically generate them when they are due!
-- **Internationalization (i18n)**: Fully localized in both English and Italian. Switch seamlessly using the navigation bar.
-
-## Getting Started
-
-First, install dependencies and run the development server:
+## Development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Set `NEXT_PUBLIC_API_URL` to the backend base URL when it is not running at `http://localhost:8098`. The frontend preserves the existing API routes and browser storage keys used by deployed versions.
 
-## Running Tests (Python Environment)
+## Structure
 
-We provide comprehensive End-to-End (E2E) and Stress tests written in Python to ensure the entire application works flawlessly under different conditions. The test scripts are located in the `tests/` directory at the root of the repository.
+- `src/auth/SessionContext.tsx` owns session restoration, login, registration, and logout. `AppShell` renders the shared navigation for signed-in pages.
+- `src/utils/api.ts` is the typed request and error boundary. Domain response types live in `src/types/domain.ts`; focused hooks in `src/hooks/` load page data and discard stale responses.
+- `src/app/globals.css` contains theme tokens, base styles, and shared controls. Page layouts use nearby CSS Modules. The language and theme providers keep their existing browser preferences.
 
-### Prerequisites
-Make sure you have Python 3 installed. It is recommended to use a Python virtual environment to isolate the test dependencies.
+## Checks
 
-1. **Create a virtual environment**:
-   ```bash
-   python -m venv venv
-   ```
-
-2. **Activate the virtual environment**:
-   - On **macOS/Linux**:
-     ```bash
-     source venv/bin/activate
-     ```
-   - On **Windows**:
-     ```bash
-     .\venv\Scripts\activate
-     ```
-
-3. **Install the required dependencies**:
-   ```bash
-   pip install requests
-   ```
-
-*(Note: Ensure your Go backend server is running on `localhost:8080` before executing these tests!)*
-
-### End-to-End (E2E) Test
-This script runs a complete user journey against the live API: registering a user, logging in, creating categories, creating standard expenses, and creating periodic expenses to ensure the generation logic works.
-
-Run this from the root of the project:
 ```bash
-python tests/e2e_test.py
+npm run lint
+npx tsc --noEmit
+npm run build
+npx playwright test --config playwright.ui.config.ts
 ```
 
-### Stress Test
-This script blasts the backend API with 1,000 requests using 50 concurrent threads to measure latency and verify the system's stability under heavy load.
-
-Run this from the root of the project:
-```bash
-python tests/stress_test.py
-```
+The UI Playwright suite uses mocked API responses and needs no database. The broader suite in `tests/usability.spec.ts` uses a real backend and requires `TEST_DATABASE_URL` pointing to a migrated PostgreSQL database whose name ends in `_test`; run it with `npx playwright test`.

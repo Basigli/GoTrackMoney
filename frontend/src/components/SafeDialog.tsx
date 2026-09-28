@@ -2,8 +2,8 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { useLanguage } from '@/i18n/LanguageContext';
 
-export default function SafeDialog({ title, dirty = false, busy = false, onClose, children }: {
-  title: string; dirty?: boolean; busy?: boolean; onClose: () => void; children: ReactNode;
+export default function SafeDialog({ title, dirty = false, busy = false, onClose, children, className, showCancel = true }: {
+  title: string; dirty?: boolean; busy?: boolean; onClose: () => void; children: ReactNode; className?: string; showCancel?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const { t } = useLanguage();
@@ -29,14 +29,14 @@ export default function SafeDialog({ title, dirty = false, busy = false, onClose
     document.addEventListener('click', navigate, true);
     return () => { window.removeEventListener('beforeunload', unload); document.removeEventListener('click', navigate, true); };
   }, [dirty, busy, t]);
-  return <dialog ref={ref} className="editor-dialog" aria-label={title}
+  return <dialog ref={ref} className={`editor-dialog ${className || ''}`} aria-label={title}
     onCancel={event => { event.preventDefault(); close(); }}
     onClick={event => { if (event.target === event.currentTarget) close(); }}>
     <div className="editor-body">
       <button className="modal-close" type="button" aria-label={t('form.close')} disabled={busy} onClick={close}>×</button>
       <h2>{title}</h2>
       {children}
-      <button className="secondary-btn" type="button" disabled={busy} onClick={close}>{t('auth.cancel')}</button>
+      {showCancel && <button className="secondary-btn" type="button" disabled={busy} onClick={close}>{t('auth.cancel')}</button>}
     </div>
   </dialog>;
 }

@@ -1,46 +1,24 @@
 'use client';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
-import type { Category } from '@/hooks/useData';
+import { useTransactionSearch } from '@/hooks/useTransactionSearch';
 import { useLanguage } from '@/i18n/LanguageContext';
-import { API_BASE } from '@/utils/api';
 import type { Transaction } from '@/utils/transactions';
-import Navbar from '@/components/Navbar';
+import AppShell from '@/components/AppShell';
+import styles from './Search.module.css';
 import TransactionEditor from '@/components/TransactionEditor';
 
-interface Results { items: Transaction[]; total: number; limit: number; offset: number }
 function SearchContent() {
-  const { user, token, loading, logout } = useAuth();
+  const { user, token, loading } = useAuth();
   const { t, language } = useLanguage();
   const params = useSearchParams();
   const query = params.toString();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [snapshot, setSnapshot] = useState<{ key: string; result: Results } | null>(null);
-  const [failure, setFailure] = useState('');
-  const [revision, setRevision] = useState(0);
+  const { result, categories, ready, failed, retry } = useTransactionSearch(token, query);
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const key = token + ':' + query + ':' + revision;
-  const ready = snapshot?.key === key;
-  const failed = failure === key;
   const advancedFilterCount = ['type', 'category_id', 'from', 'to', 'min_amount', 'max_amount'].filter(field => Boolean(params.get(field))).length;
-  useEffect(() => {
-    if (!token) return;
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      const headers = { Authorization: 'Bearer ' + token };
-      Promise.all([
-        fetch(API_BASE + '/transactions/search?' + query, { headers, signal: controller.signal }).then(res => { if (!res.ok) throw new Error(); return res.json() as Promise<Results>; }),
-        fetch(API_BASE + '/categories', { headers, signal: controller.signal }).then(res => { if (!res.ok) throw new Error(); return res.json() as Promise<Category[]>; }),
-      ]).then(([result, list]) => {
-        if (controller.signal.aborted) return;
-        setSnapshot({ key, result }); setCategories(list || []);
-      }).catch(() => { if (!controller.signal.aborted) setFailure(key); });
-    }, 250);
-    return () => { clearTimeout(timer); controller.abort(); };
-  }, [token, query, key]);
   const change = (field: string, value: string) => {
     const next = new URLSearchParams(query);
     if (value) next.set(field, value); else next.delete(field);
@@ -48,21 +26,19 @@ function SearchContent() {
     window.history.replaceState(null, '', '/search?' + next.toString());
   };
   if (loading || !user || !token) return null;
-  const result = ready ? snapshot.result : null;
   const money = (amount: number) => new Intl.NumberFormat(language, { style:'currency', currency:'EUR' }).format(amount);
-  return <div className="app-container">
-    <Navbar username={user.username} onLogout={logout} isAdmin={user.is_admin} />
+  return <AppShell>
     <main className="page-content">
       <h1>{t('nav.search')}</h1>
       <p className="analytics-note">{t('search.history')}</p>
-      <div className="search-primary">
+      <div className={styles.primary}>
         <label>{t('dashboard.search')}<input className="input-field" type="search" value={params.get('q') || ''} onChange={e => change('q', e.target.value)} /></label>
-        <button type="button" className="secondary-btn search-filter-toggle" aria-expanded={showMobileFilters} aria-controls="search-advanced-filters" onClick={() => setShowMobileFilters(open => !open)}>
-          {t(showMobileFilters ? 'search.hide_filters' : 'search.show_filters')}{advancedFilterCount > 0 && <span className="filter-count">{advancedFilterCount}</span>}
+        <button type="button" className={`secondary-btn ${styles.filterToggle}`} aria-expanded={showMobileFilters} aria-controls="search-advanced-filters" onClick={() => setShowMobileFilters(open => !open)}>
+          {t(showMobileFilters ? 'search.hide_filters' : 'search.show_filters')}{advancedFilterCount > 0 && <span className={styles.filterCount}>{advancedFilterCount}</span>}
         </button>
       </div>
-      <div id="search-advanced-filters" className={`search-advanced${showMobileFilters ? ' open' : ''}`}>
-        <div className="search-filters">
+      <div id="search-advanced-filters" className={`${styles.advanced} ${showMobileFilters ? styles.open : ''}`}>
+        <div className={styles.filters}>
           <label>{t('record.type')}<select className="input-field" value={params.get('type') || ''} onChange={e => { const next = new URLSearchParams(query); next.delete('category_id'); next.delete('offset'); if (e.target.value) next.set('type', e.target.value); else next.delete('type'); window.history.replaceState(null, '', '/search?' + next); }}>
             <option value="">{t('search.all')}</option><option value="expense">{t('record.expense')}</option><option value="income">{t('record.income')}</option>
           </select></label>
@@ -77,7 +53,7 @@ function SearchContent() {
         <button type="button" className="secondary-btn" onClick={() => window.history.replaceState(null, '', '/search')}>{t('search.clear')}</button>
       </div>
       {!ready && <p role={failed ? 'alert' : 'status'}>{t(failed ? 'search.error' : 'analytics.loading')}
-        {failed && <button className="secondary-btn" onClick={() => setRevision(n => n + 1)}>{t('analytics.retry')}</button>}
+        {failed && <button className="secondary-btn" onClick={retry}>{t('analytics.retry')}</button>}
       </p>}
       {result && <>
         <p aria-live="polite">{t('search.results_count', { count: String(result.total) })}</p>
@@ -93,7 +69,7 @@ function SearchContent() {
         </div>
       </>}
     </main>
-    {editing && <TransactionEditor token={token} categories={categories} item={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); change('offset', '0'); setRevision(n => n+1); }} />}
-  </div>;
+    {editing && <TransactionEditor token={token} categories={categories} item={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); change('offset', '0'); retry(); }} />}
+  </AppShell>;
 }
 export default function SearchPage() { return <Suspense fallback={null}><SearchContent /></Suspense>; }

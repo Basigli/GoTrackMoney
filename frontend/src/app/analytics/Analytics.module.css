@@ -1,0 +1,18 @@
+.content { padding: 24px 20px; }
+.header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.title { font-size: 24px; font-weight: 700; }
+.exportButton { width: auto; margin: 0; padding: 8px 16px; font-size: 14px; }
+.grid { display: flex; flex-direction: column; gap: 24px; }
+.grid > div { min-width: 0; }
+.chartPanel { background: var(--surface-color); padding: 24px; border-radius: 24px; border: 1px solid var(--border-color); }
+.chartPanelScrollable { overflow-x: auto; }
+.chartTitle { font-size: 18px; margin-bottom: 24px; color: var(--text-color); }
+.chartArea { height: 300px; width: 100%; }
+.emptyChart { height: 300px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table caption { text-align: left; font-weight: 600; padding: 12px 0; }
+.table th, .table td { padding: 10px 4px; border-bottom: 1px solid var(--border-color); text-align: right; }
+.table th:first-child { text-align: left; overflow-wrap: anywhere; }
+.table tbody th { font-weight: 400; }
+.table a, .chartLinks a { color: var(--link-color); }
+.chartLinks { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 16px; font-size: 13px; }

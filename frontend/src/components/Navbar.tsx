@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/i18n/LanguageContext';
+import styles from './Navbar.module.css';
 
 export default function Navbar({ username, onLogout, isAdmin }: { username: string, onLogout: () => void, isAdmin?: boolean }) {
   const pathname = usePathname();
@@ -11,28 +12,28 @@ export default function Navbar({ username, onLogout, isAdmin }: { username: stri
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="navbar">
-      <div className="navbar-header">
-        <div className="mobile-only" style={{ fontWeight: 700, fontSize: '18px', color: 'var(--primary-color)' }}>GoTrackMoney</div>
-        <button className="mobile-menu-btn" type="button" aria-label={t(isOpen ? 'nav.close_menu' : 'nav.open_menu')} aria-expanded={isOpen} onClick={() => setIsOpen(!isOpen)}>
+    <nav className={styles.bar} aria-label="Main navigation">
+      <div className={styles.header}>
+        <div className={styles.brand}>GoTrackMoney</div>
+        <button className={styles.menuButton} type="button" aria-label={t(isOpen ? 'nav.close_menu' : 'nav.open_menu')} aria-expanded={isOpen} onClick={() => setIsOpen(!isOpen)}>
           {isOpen ? '✕' : '☰'}
         </button>
       </div>
 
-      <div className={`navbar-content ${isOpen ? 'open' : ''}`}>
-        <div className="nav-links">
-          <Link href="/" className={`nav-link ${pathname === '/' ? 'active' : ''}`}>{t('nav.dashboard')}</Link>
-          <Link href="/categories" className={`nav-link ${pathname === '/categories' ? 'active' : ''}`}>{t('nav.categories')}</Link>
-          <Link href="/periodic" className={`nav-link ${pathname === '/periodic' ? 'active' : ''}`}>{t('record.periodic') || 'Periodic'}</Link>
-          <Link href="/search" className={`nav-link ${pathname === '/search' ? 'active' : ''}`}>{t('nav.search')}</Link>
-          <Link href="/analytics" className={`nav-link ${pathname === '/analytics' ? 'active' : ''}`}>{t('nav.analytics')}</Link>
-          {isAdmin && <Link href="/admin" className={`nav-link ${pathname === '/admin' ? 'active' : ''}`}>{t('nav.admin')}</Link>}
+      <div className={`${styles.content} ${isOpen ? styles.open : ''}`}>
+        <div className={styles.links}>
+          <Link href="/" className={`${styles.link} ${pathname === '/' ? styles.active : ''}`}>{t('nav.dashboard')}</Link>
+          <Link href="/categories" className={`${styles.link} ${pathname === '/categories' ? styles.active : ''}`}>{t('nav.categories')}</Link>
+          <Link href="/periodic" className={`${styles.link} ${pathname === '/periodic' ? styles.active : ''}`}>{t('record.periodic') || 'Periodic'}</Link>
+          <Link href="/search" className={`${styles.link} ${pathname === '/search' ? styles.active : ''}`}>{t('nav.search')}</Link>
+          <Link href="/analytics" className={`${styles.link} ${pathname === '/analytics' ? styles.active : ''}`}>{t('nav.analytics')}</Link>
+          {isAdmin && <Link href="/admin" className={`${styles.link} ${pathname === '/admin' ? styles.active : ''}`}>{t('nav.admin')}</Link>}
         </div>
-        <div className="nav-right">
-          <Link href="/profile" className="profile-link" title={username}><span className="profile-name">{username}</span></Link>
-          <button type="button" onClick={onLogout} className="logout-btn">{t('nav.logout')}</button>
+        <div className={styles.right}>
+          <Link href="/profile" className={styles.profileLink} title={username}><span className={styles.profileName}>{username}</span></Link>
+          <button type="button" onClick={onLogout} className={styles.logout}>{t('nav.logout')}</button>
         </div>
       </div>
-    </div>
+    </nav>
   );
 }
