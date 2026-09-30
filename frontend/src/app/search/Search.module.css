@@ -5,6 +5,7 @@
 .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 16px 0; }
 .filters label { min-width: 0; font-size: 14px; }
 .filters :global(.input-field) { min-width: 0; max-width: 100%; margin: 6px 0; }
+.resultsCount { margin-top: 12px; }
 @media (max-width: 639px) {
   .filterToggle { display: inline-flex; margin-top: 10px; }
   .advanced:not(.open) { display: none; }

@@ -56,7 +56,7 @@ function SearchContent() {
         {failed && <button className="secondary-btn" onClick={retry}>{t('analytics.retry')}</button>}
       </p>}
       {result && <>
-        <p aria-live="polite">{t('search.results_count', { count: String(result.total) })}</p>
+        <p className={styles.resultsCount} aria-live="polite">{t('search.results_count', { count: String(result.total) })}</p>
         <div className="list-container">{result.items.map(item => <button className="list-item transaction-row" key={item.type + ':' + item.id} onClick={() => setEditing(item)}>
           <span><strong>{item.description || item.name}</strong><small>{format(new Date(item.date), 'dd/MM/yyyy HH:mm')} · {categories.find(c => c.id === item.category_id)?.name || t('dashboard.unknown')}{item.is_periodic && ' · ' + t('record.periodic')}</small></span>
           <span className={item.type === 'expense' ? 'amount-expense' : 'amount-income'}>{item.type === 'expense' ? '−' : '+'}{money(item.amount)}</span>
