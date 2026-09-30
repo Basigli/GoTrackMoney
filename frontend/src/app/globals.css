@@ -390,19 +390,27 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); opacity: 1
   opacity: 1;
 }
 
-/* Fix for iOS datetime-local offset */
+/* Keep native date controls inside their bounds on iOS, including empty fields. */
+input[type="date"].input-field,
 input[type="datetime-local"].input-field {
   -webkit-appearance: none;
   appearance: none;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 50px;
+  line-height: 20px;
   text-align: left;
 }
 
+input[type="date"]::-webkit-date-and-time-value,
 input[type="datetime-local"]::-webkit-date-and-time-value {
+  min-height: 20px;
   text-align: left;
   margin: 0;
   padding: 0;
 }
 
+input[type="date"]::-webkit-datetime-edit,
 input[type="datetime-local"]::-webkit-datetime-edit {
   padding: 0;
 }

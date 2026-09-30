@@ -47,7 +47,7 @@ function SearchContent() {
             {categories.filter(c => !params.get('type') || c.type === params.get('type')).sort((a,b) => a.name.localeCompare(b.name, language, { sensitivity:'base' })).map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
           </select></label>
           {(['from','to','min_amount','max_amount'] as const).map(field => <label key={field}>{t('search.' + field)}
-            <input className="input-field" type={field === 'from' || field === 'to' ? 'date' : 'number'} min="0" step="0.01" value={params.get(field) || ''} onChange={e => change(field, e.target.value)} />
+            <input className="input-field" type={field === 'from' || field === 'to' ? 'date' : 'number'} min={field === 'from' || field === 'to' ? undefined : '0'} step={field === 'from' || field === 'to' ? undefined : '0.01'} value={params.get(field) || ''} onChange={e => change(field, e.target.value)} />
           </label>)}
         </div>
         <button type="button" className="secondary-btn" onClick={() => window.history.replaceState(null, '', '/search')}>{t('search.clear')}</button>
