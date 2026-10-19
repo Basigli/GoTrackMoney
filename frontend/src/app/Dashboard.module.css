@@ -1,15 +1,21 @@
-.header { padding: 24px 20px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.header { padding: 20px 20px 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .header h1 { font-size: 24px; font-weight: 700; }
-.header .addButton { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: auto; min-height: 48px; margin: 0; padding: 12px 16px; font: inherit; font-size: 14px; font-weight: 600; }
+.header .addButton { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: auto; min-height: 44px; margin: 0; padding: 10px 14px; font: inherit; font-size: 14px; font-weight: 600; }
 .addButton > span { font-size: 22px; line-height: 20px; }
-.periodControls { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: center; justify-items: center; align-items: start; gap: 12px; margin: 0 20px 24px; padding: 16px; border: 1px solid var(--border-color); border-radius: 20px; background: var(--surface-color); }
-.periodModes { display: inline-grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; background: var(--input-bg); border-radius: 16px; }
-.periodMode { min-height: 44px; min-width: 88px; padding: 10px 14px; border: 0; border-radius: 12px; background: transparent; color: var(--text-muted); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.periodControls { display: grid; grid-template-columns: auto minmax(0, 340px); justify-content: center; align-items: start; gap: 8px; margin: 0 20px 16px; }
+.periodModes { display: inline-grid; grid-template-columns: repeat(2, 48px); padding: 2px; background: var(--input-bg); border-radius: 14px; }
+.periodMode { min-height: 44px; min-width: 0; padding: 8px 2px; border: 0; border-radius: 12px; background: transparent; color: var(--text-muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .periodModeActive { background: var(--surface-color); color: var(--accent-color); box-shadow: 0 2px 4px rgba(0,0,0,.05); }
-.periodControls :global(.month-navigation) { width: min(100%, 340px); min-width: 0; margin: 0; }
+.periodControls :global(.month-navigation) { width: 100%; min-width: 0; margin: 2px 0 0; }
+@media (max-width: 639px) {
+  .periodControls :global(.month-navigation-main) { gap: 4px; }
+  .periodControls :global(.period-picker-button) { padding: 8px 4px; font-size: 14px; }
+  .periodControls :global(.period-picker-button > span:first-child) { display: none; }
+}
 @media (min-width: 640px) {
-  .periodControls { grid-template-columns: auto minmax(0, 340px); column-gap: 24px; }
-  .periodControls :global(.month-navigation) { margin-top: 4px; }
+  .periodControls { column-gap: 16px; }
+  .periodModes { grid-template-columns: repeat(2, minmax(72px, 1fr)); }
+  .periodMode { padding: 10px 14px; font-size: 14px; }
 }
 .balanceBanner { background: var(--balance-bg); border-radius: 24px; padding: 28px 24px; margin: 0 20px 24px; color: white; }
 .balanceTitle { font-size: 16px; font-weight: 500; opacity: .9; margin-bottom: 6px; }
