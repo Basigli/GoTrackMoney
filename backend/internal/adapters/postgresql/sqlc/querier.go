@@ -24,6 +24,7 @@ type Querier interface {
 	FindCategoryByID(ctx context.Context, id int64) (Category, error)
 	FindCategoryByIDAndCreatorID(ctx context.Context, arg FindCategoryByIDAndCreatorIDParams) (Category, error)
 	FindDuePeriodicExpensesByUserID(ctx context.Context, userID int64) ([]PeriodicExpense, error)
+	FindDuplicateExpenses(ctx context.Context, arg FindDuplicateExpensesParams) ([]FindDuplicateExpensesRow, error)
 	FindUserByID(ctx context.Context, id int64) (User, error)
 	FindUserByUsername(ctx context.Context, username string) (User, error)
 	GetExpensesByCategory(ctx context.Context, arg GetExpensesByCategoryParams) ([]GetExpensesByCategoryRow, error)

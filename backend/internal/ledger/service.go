@@ -276,6 +276,31 @@ func (s *svc) CreateExpense(ctx context.Context, params createExpenseParams) (re
 	} else if category.Type != "expense" {
 		return repo.Expense{}, fmt.Errorf("category type must be expense")
 	}
+	start, end, date, err := expenseDayBounds(params.SpentOn, params.Timezone)
+	if err != nil {
+		return repo.Expense{}, err
+	}
+	if !params.AllowDuplicate {
+		matches, err := s.repo.FindDuplicateExpenses(ctx, repo.FindDuplicateExpensesParams{
+			UserID: user.ID, DayStart: timestamptzFromTime(&start), DayEnd: timestamptzFromTime(&end),
+			Amount: params.Amount, CategoryID: params.CategoryID, Description: params.Description,
+			SpentOn: timestamptzFromTime(&date),
+		})
+		if err != nil {
+			return repo.Expense{}, err
+		}
+		if len(matches) > 0 {
+			review := &duplicateExpenseError{Total: matches[0].TotalCount}
+			for _, match := range matches {
+				review.Matches = append(review.Matches, duplicateExpenseMatch{
+					ID: match.ID, Name: match.Name, Description: match.Description, Amount: match.Amount,
+					CategoryID: match.CategoryID, CategoryName: match.CategoryName, CategoryEmoji: match.CategoryEmoji,
+					SpentOn: match.SpentOn.Time, IsPeriodic: match.IsPeriodic,
+				})
+			}
+			return repo.Expense{}, review
+		}
+	}
 	return s.repo.CreateExpense(ctx, repo.CreateExpenseParams{
 		Name:        params.Name,
 		Description: params.Description,

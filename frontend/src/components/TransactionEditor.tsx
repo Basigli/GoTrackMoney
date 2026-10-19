@@ -5,8 +5,10 @@ import toast from 'react-hot-toast';
 import type { Category } from '@/types/domain';
 import type { Transaction, TransactionType } from '@/utils/transactions';
 import { apiRequest } from '@/utils/api';
+import { readDuplicateExpenseReview, type DuplicateExpenseReview } from '@/utils/expenseDuplicates';
 import { useLanguage } from '@/i18n/LanguageContext';
 import SafeDialog from './SafeDialog';
+import ExpenseDuplicateReview from './ExpenseDuplicateReview';
 
 export interface SavedTransaction { type: TransactionType; category_id: number; date: string; deleted?: boolean }
 export default function TransactionEditor({ token, categories, item, initialType = 'expense', initialCategory, initialDate = new Date(), onClose, onSaved }: {
@@ -25,10 +27,12 @@ export default function TransactionEditor({ token, categories, item, initialType
   const submitting = useRef(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState('');
+  const [review, setReview] = useState<DuplicateExpenseReview | null>(null);
+  const amountInput = useRef<HTMLInputElement>(null);
   const dirty = JSON.stringify(initial) !== JSON.stringify(form);
   const update = <K extends keyof typeof form>(key: K, value: typeof form[K]) => setForm(old => ({ ...old, [key]: value }));
-  const save = async (event: FormEvent) => {
-    event.preventDefault();
+  const save = async (event?: FormEvent, allowDuplicate = false) => {
+    event?.preventDefault();
     if (submitting.current) return;
     const amount = Number(form.amount.replace(',', '.'));
     const date = new Date(form.date);
@@ -45,6 +49,10 @@ export default function TransactionEditor({ token, categories, item, initialType
     const payload = {
       name: item?.name || categories.find(c => c.id === Number(form.category))!.name,
       description: form.description, amount, category_id: Number(form.category),
+      ...(!item && !periodic && form.type === 'expense' ? {
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        ...(allowDuplicate ? { allow_duplicate: true } : {}),
+      } : {}),
       ...(periodic ? { start_date: date.toISOString(), period_interval: Number(form.interval), period_unit: form.unit }
         : { [form.type === 'expense' ? 'spent_on' : 'received_on']: date.toISOString() }),
     };
@@ -52,7 +60,11 @@ export default function TransactionEditor({ token, categories, item, initialType
       await apiRequest<void>(endpoint, { method: item ? 'PUT' : 'POST', token, body: payload });
       toast.success(t(item ? 'record.success_edit' : form.type === 'expense' ? 'record.success_expense' : 'record.success_income'));
       onSaved({ type: form.type, category_id: Number(form.category), date: date.toISOString() });
-    } catch { setFailure(t('form.save_error')); }
+    } catch (error) {
+      const duplicate = !item && !periodic && form.type === 'expense' ? readDuplicateExpenseReview(error) : null;
+      if (duplicate) setReview(duplicate);
+      else setFailure(t('form.save_error'));
+    }
     finally { submitting.current = false; setBusy(false); }
   };
   const remove = async () => {
@@ -66,13 +78,15 @@ export default function TransactionEditor({ token, categories, item, initialType
     finally { submitting.current = false; setBusy(false); }
   };
   return <SafeDialog title={t(item ? 'record.edit' : 'record.new')} dirty={dirty} busy={busy} onClose={onClose}>
-    <form className="modal-form" onSubmit={save} noValidate>
+    {review ? <ExpenseDuplicateReview review={review} busy={busy} failure={failure}
+      onBack={() => { setReview(null); setFailure(''); requestAnimationFrame(() => amountInput.current?.focus()); }}
+      onConfirm={() => { void save(undefined, true); }} /> : <form className="modal-form" onSubmit={save} noValidate>
       <fieldset disabled={busy}>
         <label>{t('record.type')}<select className="input-field" value={form.type} disabled={!!item}
           onChange={e => setForm(old => ({ ...old, type: e.target.value as TransactionType, category: '', periodic: false }))}>
           <option value="expense">{t('record.expense')}</option><option value="income">{t('record.income')}</option>
         </select></label>
-        <label>{t('record.amount')}<input data-initial-focus className="input-field" inputMode="decimal" value={form.amount}
+        <label>{t('record.amount')}<input ref={amountInput} data-initial-focus className="input-field" inputMode="decimal" value={form.amount}
           aria-invalid={!!errors.amount} aria-describedby="amount-error" onChange={e => update('amount', e.target.value)} /></label>
         {errors.amount && <p id="amount-error" className="field-error">{errors.amount}</p>}
         <label>{t('record.category')}<select className="input-field" value={form.category} aria-invalid={!!errors.category} onChange={e => update('category', e.target.value)}>
@@ -97,6 +111,6 @@ export default function TransactionEditor({ token, categories, item, initialType
           <button className="submit-btn" type="submit">{t(busy ? 'form.saving' : 'record.save')}</button>
         </div>
       </fieldset>
-    </form>
+    </form>}
   </SafeDialog>;
 }

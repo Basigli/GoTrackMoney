@@ -1,0 +1,10 @@
+.explanation { color: var(--text-muted); margin: 12px 0; line-height: 1.5; }
+.matches { list-style: none; display: grid; gap: 10px; margin: 16px 0; }
+.match { min-width: 0; padding: 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--card-bg); overflow-wrap: anywhere; }
+.header { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.amount { color: var(--danger-color); }
+.match p { color: var(--text-muted); font-size: 14px; margin-top: 6px; }
+.badge { display: inline-block; margin-top: 8px; color: var(--primary-color); font-size: 12px; font-weight: 600; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+.actions :global(.submit-btn) { width: auto; }
+.actions > button { flex: 1; margin-top: 0; }

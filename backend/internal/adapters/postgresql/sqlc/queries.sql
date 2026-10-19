@@ -238,6 +238,25 @@ WHERE
 ORDER BY
   spent_on DESC, id DESC;
 
+-- name: FindDuplicateExpenses :many
+SELECT e.id, e.name, e.description, e.amount, e.category_id,
+       c.name AS category_name, c.emoji AS category_emoji,
+       COALESCE(e.spent_on, e.created_at) AS spent_on, e.is_periodic,
+       COUNT(*) OVER () AS total_count
+FROM expenses e
+JOIN categories c ON c.id = e.category_id
+WHERE e.user_id = sqlc.arg(user_id)
+  AND COALESCE(e.spent_on, e.created_at) >= sqlc.arg(day_start)::timestamptz
+  AND COALESCE(e.spent_on, e.created_at) < sqlc.arg(day_end)::timestamptz
+  AND ROUND(e.amount::numeric, 2) = ROUND(sqlc.arg(amount)::double precision::numeric, 2)
+ORDER BY (e.category_id = sqlc.arg(category_id)) DESC,
+         (BTRIM(sqlc.arg(description)::text) <> '' AND
+          LOWER(REGEXP_REPLACE(BTRIM(e.description), '\s+', ' ', 'g')) =
+          LOWER(REGEXP_REPLACE(BTRIM(sqlc.arg(description)::text), '\s+', ' ', 'g'))) DESC,
+         ABS(EXTRACT(EPOCH FROM (COALESCE(e.spent_on, e.created_at) - sqlc.arg(spent_on)::timestamptz))),
+         e.id DESC
+LIMIT 5;
+
 -- name: FilterIncomesByDate :many
 SELECT
   id, name, description, amount, user_id, created_at, category_id, received_on

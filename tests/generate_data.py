@@ -119,6 +119,7 @@ def main(argv=None):
             # Rent
             api_request('POST', '/expenses', {
                 "name": "Affitto Mensile",
+                "allow_duplicate": True,
                 "description": "",
                 "amount": 1000.0,
                 "category_id": categories["Affitto"],
@@ -142,6 +143,7 @@ def main(argv=None):
         if curr_date.day == 15:
             api_request('POST', '/expenses', {
                 "name": "Bolletta Elettricità/Gas",
+                "allow_duplicate": True,
                 "description": "",
                 "amount": round(random.uniform(80, 180), 2),
                 "category_id": categories["Bollette"],
@@ -153,6 +155,7 @@ def main(argv=None):
         if curr_date.weekday() == 5:
             api_request('POST', '/expenses', {
                 "name": "Spesa al Supermercato",
+                "allow_duplicate": True,
                 "description": "Esselunga",
                 "amount": round(random.uniform(50, 150), 2),
                 "category_id": categories["Spesa"],
@@ -182,6 +185,7 @@ def main(argv=None):
 
             api_request('POST', '/expenses', {
                 "name": f"Spesa {chosen_cat}",
+                "allow_duplicate": True,
                 "description": desc,
                 "amount": amt,
                 "category_id": categories[chosen_cat],

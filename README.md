@@ -134,6 +134,18 @@ and `offset`. Recurring actions use `POST /periodic-expenses/{id}/pause`,
 `/resume`, and `/skip`; `GET /periodic-expenses/upcoming` supplies occurrence
 previews and totals. Updates to recurring expenses preserve omitted fields.
 
+New manual expenses are checked for possible duplicates before insertion.
+`POST /expenses` accepts an optional IANA `timezone` (UTC by default) and compares
+the amount rounded to cents against the user's expenses on that calendar day.
+HTTP `409` with `code: "possible_duplicate"` returns `matches` (up to five,
+including category details and recurring status) and `total`; it inserts nothing.
+After reviewing the matches, resubmit the expense with `allow_duplicate: true`
+to save it intentionally. Existing recurring expenses can appear as matches;
+income, expense edits, and recurring-schedule creation keep their existing flow.
+This feature requires no database migration.
+Deploy the updated backend before or together with the frontend: older backend
+versions reject the new expense request fields.
+
 ## Upgrading an installation with real data
 
 The schema change is additive. It marks existing recurring schedules active and

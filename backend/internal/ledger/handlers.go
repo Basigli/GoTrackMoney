@@ -279,6 +279,14 @@ func (h *handler) CreateExpense(w http.ResponseWriter, r *http.Request) {
 	}
 	expense, err := h.service.CreateExpense(r.Context(), payload)
 	if err != nil {
+		var duplicate *duplicateExpenseError
+		if errors.As(err, &duplicate) {
+			json.Write(w, http.StatusConflict, struct {
+				Code string `json:"code"`
+				*duplicateExpenseError
+			}{Code: "possible_duplicate", duplicateExpenseError: duplicate})
+			return
+		}
 		log.Println(err)
 		switch {
 		case errors.Is(err, auth.ErrUnauthorized):
@@ -518,14 +526,14 @@ func (h *handler) UpdatePeriodicExpense(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "missing id", http.StatusBadRequest)
 		return
 	}
-	
+
 	var payload updatePeriodicExpenseParams
 	if err := json.Read(r, &payload); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	
+
 	var id int64
 	fmt.Sscanf(idStr, "%d", &id)
 	payload.ID = id

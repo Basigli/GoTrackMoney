@@ -15,7 +15,7 @@ async function setup(page:Page, request:APIRequestContext) {
   return { token, headers, categories };
 }
 async function expense(request:APIRequestContext, headers:Record<string,string>, category:number, date:string, description = 'Dinner') {
-  const response = await request.post(api + '/expenses', { headers, data:{ name:'Food', amount:20, category_id:category, spent_on:date, description } });
+  const response = await request.post(api + '/expenses', { headers, data:{ name:'Food', amount:20, category_id:category, spent_on:date, description, allow_duplicate:true } });
   expect(response.ok()).toBeTruthy();
 }
 async function nav(page:Page, name:string) {
@@ -91,6 +91,27 @@ test('dirty form cannot be accidentally dismissed; validation and keyboard cance
   page.once('dialog',prompt => prompt.accept());
   await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
   await expect(dialog).not.toBeVisible();
+});
+
+test('duplicate expense review leaves data unchanged until explicitly confirmed', async ({page,request}) => {
+  const {headers,categories} = await setup(page,request);
+  await expense(request,headers,categories.Food,'2024-02-15T12:00:00Z','Existing dinner');
+  await page.goto('/?month=2024-02');
+  await page.getByRole('button',{name:'New Record',exact:true}).click();
+  const editor = page.getByRole('dialog');
+  await editor.getByLabel('Amount',{exact:true}).fill('20');
+  await editor.getByRole('combobox',{name:'Category',exact:true}).selectOption(String(categories.Zulu));
+  await editor.getByLabel('Date & Time').fill('2024-02-15T20:00');
+  await editor.getByLabel('Description',{exact:true}).fill('Second dinner');
+  await editor.getByRole('button',{name:'Save',exact:true}).click();
+  await expect(editor.getByRole('heading',{name:'Possible duplicate'})).toBeVisible();
+  await expect(editor.getByText('Existing dinner')).toBeVisible();
+  const before = await (await request.get(api+'/transactions/search',{headers})).json();
+  expect(before.total).toBe(1);
+  await editor.getByRole('button',{name:'Save anyway'}).click();
+  await expect(editor).toBeHidden();
+  const after = await (await request.get(api+'/transactions/search',{headers})).json();
+  expect(after.total).toBe(2);
 });
 
 test('month navigation crosses years and analytics links open filtered search', async ({page,request}) => {

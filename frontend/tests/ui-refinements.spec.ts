@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-async function mockApp(page: Page, options: { username?: string; isAdmin?: boolean; withChartData?: boolean; startAnonymous?: boolean; startToken?: string; withDashboardExpense?: boolean; failFirstExpenseSave?: boolean; withRecurring?: boolean } = {}) {
+async function mockApp(page: Page, options: { username?: string; isAdmin?: boolean; withChartData?: boolean; startAnonymous?: boolean; startToken?: string; withDashboardExpense?: boolean; failFirstExpenseSave?: boolean; withRecurring?: boolean; withDuplicateReview?: boolean; failFirstConfirmation?: boolean } = {}) {
   await page.addInitScript(({ startAnonymous, startToken }: { startAnonymous: boolean; startToken?: string }) => {
     if (!sessionStorage.getItem('ui-test-initialized')) {
       sessionStorage.setItem('ui-test-initialized', 'true');
@@ -12,6 +12,7 @@ async function mockApp(page: Page, options: { username?: string; isAdmin?: boole
   let categories = options.withChartData || options.withDashboardExpense || options.withRecurring ? [{ id: 1, name: 'Food', emoji: '🍴', type: 'expense', color: '#ff9078' }] : [];
   let expenses = options.withDashboardExpense ? [{ id: 1, name: 'Food', amount: 20, description: 'Dinner', category_id: 1, spent_on: '2024-02-15T12:00:00Z' }] : [];
   let expenseSaveAttempts = 0;
+  let duplicateConfirmations = 0;
   let schedules = options.withRecurring ? [{ id: 1, name: 'Daily coffee', amount: 5, description: '', category_id: 1, paused: false, schedule_anchor: '2026-01-01T12:00:00Z', period_interval: 1, period_unit: 'days', start_date: '2026-01-01T12:00:00Z', next_due_date: '2026-01-02T12:00:00Z' }] : [];
   await page.route(/^http:\/\/localhost:(8098|8198)\//, route => {
     const url = new URL(route.request().url());
@@ -43,7 +44,21 @@ async function mockApp(page: Page, options: { username?: string; isAdmin?: boole
     if (url.pathname === '/expenses' && route.request().method() === 'POST') {
       expenseSaveAttempts++;
       if (options.failFirstExpenseSave && expenseSaveAttempts === 1) return route.fulfill({ status: 500, body: 'unavailable', headers });
-      const body = route.request().postDataJSON() as Omit<(typeof expenses)[number], 'id'>;
+      const body = route.request().postDataJSON() as Omit<(typeof expenses)[number], 'id'> & { allow_duplicate?: boolean };
+      if (options.withDuplicateReview && !body.allow_duplicate && body.amount === 20) {
+        return route.fulfill({ status: 409, headers, json: {
+          code: 'possible_duplicate', total: 7,
+          matches: Array.from({ length: 5 }, (_, index) => ({
+            id: 100 + index, name: 'Legacy payment', description: index === 1 ? '' : `Saved dinner ${index + 1}`,
+            amount: 20, category_id: 1, category_name: index === 1 ? 'Utilities' : 'Food', category_emoji: '🍴',
+            spent_on: body.spent_on, is_periodic: index === 1,
+          })),
+        } });
+      }
+      if (options.withDuplicateReview && body.allow_duplicate) {
+        duplicateConfirmations++;
+        if (options.failFirstConfirmation && duplicateConfirmations === 1) return route.fulfill({ status: 500, body: 'unavailable', headers });
+      }
       const expense = { ...body, id: expenses.length + 1 };
       expenses = [...expenses, expense];
       return route.fulfill({ json: expense, headers });
@@ -304,6 +319,87 @@ test('category quick-add keeps its selection and input after a failed save', asy
   await editor.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('dialog', { name: 'Details for Food' })).toBeVisible();
   await expect(page.getByRole('dialog', { name: 'Details for Food' }).getByText(/12\.50/)).toBeVisible();
+});
+
+for (const language of ['en', 'it'] as const) {
+  test(`duplicate review preserves the draft and explicitly confirms saving (${language})`, async ({ page }) => {
+    await mockApp(page, { withDashboardExpense: true, withDuplicateReview: true, failFirstConfirmation: true });
+    await page.addInitScript(language => {
+      localStorage.setItem('app_language', language);
+      if (language === 'it') {
+        localStorage.setItem('app_theme_active_user', '1');
+        localStorage.setItem('app_theme:1', 'dark');
+      }
+    }, language);
+    const italian = language === 'it';
+    await page.goto('/?month=2024-02');
+    await page.getByRole('button', { name: italian ? 'Nuova Registrazione' : 'New Record', exact: true }).click();
+    const editor = page.getByRole('dialog');
+    const amount = italian ? 'Importo' : 'Amount';
+    const description = italian ? 'Descrizione' : 'Description';
+    const date = italian ? 'Data e Ora' : 'Date & Time';
+    const save = italian ? 'Salva' : 'Save';
+    await editor.getByLabel(amount, { exact: true }).fill('20,00');
+    await editor.getByRole('combobox', { name: italian ? 'Categoria' : 'Category', exact: true }).selectOption('1');
+    await editor.getByLabel(description, { exact: true }).fill('New dinner');
+    await editor.getByLabel(date, { exact: true }).fill('2024-02-15T20:00');
+    const requests: Record<string, unknown>[] = [];
+    page.on('request', request => {
+      if (new URL(request.url()).pathname === '/expenses' && request.method() === 'POST') requests.push(request.postDataJSON());
+    });
+    await editor.getByRole('button', { name: save, exact: true }).click();
+    const heading = editor.getByRole('heading', { name: italian ? 'Possibile duplicato' : 'Possible duplicate' });
+    await expect(heading).toBeVisible();
+    await expect(heading).toBeFocused();
+    await page.keyboard.press('Enter');
+    expect(requests).toHaveLength(1);
+    await expect(editor.getByRole('listitem')).toHaveCount(5);
+    await expect(editor.getByText('Utilities', { exact: false })).toBeVisible();
+    await expect(editor.getByText('Legacy payment')).toBeVisible();
+    await expect(editor.getByText(italian ? 'Spesa Periodica' : 'Periodic Expense', { exact: true })).toBeVisible();
+    await expect(editor.getByText(italian ? 'Mostrate 5 di 7 possibili corrispondenze.' : 'Showing 5 of 7 possible matches.')).toBeVisible();
+    expect(requests).toHaveLength(1);
+    expect(requests[0].allow_duplicate).toBeUndefined();
+    expect(requests[0].timezone).toBeTruthy();
+    await page.screenshot({ path: test.info().outputPath(`duplicate-review-${language}.png`), fullPage: true });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+    await editor.getByRole('button', { name: italian ? 'Torna indietro' : 'Go back' }).click();
+    await expect(editor.getByLabel(amount, { exact: true })).toBeFocused();
+    await expect(editor.getByLabel(amount, { exact: true })).toHaveValue('20,00');
+    await expect(editor.getByLabel(description, { exact: true })).toHaveValue('New dinner');
+    await expect(editor.getByLabel(date, { exact: true })).toHaveValue('2024-02-15T20:00');
+    expect(requests).toHaveLength(1);
+    await editor.getByRole('button', { name: save, exact: true }).click();
+    await expect(heading).toBeVisible();
+    expect(requests[1].allow_duplicate).toBeUndefined();
+    const confirm = editor.getByRole('button', { name: italian ? 'Salva comunque' : 'Save anyway' });
+    await confirm.focus();
+    await page.keyboard.press('Enter');
+    await expect(editor.getByRole('alert')).toBeVisible();
+    await expect(heading).toBeVisible();
+    expect(requests[2]).toEqual({ ...requests[1], allow_duplicate: true });
+    await confirm.click();
+    await expect(editor).toBeHidden();
+    expect(requests).toHaveLength(4);
+    expect(requests[3]).toEqual(requests[2]);
+  });
+}
+
+test('changing a reviewed expense checks the revised draft without an override', async ({ page }) => {
+  await mockApp(page, { withDashboardExpense: true, withDuplicateReview: true });
+  await page.goto('/?month=2024-02');
+  await page.getByRole('button', { name: 'New Record', exact: true }).click();
+  const editor = page.getByRole('dialog');
+  await editor.getByLabel('Amount', { exact: true }).fill('20');
+  await editor.getByRole('combobox', { name: 'Category', exact: true }).selectOption('1');
+  await editor.getByRole('button', { name: 'Save', exact: true }).click();
+  await editor.getByRole('button', { name: 'Go back' }).click();
+  await editor.getByLabel('Amount', { exact: true }).fill('25');
+  const request = page.waitForRequest(request => new URL(request.url()).pathname === '/expenses' && request.method() === 'POST');
+  await editor.getByRole('button', { name: 'Save', exact: true }).click();
+  expect((await request).postDataJSON()).not.toHaveProperty('allow_duplicate');
+  await expect(editor).toBeHidden();
 });
 
 test('recurring controls refresh after pause and resume', async ({ page }) => {

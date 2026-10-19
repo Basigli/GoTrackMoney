@@ -459,6 +459,88 @@ func (q *Queries) FindDuePeriodicExpensesByUserID(ctx context.Context, userID in
 	return items, nil
 }
 
+const findDuplicateExpenses = `-- name: FindDuplicateExpenses :many
+SELECT e.id, e.name, e.description, e.amount, e.category_id,
+       c.name AS category_name, c.emoji AS category_emoji,
+       COALESCE(e.spent_on, e.created_at) AS spent_on, e.is_periodic,
+       COUNT(*) OVER () AS total_count
+FROM expenses e
+JOIN categories c ON c.id = e.category_id
+WHERE e.user_id = $1
+  AND COALESCE(e.spent_on, e.created_at) >= $2::timestamptz
+  AND COALESCE(e.spent_on, e.created_at) < $3::timestamptz
+  AND ROUND(e.amount::numeric, 2) = ROUND($4::double precision::numeric, 2)
+ORDER BY (e.category_id = $5) DESC,
+         (BTRIM($6::text) <> '' AND
+          LOWER(REGEXP_REPLACE(BTRIM(e.description), '\s+', ' ', 'g')) =
+          LOWER(REGEXP_REPLACE(BTRIM($6::text), '\s+', ' ', 'g'))) DESC,
+         ABS(EXTRACT(EPOCH FROM (COALESCE(e.spent_on, e.created_at) - $7::timestamptz))),
+         e.id DESC
+LIMIT 5
+`
+
+type FindDuplicateExpensesParams struct {
+	UserID      int64              `json:"user_id"`
+	DayStart    pgtype.Timestamptz `json:"day_start"`
+	DayEnd      pgtype.Timestamptz `json:"day_end"`
+	Amount      float64            `json:"amount"`
+	CategoryID  int64              `json:"category_id"`
+	Description string             `json:"description"`
+	SpentOn     pgtype.Timestamptz `json:"spent_on"`
+}
+
+type FindDuplicateExpensesRow struct {
+	ID            int64              `json:"id"`
+	Name          string             `json:"name"`
+	Description   string             `json:"description"`
+	Amount        float64            `json:"amount"`
+	CategoryID    int64              `json:"category_id"`
+	CategoryName  string             `json:"category_name"`
+	CategoryEmoji string             `json:"category_emoji"`
+	SpentOn       pgtype.Timestamptz `json:"spent_on"`
+	IsPeriodic    bool               `json:"is_periodic"`
+	TotalCount    int64              `json:"total_count"`
+}
+
+func (q *Queries) FindDuplicateExpenses(ctx context.Context, arg FindDuplicateExpensesParams) ([]FindDuplicateExpensesRow, error) {
+	rows, err := q.db.Query(ctx, findDuplicateExpenses,
+		arg.UserID,
+		arg.DayStart,
+		arg.DayEnd,
+		arg.Amount,
+		arg.CategoryID,
+		arg.Description,
+		arg.SpentOn,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindDuplicateExpensesRow
+	for rows.Next() {
+		var i FindDuplicateExpensesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Amount,
+			&i.CategoryID,
+			&i.CategoryName,
+			&i.CategoryEmoji,
+			&i.SpentOn,
+			&i.IsPeriodic,
+			&i.TotalCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findUserByID = `-- name: FindUserByID :one
 SELECT
   id, username, password, session_duration_hours, is_admin

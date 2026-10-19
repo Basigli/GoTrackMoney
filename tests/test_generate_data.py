@@ -52,6 +52,8 @@ class GeneratorTests(unittest.TestCase):
                 return {'token': 'demo-token'}
             self.assertEqual(token, 'demo-token')
             if path in ('/incomes', '/expenses'):
+                if path == '/expenses':
+                    self.assertTrue(payload['allow_duplicate'])
                 transactions.append(payload)
             return {'id': 1}
 

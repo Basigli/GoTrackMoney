@@ -15,11 +15,13 @@ type createCategoryParams struct {
 }
 
 type createExpenseParams struct {
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	Amount      float64    `json:"amount"`
-	CategoryID  int64      `json:"category_id"`
-	SpentOn     *time.Time `json:"spent_on,omitempty"`
+	Name           string     `json:"name"`
+	Description    string     `json:"description"`
+	Amount         float64    `json:"amount"`
+	CategoryID     int64      `json:"category_id"`
+	SpentOn        *time.Time `json:"spent_on,omitempty"`
+	Timezone       string     `json:"timezone,omitempty"`
+	AllowDuplicate bool       `json:"allow_duplicate,omitempty"`
 }
 
 type createIncomeParams struct {

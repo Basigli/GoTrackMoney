@@ -226,7 +226,7 @@ func TestIntegrationSearchFiltersAndTies(t *testing.T) {
 	s, ctx, cat := integrationService(t)
 	date := time.Date(2024, 2, 29, 12, 0, 0, 0, time.UTC)
 	for _, name := range []string{"First", "Second"} {
-		if _, err := s.CreateExpense(ctx, createExpenseParams{Name: name, Amount: 12.5, CategoryID: cat, SpentOn: &date}); err != nil {
+		if _, err := s.CreateExpense(ctx, createExpenseParams{Name: name, Amount: 12.5, CategoryID: cat, SpentOn: &date, AllowDuplicate: true}); err != nil {
 			t.Fatal(err)
 		}
 	}

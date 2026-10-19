@@ -39,6 +39,7 @@ def make_request(args):
     headers = {"Authorization": f"Bearer {token}"}
     exp_payload = {
         "name": "Stress Expense",
+        "allow_duplicate": True,
         "description": "Stress testing",
         "amount": round(random.uniform(10.0, 500.0), 2),
         "category_id": cat_id,
