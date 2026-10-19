@@ -6,7 +6,13 @@
 .filters label { min-width: 0; font-size: 14px; }
 .filters :global(.input-field) { min-width: 0; max-width: 100%; margin: 6px 0; }
 .resultsCount { margin-top: 12px; }
+.appliedFilters { display: none; list-style: none; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.appliedFilters li { min-width: 0; max-width: 100%; }
+.filterChip { display: inline-flex; align-items: center; gap: 10px; max-width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-color); color: var(--text-color); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.filterChip > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.filterChip > span:last-child { font-size: 20px; flex-shrink: 0; }
 @media (max-width: 639px) {
+  .appliedFilters { display: flex; }
   .filterToggle { display: inline-flex; margin-top: 10px; }
   .advanced:not(.open) { display: none; }
 }

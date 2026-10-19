@@ -245,6 +245,49 @@ test('wide search keeps advanced filters visible without a toggle', async ({ pag
   await expect(page.getByRole('button', { name: 'Show filters' })).toBeHidden();
 });
 
+test('collapsed search exposes applied filters and removes criteria without losing the query', async ({ page }, testInfo) => {
+  await mockApp(page, { withDashboardExpense: true });
+  await page.goto('/search?q=coffee&type=expense&category_id=1&from=2024-02-01&to=2024-02-29&min_amount=10.50&max_amount=100&offset=50');
+  await expect(page.getByText('0 results found')).toBeVisible();
+  const chips = page.getByRole('list', { name: 'Applied filters' });
+  if (testInfo.project.name === 'mobile') {
+    await expect(chips).toBeVisible();
+    await expect(chips.getByRole('button', { name: 'Remove Category: Food' })).toBeVisible();
+    await chips.getByRole('button', { name: 'Remove From: 01/02/2024' }).click();
+    await expect(page.getByRole('button', { name: 'Show filters 5' })).toHaveAttribute('aria-expanded', 'false');
+    const params = new URL(page.url()).searchParams;
+    expect(params.has('from')).toBe(false);
+    expect(params.has('offset')).toBe(false);
+    expect(params.get('q')).toBe('coffee');
+    expect(params.get('category_id')).toBe('1');
+    expect(params.get('to')).toBe('2024-02-29');
+    await page.screenshot({ path: test.info().outputPath('search-filter-chips.png'), fullPage: true });
+  } else {
+    await expect(chips).toBeHidden();
+  }
+  await page.getByRole('button', { name: 'Clear filters', exact: true }).click();
+  await expect(page.getByRole('searchbox')).toHaveValue('');
+  await expect(chips).toHaveCount(0);
+});
+
+test('profile translates its settings help and deletion instructions in both languages', async ({ page }) => {
+  await mockApp(page);
+  await page.goto('/profile');
+  for (const italian of [false, true]) {
+    if (italian) await page.getByRole('button', { name: 'Italiano', exact: true }).click();
+    await expect(page.getByText(italian ? 'Aggiorna le tue informazioni e preferenze.' : 'Update your information and preferences.')).toBeVisible();
+    await expect(page.getByPlaceholder(italian ? 'Nuova password' : 'New password')).toBeVisible();
+    await expect(page.getByRole('heading', { name: italian ? 'Zona pericolosa' : 'Danger zone' })).toBeVisible();
+    await expect(page.getByRole('group', { name: italian ? 'Lingua' : 'Language', exact: true }).getByRole('button', { name: italian ? 'Italiano' : 'English', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: italian ? 'Elimina Account' : 'Delete Account', exact: true }).click();
+    const editor = page.getByRole('dialog');
+    await expect(editor.getByText(italian ? 'Digita "elimina il mio account" per confermare:' : 'Type "delete my account" to confirm:')).toBeVisible();
+    await expect(editor.getByLabel(italian ? 'Frase di conferma' : 'Confirmation phrase', { exact: true })).toHaveAttribute('aria-describedby', 'profile-delete-instructions');
+    await editor.getByRole('button', { name: italian ? 'Annulla' : 'Cancel', exact: true }).click();
+  }
+  await page.screenshot({ path: test.info().outputPath('profile-translated.png'), fullPage: true });
+});
+
 test('theme selection applies immediately and stays separate for each browser account', async ({ page }) => {
   await mockApp(page, { withChartData: true });
   await page.goto('/profile');
@@ -610,5 +653,5 @@ test('analytics category links retain the selected month in search', async ({ pa
   await page.getByRole('link', { name: '🍴 Food' }).click();
   await expect(page).toHaveURL(/category_id=1/);
   await expect(page.getByLabel('From', { exact: true })).toHaveValue('2025-12-01');
-  await expect(page.getByLabel('To (inclusive)')).toHaveValue('2025-12-31');
+  await expect(page.getByLabel('To (inclusive)', { exact: true })).toHaveValue('2025-12-31');
 });

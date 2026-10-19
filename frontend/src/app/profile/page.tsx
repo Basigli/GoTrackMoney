@@ -51,9 +51,9 @@ function ProfileContent({ token, user, logout }: { token: string; user: SessionU
   };
 
   const handleDeleteAccount = async () => {
-    const expectedPhrase = language === 'it' ? 'elimina il mio account' : 'delete my account';
+    const expectedPhrase = t('auth.delete_confirm_phrase');
     if (deleteConfirmText !== expectedPhrase) {
-      toast.error('Phrase does not match / La frase non coincide');
+      toast.error(t('profile.phrase_mismatch'));
       return;
     }
 
@@ -72,7 +72,7 @@ function ProfileContent({ token, user, logout }: { token: string; user: SessionU
       <div className={styles.content}>
         <div className={`glass-container ${styles.card}`}>
           <h1 className="form-title">{t('auth.profile')}</h1>
-          <p className="form-subtitle">Aggiorna le tue informazioni (Update your info)</p>
+          <p className="form-subtitle">{t('profile.subtitle')}</p>
           
           <form onSubmit={handleSubmit}>
             <div className={styles.firstField}>
@@ -88,24 +88,27 @@ function ProfileContent({ token, user, logout }: { token: string; user: SessionU
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="profile-password">{t('auth.password')} (Lascia vuoto per non cambiare / Leave blank to keep)</label>
+              <label className={styles.label} htmlFor="profile-password">{t('auth.password')}</label>
               <div className={styles.passwordField}>
                 <input 
                   id="profile-password"
                   type={showPassword ? "text" : "password"} 
                   value={password} 
                   onChange={e => setPassword(e.target.value)} 
-                  placeholder="Nuova password..."
+                  placeholder={t('profile.password_placeholder')}
+                  autoComplete="new-password"
+                  aria-describedby="profile-password-note"
                   className={`input-field ${styles.passwordInput}`}
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className={styles.passwordToggle} aria-label={t(showPassword ? 'auth.hide_password' : 'auth.show_password')}>
                   {showPassword ? '👁️' : '👁️‍🗨️'}
                 </button>
               </div>
+              <p id="profile-password-note" className={styles.note}>{t('profile.password_note')}</p>
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label} htmlFor="profile-session-duration">{t('auth.session_duration')} (Ore / Hours)</label>
+              <label className={styles.label} htmlFor="profile-session-duration">{t('auth.session_duration')} ({t('profile.hours')})</label>
               <input 
                 id="profile-session-duration"
                 className="input-field" 
@@ -119,11 +122,12 @@ function ProfileContent({ token, user, logout }: { token: string; user: SessionU
             </div>
 
             <div className={styles.field}>
-              <span className={styles.label}>Lingua / Language</span>
-              <div className={styles.choiceGroup} role="group" aria-label="Lingua / Language">
-                <button type="button" onClick={() => setLanguage('it')} className={language === 'it' ? styles.active : ''}>Italiano</button>
-                <button type="button" onClick={() => setLanguage('en')} className={language === 'en' ? styles.active : ''}>English</button>
+              <span className={styles.label}>{t('profile.language')}</span>
+              <div className={styles.choiceGroup} role="group" aria-label={t('profile.language')}>
+                <button type="button" onClick={() => setLanguage('it')} aria-pressed={language === 'it'} className={language === 'it' ? styles.active : ''}>Italiano</button>
+                <button type="button" onClick={() => setLanguage('en')} aria-pressed={language === 'en'} className={language === 'en' ? styles.active : ''}>English</button>
               </div>
+              <p className={styles.note}>{t('profile.language_note')}</p>
             </div>
 
             <div className={styles.field}>
@@ -139,7 +143,7 @@ function ProfileContent({ token, user, logout }: { token: string; user: SessionU
           </form>
 
           <div className={styles.dangerZone}>
-            <h2 className={styles.dangerTitle}>Zona Pericolosa</h2>
+            <h2 className={styles.dangerTitle}>{t('profile.danger_zone')}</h2>
             <p className={styles.dangerNote}>{t('auth.delete_warning') || 'Warning: This action is irreversible and will delete all your data.'}</p>
             <button 
               type="button"
@@ -157,15 +161,18 @@ function ProfileContent({ token, user, logout }: { token: string; user: SessionU
             <p className={styles.deleteWarning}>
               {t('auth.delete_warning') || 'Warning: This action is irreversible and will delete all your data.'}
             </p>
-            <p className={styles.deleteInstructions}>
-              {(t('auth.delete_instructions') || 'Type "%{phrase}" to confirm:').replace('%{phrase}', language === 'it' ? 'elimina il mio account' : 'delete my account')}
+            <p id="profile-delete-instructions" className={styles.deleteInstructions}>
+              {t('auth.delete_instructions', { phrase: t('auth.delete_confirm_phrase') })}
             </p>
+            <label htmlFor="profile-delete-confirmation">{t('profile.confirm_deletion')}</label>
             <input 
+              id="profile-delete-confirmation"
+              aria-describedby="profile-delete-instructions"
               type="text" 
               data-initial-focus
               value={deleteConfirmText}
               onChange={e => setDeleteConfirmText(e.target.value)}
-              placeholder={language === 'it' ? 'elimina il mio account' : 'delete my account'}
+              placeholder={t('auth.delete_confirm_phrase')}
               className={`input-field ${styles.deleteInput}`}
             />
             <div className={styles.deleteActions}>

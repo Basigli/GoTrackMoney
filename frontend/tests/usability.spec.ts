@@ -127,7 +127,7 @@ test('month navigation crosses years and analytics links open filtered search', 
   await page.getByRole('link',{name:'🍴 Food',exact:true}).click();
   await expect(page).toHaveURL(/category_id=/);
   await expect(page.getByLabel('From',{exact:true})).toHaveValue('2025-12-01');
-  await expect(page.getByLabel('To (inclusive)')).toHaveValue('2025-12-31');
+  await expect(page.getByLabel('To (inclusive)', { exact: true })).toHaveValue('2025-12-31');
   await expect(page.getByRole('button',{name:/Dinner/})).toBeVisible();
   await page.goBack();
   await expect(page.getByRole('link',{name:'🍴 Food',exact:true})).toBeVisible();

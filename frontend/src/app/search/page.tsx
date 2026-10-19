@@ -10,6 +10,7 @@ import AppShell from '@/components/AppShell';
 import styles from './Search.module.css';
 import TransactionEditor from '@/components/TransactionEditor';
 import Money from '@/components/Money';
+import { formatMoney } from '@/utils/money';
 
 function SearchContent() {
   const { user, token, loading } = useAuth();
@@ -27,6 +28,20 @@ function SearchContent() {
     window.history.replaceState(null, '', '/search?' + next.toString());
   };
   if (loading || !user || !token) return null;
+  const appliedFilters = ['type', 'category_id', 'from', 'to', 'min_amount', 'max_amount'].flatMap(field => {
+    const raw = params.get(field);
+    if (!raw) return [];
+    const label = t(field === 'type' ? 'record.type' : field === 'category_id' ? 'record.category' : 'search.' + field);
+    let value = raw;
+    if (field === 'type' && (raw === 'expense' || raw === 'income')) value = t('record.' + raw);
+    if (field === 'category_id') value = categories.find(category => String(category.id) === raw)?.name || raw;
+    if ((field === 'min_amount' || field === 'max_amount') && Number.isFinite(Number(raw))) value = formatMoney(Number(raw), language);
+    if (field === 'from' || field === 'to') {
+      const date = new Date(raw + 'T12:00:00Z');
+      if (Number.isFinite(date.getTime())) value = new Intl.DateTimeFormat(language === 'it' ? 'it-IT' : 'en-GB', { timeZone: 'UTC' }).format(date);
+    }
+    return [{ field, label, value }];
+  });
   return <AppShell>
     <main className="page-content">
       <h1>{t('nav.search')}</h1>
@@ -37,6 +52,14 @@ function SearchContent() {
           {t(showMobileFilters ? 'search.hide_filters' : 'search.show_filters')}{advancedFilterCount > 0 && <span className={styles.filterCount}>{advancedFilterCount}</span>}
         </button>
       </div>
+      {!showMobileFilters && appliedFilters.length > 0 && <ul className={styles.appliedFilters} aria-label={t('search.applied_filters')}>
+        {appliedFilters.map(({ field, label, value }) => <li key={field}>
+          <button type="button" className={styles.filterChip} aria-label={t('search.remove_filter', { filter: label, value })} onClick={() => change(field, '')}>
+            <span>{label}: <strong>{value}</strong></span><span aria-hidden="true">×</span>
+          </button>
+        </li>)}
+        <li><button type="button" className="secondary-btn" onClick={() => window.history.replaceState(null, '', '/search')}>{t('search.clear')}</button></li>
+      </ul>}
       <div id="search-advanced-filters" className={`${styles.advanced} ${showMobileFilters ? styles.open : ''}`}>
         <div className={styles.filters}>
           <label>{t('record.type')}<select className="input-field" value={params.get('type') || ''} onChange={e => { const next = new URLSearchParams(query); next.delete('category_id'); next.delete('offset'); if (e.target.value) next.set('type', e.target.value); else next.delete('type'); window.history.replaceState(null, '', '/search?' + next); }}>
