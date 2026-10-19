@@ -2,7 +2,7 @@
 .header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .title { font-size: 24px; font-weight: 700; }
 .exportButton { width: auto; margin: 0; padding: 8px 16px; font-size: 14px; }
-.grid { display: flex; flex-direction: column; gap: 24px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 24px; }
 .grid > div { min-width: 0; }
 .chartPanel { background: var(--surface-color); padding: 24px; border-radius: 24px; border: 1px solid var(--border-color); }
 .chartPanelScrollable { overflow-x: auto; }
@@ -16,3 +16,6 @@
 .table tbody th { font-weight: 400; }
 .table a, .chartLinks a { color: var(--link-color); }
 .chartLinks { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 16px; font-size: 13px; }
+@media (min-width: 1024px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
