@@ -19,7 +19,7 @@ import { useSession } from '@/auth/SessionContext';
 import TransactionEditor, { type SavedTransaction } from '@/components/TransactionEditor';
 import MonthNavigation from '@/components/MonthNavigation';
 import { useSelectedMonth } from '@/hooks/useSelectedMonth';
-import type { Transaction, TransactionType } from '@/utils/transactions';
+import { transactionPeriodNotice, type Transaction, type TransactionType } from '@/utils/transactions';
 
 export default function Home() {
   const { session } = useSession();
@@ -52,6 +52,7 @@ function Dashboard({ token, user }: { token: string; user: SessionUser }) {
 
   // Category details modal state
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const viewPeriod = { year: filterDate.getFullYear(), month: filterMode === 'month' ? filterDate.getMonth() + 1 : 0 };
 
   useEffect(() => {
     if (token) {
@@ -101,8 +102,11 @@ function Dashboard({ token, user }: { token: string; user: SessionUser }) {
       .then(() => { setDataReadyKey(periodKey); setSelectedCategory(returnCategory); })
       .catch(() => { setDataErrorKey(periodKey); toast.error(t('analytics.load_error')); });
     const date = new Date(record.date);
-    if (!record.deleted && returnCategory !== null && (record.category_id !== returnCategory || date.getUTCFullYear() !== year || (month !== 0 && date.getUTCMonth() + 1 !== month))) {
+    const periodNotice = transactionPeriodNotice(date, viewPeriod, language);
+    if (!record.deleted && returnCategory !== null && (record.category_id !== returnCategory || periodNotice)) {
       toast(t('form.saved_elsewhere', { category: categories.find(c => c.id === record.category_id)?.name || '', date: format(date, 'd MMM yyyy', { locale: dateLocale }) }));
+    } else if (!record.deleted && periodNotice) {
+      toast(t('form.saved_outside_view', { destination: periodNotice.destination }));
     }
   };
 
@@ -152,6 +156,7 @@ function Dashboard({ token, user }: { token: string; user: SessionUser }) {
       </>}
       {showAddModal && <TransactionEditor token={token} categories={categories} item={editingItem}
         initialType={initialEntry.type} initialCategory={initialEntry.category} initialDate={initialEntry.date}
+        viewPeriod={viewPeriod}
         onClose={closeEditor} onSaved={saved} />}
 
       {selectedCategory !== null && <DashboardCategoryDetails

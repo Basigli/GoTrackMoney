@@ -312,6 +312,7 @@ test('category quick-add keeps its selection and input after a failed save', asy
   const editor = page.getByRole('dialog', { name: 'New Record' });
   await expect(editor.getByRole('combobox', { name: 'Category' })).toHaveValue('1');
   await expect(editor.getByLabel('Date & Time')).toHaveValue('2024-02-01T12:00');
+  await expect(editor.locator('#transaction-period-notice')).toHaveCount(0);
   await editor.getByLabel('Amount').fill('12,50');
   await editor.getByRole('button', { name: 'Save' }).click();
   await expect(editor.getByRole('alert')).toBeVisible();
@@ -319,6 +320,75 @@ test('category quick-add keeps its selection and input after a failed save', asy
   await editor.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('dialog', { name: 'Details for Food' })).toBeVisible();
   await expect(page.getByRole('dialog', { name: 'Details for Food' }).getByText(/12\.50/)).toBeVisible();
+});
+
+test.describe('dashboard transaction period notice', () => {
+  test.use({ timezoneId: 'Europe/Rome' });
+
+  for (const language of ['en', 'it'] as const) {
+    test(`explains dates outside a historical month and confirms where they were saved (${language})`, async ({ page }) => {
+      await page.clock.setFixedTime(new Date('2026-10-19T10:00:00Z'));
+      await mockApp(page, { withDashboardExpense: true });
+      await page.addInitScript(language => localStorage.setItem('app_language', language), language);
+      const italian = language === 'it';
+      await page.goto('/?month=2024-02');
+      await page.getByRole('button', { name: italian ? 'Nuova Registrazione' : 'New Record', exact: true }).click();
+      const editor = page.getByRole('dialog');
+      const date = editor.getByLabel(italian ? 'Data e Ora' : 'Date & Time');
+      const notice = editor.locator('#transaction-period-notice');
+      await expect(date).toHaveValue('2026-10-19T12:00');
+      await expect(notice).toContainText(italian ? 'febbraio 2024' : 'February 2024');
+      await expect(notice).toContainText(italian ? 'ottobre 2026' : 'October 2026');
+      await expect(date).toHaveAttribute('aria-describedby', 'transaction-period-notice');
+      await date.fill('2024-02-12T12:00');
+      await expect(notice).toHaveCount(0);
+      await date.fill('2026-10-19T12:00');
+      await expect(notice).toBeVisible();
+      await editor.getByRole('checkbox', { name: italian ? 'Spesa Periodica' : 'Periodic Expense' }).check();
+      await expect(notice).toHaveCount(0);
+      await editor.getByRole('checkbox', { name: italian ? 'Spesa Periodica' : 'Periodic Expense' }).uncheck();
+      await expect(notice).toBeVisible();
+      await editor.getByLabel(italian ? 'Importo' : 'Amount', { exact: true }).fill('13');
+      await editor.getByRole('combobox', { name: italian ? 'Categoria' : 'Category', exact: true }).selectOption('1');
+      await editor.getByRole('button', { name: italian ? 'Salva' : 'Save', exact: true }).click();
+      await expect(editor).toBeHidden();
+      await expect(page).toHaveURL(/month=2024-02/);
+      await expect(page.getByText(italian
+        ? 'Registrazione salvata in ottobre 2026, fuori dal periodo visualizzato.'
+        : 'Entry saved in October 2026, outside the viewed period.', { exact: true })).toBeVisible();
+    });
+  }
+
+  test('uses ledger UTC boundaries for month and year notices', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-19T10:00:00Z'));
+    await mockApp(page, { withDashboardExpense: true });
+    await page.goto('/?month=2026-10');
+    await page.getByRole('button', { name: 'New Record', exact: true }).click();
+    let editor = page.getByRole('dialog');
+    let date = editor.getByLabel('Date & Time');
+    await expect(editor.locator('#transaction-period-notice')).toHaveCount(0);
+    await date.fill('2026-10-01T00:30');
+    await expect(editor.locator('#transaction-period-notice')).toContainText('September 2026');
+    await date.fill('2026-10-01T02:30');
+    await expect(editor.locator('#transaction-period-notice')).toHaveCount(0);
+    await date.fill('');
+    await expect(editor.locator('#transaction-period-notice')).toHaveCount(0);
+
+    page.once('dialog', prompt => prompt.accept());
+    await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await page.goto('/?month=2025-10');
+    await page.getByRole('button', { name: 'Year', exact: true }).click();
+    await page.getByRole('button', { name: 'New Record', exact: true }).click();
+    editor = page.getByRole('dialog');
+    date = editor.getByLabel('Date & Time');
+    await expect(editor.locator('#transaction-period-notice')).toContainText("You're viewing 2025");
+    await date.fill('2025-04-12T12:00');
+    await expect(editor.locator('#transaction-period-notice')).toHaveCount(0);
+    await date.fill('2026-01-01T00:30');
+    await expect(editor.locator('#transaction-period-notice')).toHaveCount(0);
+    await date.fill('2026-01-01T02:30');
+    await expect(editor.locator('#transaction-period-notice')).toContainText('will appear in 2026');
+  });
 });
 
 for (const language of ['en', 'it'] as const) {

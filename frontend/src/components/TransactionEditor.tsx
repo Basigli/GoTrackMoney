@@ -3,17 +3,19 @@ import { useRef, useState, type FormEvent } from 'react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import type { Category } from '@/types/domain';
-import type { Transaction, TransactionType } from '@/utils/transactions';
+import { transactionPeriodNotice, type Transaction, type TransactionType, type TransactionViewPeriod } from '@/utils/transactions';
 import { apiRequest } from '@/utils/api';
 import { readDuplicateExpenseReview, type DuplicateExpenseReview } from '@/utils/expenseDuplicates';
 import { useLanguage } from '@/i18n/LanguageContext';
 import SafeDialog from './SafeDialog';
 import ExpenseDuplicateReview from './ExpenseDuplicateReview';
+import styles from './TransactionEditor.module.css';
 
 export interface SavedTransaction { type: TransactionType; category_id: number; date: string; deleted?: boolean }
-export default function TransactionEditor({ token, categories, item, initialType = 'expense', initialCategory, initialDate = new Date(), onClose, onSaved }: {
+export default function TransactionEditor({ token, categories, item, initialType = 'expense', initialCategory, initialDate = new Date(), viewPeriod, onClose, onSaved }: {
   token: string; categories: Category[]; item?: Transaction | null; initialType?: TransactionType;
-  initialCategory?: number; initialDate?: Date; onClose: () => void; onSaved: (record: SavedTransaction) => void;
+  initialCategory?: number; initialDate?: Date; viewPeriod?: TransactionViewPeriod;
+  onClose: () => void; onSaved: (record: SavedTransaction) => void;
 }) {
   const { t, language } = useLanguage();
   const [initial] = useState(() => ({
@@ -30,6 +32,7 @@ export default function TransactionEditor({ token, categories, item, initialType
   const [review, setReview] = useState<DuplicateExpenseReview | null>(null);
   const amountInput = useRef<HTMLInputElement>(null);
   const dirty = JSON.stringify(initial) !== JSON.stringify(form);
+  const periodNotice = form.periodic ? null : transactionPeriodNotice(new Date(form.date), viewPeriod, language);
   const update = <K extends keyof typeof form>(key: K, value: typeof form[K]) => setForm(old => ({ ...old, [key]: value }));
   const save = async (event?: FormEvent, allowDuplicate = false) => {
     event?.preventDefault();
@@ -94,8 +97,11 @@ export default function TransactionEditor({ token, categories, item, initialType
           {categories.filter(c => c.type === form.type).sort((a,b) => a.name.localeCompare(b.name, language, { sensitivity: 'base' })).map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
         </select></label>
         {errors.category && <p className="field-error">{errors.category}</p>}
-        <label>{t('record.date_time')}<input className="input-field" type="datetime-local" value={form.date} aria-invalid={!!errors.date} onChange={e => update('date', e.target.value)} /></label>
-        {errors.date && <p className="field-error">{errors.date}</p>}
+        <label>{t('record.date_time')}<input className="input-field" type="datetime-local" value={form.date} aria-invalid={!!errors.date}
+          aria-describedby={[errors.date && 'transaction-date-error', periodNotice && 'transaction-period-notice'].filter(Boolean).join(' ') || undefined}
+          onChange={e => update('date', e.target.value)} /></label>
+        {errors.date && <p id="transaction-date-error" className="field-error">{errors.date}</p>}
+        {periodNotice && <p id="transaction-period-notice" role="status" className={styles.periodNotice}>{t('form.outside_view', periodNotice)}</p>}
         <label>{t('record.description')}<input className="input-field" value={form.description} onChange={e => update('description', e.target.value)} /></label>
         {!item && form.type === 'expense' && <label><input type="checkbox" checked={form.periodic} onChange={e => update('periodic', e.target.checked)} /> {t('record.periodic')}</label>}
         {form.periodic && <div className="form-row">
