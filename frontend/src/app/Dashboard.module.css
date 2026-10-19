@@ -1,13 +1,18 @@
-.actions { padding: 16px 20px 0; display: flex; justify-content: flex-end; }
-.actionButtons { display: flex; align-items: center; gap: 8px; }
-.modeToggle { font: inherit; font-size: 14px; font-weight: 500; }
-.addButton {
-  background: var(--primary-color); color: var(--primary-on); border: none; border-radius: 14px;
-  width: 48px; height: 48px; font-size: 28px; display: flex; justify-content: center;
-  align-items: center; cursor: pointer; box-shadow: 0 4px 6px var(--primary-shadow);
+.header { padding: 24px 20px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.header h1 { font-size: 24px; font-weight: 700; }
+.header .addButton { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: auto; min-height: 48px; margin: 0; padding: 12px 16px; font: inherit; font-size: 14px; font-weight: 600; }
+.addButton > span { font-size: 22px; line-height: 20px; }
+.periodControls { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: center; justify-items: center; align-items: start; gap: 12px; margin: 0 20px 24px; padding: 16px; border: 1px solid var(--border-color); border-radius: 20px; background: var(--surface-color); }
+.periodModes { display: inline-grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; background: var(--input-bg); border-radius: 16px; }
+.periodMode { min-height: 44px; min-width: 88px; padding: 10px 14px; border: 0; border-radius: 12px; background: transparent; color: var(--text-muted); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.periodModeActive { background: var(--surface-color); color: var(--accent-color); box-shadow: 0 2px 4px rgba(0,0,0,.05); }
+.periodControls :global(.month-navigation) { width: min(100%, 340px); min-width: 0; margin: 0; }
+@media (min-width: 640px) {
+  .periodControls { grid-template-columns: auto minmax(0, 340px); column-gap: 24px; }
+  .periodControls :global(.month-navigation) { margin-top: 4px; }
 }
 .balanceBanner { background: var(--balance-bg); border-radius: 24px; padding: 28px 24px; margin: 0 20px 24px; color: white; }
-.balanceTitle { font-size: 16px; opacity: .9; margin-bottom: 6px; }
+.balanceTitle { font-size: 16px; font-weight: 500; opacity: .9; margin-bottom: 6px; }
 .balanceAmount { font-size: clamp(24px, 6vw, 42px); font-weight: 700; margin-bottom: 28px; }
 .balanceStats { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
 .statItem { display: flex; align-items: center; gap: 8px; }
@@ -15,7 +20,7 @@
 .expense { color: var(--danger-color); }
 .income { color: var(--success-color); }
 .statDetails p { font-size: 14px; opacity: .9; margin: 0; }
-.statDetails h4 { font-size: 18px; font-weight: 600; margin: 0; }
+.statDetails strong { display: block; font-size: 18px; font-weight: 600; margin: 0; }
 .tabs { display: flex; background: var(--input-bg); border-radius: 16px; padding: 6px; margin: 0 20px 24px; overflow-x: auto; scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
 .tab { flex: 1; text-align: center; padding: 10px 16px; font: inherit; font-size: 14px; font-weight: 600; color: var(--text-muted); border: 0; border-radius: 12px; cursor: pointer; transition: all .2s; white-space: nowrap; background: transparent; }

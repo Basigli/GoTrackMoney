@@ -96,7 +96,11 @@ export const translations = {
 
     // Dashboard
     'dashboard.welcome': 'Ciao, {name}!',
-    'dashboard.total_balance': 'Saldo Totale',
+    'dashboard.period_balance': 'Saldo del periodo',
+    'dashboard.new_expense': 'Nuova spesa',
+    'dashboard.new_income': 'Nuova entrata',
+    'dashboard.period': 'Periodo',
+    'dashboard.period_view': 'Vista del periodo',
     'dashboard.expenses': 'Uscite',
     'dashboard.incomes': 'Entrate',
     'dashboard.no_data': 'Nessun dato.',
@@ -310,7 +314,11 @@ export const translations = {
 
     // Dashboard
     'dashboard.welcome': 'Hello, {name}!',
-    'dashboard.total_balance': 'Total Balance',
+    'dashboard.period_balance': 'Period balance',
+    'dashboard.new_expense': 'New expense',
+    'dashboard.new_income': 'New income',
+    'dashboard.period': 'Period',
+    'dashboard.period_view': 'Period view',
     'dashboard.expenses': 'Expenses',
     'dashboard.incomes': 'Incomes',
     'dashboard.no_data': 'No data.',

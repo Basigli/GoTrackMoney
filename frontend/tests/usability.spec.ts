@@ -80,7 +80,7 @@ test('category quick-add selects category and historical date; failed saves reta
 test('dirty form cannot be accidentally dismissed; validation and keyboard cancellation work', async ({page,request}) => {
   await setup(page,request);
   await page.goto('/');
-  await page.getByRole('button',{name:'New Record'}).click();
+  await page.getByRole('button',{name:'New expense'}).click();
   const dialog=page.getByRole('dialog');
   await dialog.getByLabel('Amount',{exact:true}).fill('-1');
   await dialog.getByRole('button',{name:'Save',exact:true}).click();
@@ -97,7 +97,7 @@ test('duplicate expense review leaves data unchanged until explicitly confirmed'
   const {headers,categories} = await setup(page,request);
   await expense(request,headers,categories.Food,'2024-02-15T12:00:00Z','Existing dinner');
   await page.goto('/?month=2024-02');
-  await page.getByRole('button',{name:'New Record',exact:true}).click();
+  await page.getByRole('button',{name:'New expense',exact:true}).click();
   const editor = page.getByRole('dialog');
   await editor.getByLabel('Amount',{exact:true}).fill('20');
   await editor.getByRole('combobox',{name:'Category',exact:true}).selectOption(String(categories.Zulu));

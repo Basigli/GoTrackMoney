@@ -233,7 +233,7 @@ for (const language of ['en', 'it'] as const) {
 test('transaction validation focuses the first error and describes each invalid field', async ({ page }) => {
   await mockApp(page, { withDashboardExpense: true });
   await page.goto('/?month=2024-02');
-  await page.getByRole('button', { name: 'New Record', exact: true }).click();
+  await page.getByRole('button', { name: 'New expense', exact: true }).click();
   const editor = page.getByRole('dialog');
   await editor.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(editor.getByLabel('Amount', { exact: true })).toBeFocused();
@@ -244,6 +244,58 @@ test('transaction validation focuses the first error and describes each invalid 
     expect(size && size.width >= 44 && size.height >= 44).toBeTruthy();
   }
 });
+
+for (const language of ['en', 'it'] as const) {
+  test(`dashboard makes the period mode and new transaction type explicit (${language})`, async ({ page }) => {
+    await mockApp(page, { withDashboardExpense: true });
+    await page.addInitScript(language => {
+      localStorage.setItem('app_language', language);
+      if (language === 'it') {
+        localStorage.setItem('app_theme_active_user', '1');
+        localStorage.setItem('app_theme:1', 'dark');
+      }
+    }, language);
+    const italian = language === 'it';
+    await page.goto('/?month=2024-03');
+    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+    const controls = page.getByRole('region', { name: italian ? 'Periodo' : 'Period', exact: true });
+    const modes = controls.getByRole('group', { name: italian ? 'Vista del periodo' : 'Period view' });
+    const month = modes.getByRole('button', { name: italian ? 'Mese' : 'Month', exact: true });
+    const year = modes.getByRole('button', { name: italian ? 'Anno' : 'Year', exact: true });
+    const balance = page.getByRole('heading', { name: italian ? 'Saldo del periodo' : 'Period balance', exact: true }).locator('..').locator('.money').first();
+    await expect(month).toHaveAttribute('aria-pressed', 'true');
+    await expect(year).toHaveAttribute('aria-pressed', 'false');
+    await expect(balance).toContainText(italian ? '0,00' : '€0.00');
+    await year.focus();
+    await page.keyboard.press('Enter');
+    await expect(year).toHaveAttribute('aria-pressed', 'true');
+    await expect(month).toHaveAttribute('aria-pressed', 'false');
+    await expect(controls.getByRole('button', { name: italian ? /Scegli anno:/ : /Choose year:/ })).toBeVisible();
+    await expect(balance).toContainText(italian ? '-20,00' : '-€20.00');
+    await year.click();
+    await expect(year).toHaveAttribute('aria-pressed', 'true');
+    await page.screenshot({ path: test.info().outputPath(`dashboard-controls-${language}.png`), fullPage: true });
+    await month.click();
+    await expect(month).toHaveAttribute('aria-pressed', 'true');
+    await expect(balance).toContainText(italian ? '0,00' : '€0.00');
+    await expect(page).toHaveURL(/month=2024-03/);
+
+    await page.getByRole('button', { name: italian ? 'Nuova spesa' : 'New expense', exact: true }).click();
+    await expect(page.getByRole('dialog').getByRole('combobox', { name: italian ? 'Tipo' : 'Type', exact: true })).toHaveValue('expense');
+    await page.getByRole('dialog').getByRole('button', { name: italian ? 'Annulla' : 'Cancel', exact: true }).click();
+    await page.getByRole('button', { name: italian ? 'Entrate' : 'Incomes', exact: true }).click();
+    await expect(page.getByRole('button', { name: italian ? 'Nuova spesa' : 'New expense', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: italian ? 'Nuova entrata' : 'New income', exact: true }).click();
+    await expect(page.getByRole('dialog').getByRole('combobox', { name: italian ? 'Tipo' : 'Type', exact: true })).toHaveValue('income');
+    await page.getByRole('dialog').getByRole('button', { name: italian ? 'Annulla' : 'Cancel', exact: true }).click();
+    for (const width of [320, 393, 600, 1024, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(page.getByRole('button', { name: italian ? 'Nuova entrata' : 'New income', exact: true })).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    }
+  });
+}
 
 test('dashboard and analytics center the period picker between navigation arrows', async ({ page }) => {
   await mockApp(page);
@@ -262,9 +314,9 @@ test('dashboard and analytics center the period picker between navigation arrows
     await expect(page.locator('.react-datepicker')).toBeVisible();
   }
   await page.goto('/?month=2025-12');
-  const modeToggle = page.getByRole('button', { name: 'Year', exact: true });
-  await expect(modeToggle).toHaveCSS('border-radius', '12px');
-  await modeToggle.click();
+  const yearButton = page.getByRole('button', { name: 'Year', exact: true });
+  await expect(yearButton).toHaveCSS('border-radius', '12px');
+  await yearButton.click();
   await expect(page.getByRole('button', { name: /Choose year:/ })).toBeVisible();
   await page.getByRole('button', { name: 'Previous year' }).click();
   await expect(page).toHaveURL(/month=2024-12/);
@@ -395,7 +447,7 @@ test('dark surfaces remain readable across app pages and dialogs', async ({ page
     localStorage.setItem('app_theme:1', 'dark');
   });
   for (const [route, title, artifact] of [
-    ['/', 'Total Balance', 'dashboard'],
+    ['/', 'Period balance', 'dashboard'],
     ['/search', 'Search', 'search'],
     ['/categories', 'My Categories', 'categories'],
     ['/periodic', 'Periodic Expense', 'periodic'],
@@ -451,7 +503,7 @@ test('session flow restores protected navigation, profile changes, and logout', 
   await expect(page.getByText('Invalid username or password')).toBeVisible();
   await page.getByPlaceholder('Password', { exact: true }).fill('correct');
   await page.getByRole('button', { name: 'Login', exact: true }).click();
-  await expect(page.getByText('Total Balance')).toBeVisible();
+  await expect(page.getByText('Period balance')).toBeVisible();
   await page.goto('/profile');
   await page.getByLabel('Username').fill('alex-updated');
   await page.getByRole('button', { name: 'Save Profile' }).click();
@@ -476,7 +528,7 @@ test('expired sessions return to login and registration handles conflicts', asyn
   await expect(page.getByText('Username is already taken')).toBeVisible();
   await page.getByPlaceholder('Username').fill('new-account');
   await page.getByRole('button', { name: 'Register', exact: true }).click();
-  await expect(page.getByText('Total Balance')).toBeVisible();
+  await expect(page.getByText('Period balance')).toBeVisible();
 });
 
 test('category form creates and edits a category with keyboard navigation', async ({ page }) => {
@@ -554,7 +606,7 @@ test.describe('dashboard transaction period notice', () => {
       await page.addInitScript(language => localStorage.setItem('app_language', language), language);
       const italian = language === 'it';
       await page.goto('/?month=2024-02');
-      await page.getByRole('button', { name: italian ? 'Nuova Registrazione' : 'New Record', exact: true }).click();
+      await page.getByRole('button', { name: italian ? 'Nuova spesa' : 'New expense', exact: true }).click();
       const editor = page.getByRole('dialog');
       const date = editor.getByLabel(italian ? 'Data e Ora' : 'Date & Time');
       const notice = editor.locator('#transaction-period-notice');
@@ -585,7 +637,7 @@ test.describe('dashboard transaction period notice', () => {
     await page.clock.setFixedTime(new Date('2026-10-19T10:00:00Z'));
     await mockApp(page, { withDashboardExpense: true });
     await page.goto('/?month=2026-10');
-    await page.getByRole('button', { name: 'New Record', exact: true }).click();
+    await page.getByRole('button', { name: 'New expense', exact: true }).click();
     let editor = page.getByRole('dialog');
     let date = editor.getByLabel('Date & Time');
     await expect(editor.locator('#transaction-period-notice')).toHaveCount(0);
@@ -600,7 +652,7 @@ test.describe('dashboard transaction period notice', () => {
     await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
     await page.goto('/?month=2025-10');
     await page.getByRole('button', { name: 'Year', exact: true }).click();
-    await page.getByRole('button', { name: 'New Record', exact: true }).click();
+    await page.getByRole('button', { name: 'New expense', exact: true }).click();
     editor = page.getByRole('dialog');
     date = editor.getByLabel('Date & Time');
     await expect(editor.locator('#transaction-period-notice')).toContainText("You're viewing 2025");
@@ -625,7 +677,7 @@ for (const language of ['en', 'it'] as const) {
     }, language);
     const italian = language === 'it';
     await page.goto('/?month=2024-02');
-    await page.getByRole('button', { name: italian ? 'Nuova Registrazione' : 'New Record', exact: true }).click();
+    await page.getByRole('button', { name: italian ? 'Nuova spesa' : 'New expense', exact: true }).click();
     const editor = page.getByRole('dialog');
     const amount = italian ? 'Importo' : 'Amount';
     const description = italian ? 'Descrizione' : 'Description';
@@ -682,7 +734,7 @@ for (const language of ['en', 'it'] as const) {
 test('changing a reviewed expense checks the revised draft without an override', async ({ page }) => {
   await mockApp(page, { withDashboardExpense: true, withDuplicateReview: true });
   await page.goto('/?month=2024-02');
-  await page.getByRole('button', { name: 'New Record', exact: true }).click();
+  await page.getByRole('button', { name: 'New expense', exact: true }).click();
   const editor = page.getByRole('dialog');
   await editor.getByLabel('Amount', { exact: true }).fill('20');
   await editor.getByRole('combobox', { name: 'Category', exact: true }).selectOption('1');

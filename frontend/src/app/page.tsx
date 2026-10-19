@@ -134,26 +134,31 @@ function Dashboard({ token, user }: { token: string; user: SessionUser }) {
 
   return (
     <AppShell>
-      <div className={styles.actions}>
-        <div className={styles.actionButtons}>
-          <button
-            type="button"
-            className={`secondary-btn ${styles.modeToggle}`}
-            onClick={() => setFilterMode(m => m === 'month' ? 'year' : 'month')}
-          >
-            {filterMode === 'month' ? t('dashboard.filter_year') : t('dashboard.filter_month')}
+      <main>
+        <header className={styles.header}>
+          <h1>{t('nav.dashboard')}</h1>
+          <button type="button" className={`submit-btn ${styles.addButton}`} onClick={() => openAddModal()}>
+            <span aria-hidden="true">+</span>{t(activeTab === 'uscite' ? 'dashboard.new_expense' : 'dashboard.new_income')}
           </button>
-          <button className={styles.addButton} aria-label={t('record.new')} onClick={() => openAddModal()}>+</button>
-        </div>
-      </div>
+        </header>
 
-      <MonthNavigation date={filterDate} onChange={setFilterDate} mode={filterMode} />
+        <section className={styles.periodControls} aria-label={t('dashboard.period')}>
+          <div className={styles.periodModes} role="group" aria-label={t('dashboard.period_view')}>
+            {(['month', 'year'] as const).map(mode => <button key={mode} type="button"
+              className={`${styles.periodMode} ${filterMode === mode ? styles.periodModeActive : ''}`}
+              aria-pressed={filterMode === mode} onClick={() => setFilterMode(mode)}>
+              {t(mode === 'month' ? 'dashboard.filter_month' : 'dashboard.filter_year')}
+            </button>)}
+          </div>
+          <MonthNavigation date={filterDate} onChange={setFilterDate} mode={filterMode} />
+        </section>
 
-      {!dataReady && (dataErrorKey === periodKey || categoriesFailed ? <p role="alert">{t('analytics.load_error')} <button className="secondary-btn" onClick={() => { setDataErrorKey(''); setDataRevision(n => n + 1); void fetchCategories().catch(() => {}); }}>{t('analytics.retry')}</button></p> : <p role="status">{t('analytics.loading')}</p>)}
-      {dataReady && <>
-        <DashboardBalance income={totalIncome} expense={totalExpense} />
-        <DashboardCategories tab={activeTab} onTabChange={setActiveTab} groups={activeGroups} categories={categories} total={activeTotal} onSelect={setSelectedCategory} onAdd={() => openAddModal()} />
-      </>}
+        {!dataReady && (dataErrorKey === periodKey || categoriesFailed ? <p role="alert">{t('analytics.load_error')} <button className="secondary-btn" onClick={() => { setDataErrorKey(''); setDataRevision(n => n + 1); void fetchCategories().catch(() => {}); }}>{t('analytics.retry')}</button></p> : <p role="status">{t('analytics.loading')}</p>)}
+        {dataReady && <>
+          <DashboardBalance income={totalIncome} expense={totalExpense} />
+          <DashboardCategories tab={activeTab} onTabChange={setActiveTab} groups={activeGroups} categories={categories} total={activeTotal} onSelect={setSelectedCategory} onAdd={() => openAddModal()} />
+        </>}
+      </main>
       {showAddModal && <TransactionEditor token={token} categories={categories} item={editingItem}
         initialType={initialEntry.type} initialCategory={initialEntry.category} initialDate={initialEntry.date}
         viewPeriod={viewPeriod}

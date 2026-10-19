@@ -4,18 +4,18 @@ import Money from '@/components/Money';
 
 export default function DashboardBalance({ income, expense }: { income: number; expense: number }) {
   const { t } = useLanguage();
-  return <div className={styles.balanceBanner}>
-    <p className={styles.balanceTitle}>{t('dashboard.total_balance')}</p>
-    <h1 className={styles.balanceAmount}><Money amount={income - expense} /></h1>
+  return <section className={styles.balanceBanner}>
+    <h2 className={styles.balanceTitle}>{t('dashboard.period_balance')}</h2>
+    <p className={styles.balanceAmount}><Money amount={income - expense} /></p>
     <div className={styles.balanceStats}>
       <div className={styles.statItem}>
         <div className={`${styles.statIcon} ${styles.expense}`}>↓</div>
-        <div className={styles.statDetails}><p>{t('dashboard.expenses')}</p><h4><Money amount={expense} /></h4></div>
+        <div className={styles.statDetails}><p>{t('dashboard.expenses')}</p><strong><Money amount={expense} /></strong></div>
       </div>
       <div className={styles.statItem}>
         <div className={`${styles.statIcon} ${styles.income}`}>↑</div>
-        <div className={styles.statDetails}><p>{t('dashboard.incomes')}</p><h4><Money amount={income} /></h4></div>
+        <div className={styles.statDetails}><p>{t('dashboard.incomes')}</p><strong><Money amount={income} /></strong></div>
       </div>
     </div>
-  </div>;
+  </section>;
 }
