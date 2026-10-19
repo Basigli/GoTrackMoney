@@ -115,6 +115,80 @@ for (const language of ['en', 'it'] as const) {
   });
 }
 
+for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`subtle motion preserves interaction and honors preferences (${reducedMotion}, ${theme})`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion });
+      await mockApp(page, { withDashboardExpense: true });
+      await page.addInitScript(theme => {
+        localStorage.setItem('app_theme_active_user', '1');
+        localStorage.setItem('app_theme:1', theme);
+      }, theme);
+      await page.goto('/?month=2024-02');
+      const year = page.getByRole('button', { name: 'Year', exact: true });
+      await year.focus();
+      await page.keyboard.down('Space');
+      try {
+        if (reducedMotion === 'reduce') await expect(year).toHaveCSS('transform', 'none');
+        else await expect.poll(() => year.evaluate(element => new DOMMatrixReadOnly(getComputedStyle(element).transform).a)).toBeLessThan(1);
+      } finally { await page.keyboard.up('Space'); }
+      await expect(year).toHaveAttribute('aria-pressed', 'true');
+      const add = page.getByRole('button', { name: 'New expense', exact: true });
+      if (reducedMotion === 'reduce') {
+        for (const button of [add, year, page.getByRole('button', { name: 'Incomes', exact: true }), page.getByRole('button', { name: /Choose year:/ })]) {
+          expect(await button.evaluate(element => getComputedStyle(element).transitionDuration.split(',').every(duration => parseFloat(duration) === 0))).toBe(true);
+        }
+      }
+      await add.click();
+      const editor = page.getByRole('dialog', { name: 'New Record' });
+      const amount = editor.getByLabel('Amount', { exact: true });
+      await expect(amount).toBeFocused();
+      const motion = await editor.evaluate(element => ({
+        duration: parseFloat(getComputedStyle(element).animationDuration),
+        name: getComputedStyle(element).animationName,
+        backdrop: getComputedStyle(element, '::backdrop').animationName,
+      }));
+      if (reducedMotion === 'reduce') {
+        expect(motion.name).toBe('none');
+        expect(motion.backdrop).toBe('none');
+      } else {
+        expect(motion.name).not.toBe('none');
+        expect(motion.backdrop).not.toBe('none');
+        expect(motion.duration).toBeGreaterThan(0);
+        expect(motion.duration).toBeLessThanOrEqual(.2);
+      }
+      await editor.evaluate(async element => { await Promise.all(element.getAnimations().map(animation => animation.finished)); });
+      await expect(editor).toHaveCSS('opacity', '1');
+      await expect(editor).toHaveCSS('transform', 'none');
+      await amount.fill('12.50');
+      expect(await editor.evaluate(element => element.getAnimations().some(animation => animation.playState === 'running'))).toBe(false);
+      page.once('dialog', prompt => prompt.dismiss());
+      await editor.getByRole('button', { name: 'Close', exact: true }).click();
+      await expect(amount).toHaveValue('12.50');
+      page.once('dialog', prompt => prompt.accept());
+      await page.keyboard.press('Escape');
+      await expect(editor).toHaveCount(0);
+      await expect(add).toBeFocused();
+      await add.click();
+      await expect(amount).toBeFocused();
+      await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await expect(editor).toHaveCount(0);
+
+      await page.goto('/profile');
+      const card = page.locator('.glass-container');
+      await card.hover();
+      await expect(card).toHaveCSS('transform', 'none');
+      if (reducedMotion === 'reduce') {
+        expect(await page.getByRole('group', { name: 'Theme', exact: true }).getByRole('button').evaluateAll(buttons => buttons.every(button => getComputedStyle(button).transitionDuration.split(',').every(duration => parseFloat(duration) === 0)))).toBe(true);
+      }
+      const passwordBounds = await page.getByLabel('Password', { exact: true }).boundingBox();
+      const toggleBounds = await page.getByRole('button', { name: 'Show password', exact: true }).boundingBox();
+      expect(passwordBounds && toggleBounds).toBeTruthy();
+      expect(Math.abs(passwordBounds!.y + passwordBounds!.height / 2 - (toggleBounds!.y + toggleBounds!.height / 2))).toBeLessThan(1);
+    });
+  }
+}
+
 test('large analytics values remain inside summary cards on narrow screens', async ({ page }) => {
   await mockApp(page, { withChartData: true });
   await page.addInitScript(() => localStorage.setItem('app_language', 'it'));

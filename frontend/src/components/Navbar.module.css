@@ -6,7 +6,7 @@
 .right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: auto; }
 .profileLink { display: flex; align-items: center; justify-content: center; max-width: 140px; min-width: 0; min-height: 36px; padding: 8px 12px; box-sizing: border-box; font-size: 14px; line-height: 20px; color: var(--text-muted); text-decoration: none; font-weight: 600; }
 .profileName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.link { color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 14px; padding: 8px 10px; border-radius: 8px; transition: all .2s; white-space: nowrap; }
+.link { color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 14px; padding: 8px 10px; border-radius: 8px; transition: background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease); white-space: nowrap; }
 .link:hover, .active { color: var(--accent-color); background: var(--primary-soft); }
 .logout { display: flex; align-items: center; justify-content: center; min-height: 36px; padding: 8px 12px; line-height: 20px; background: none; border: none; color: var(--danger-color); font-weight: 600; cursor: pointer; font-size: 14px; }
 @media (max-width: 1023px) {
