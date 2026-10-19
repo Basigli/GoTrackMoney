@@ -1,6 +1,8 @@
 export const translations = {
   it: {
     'form.add_income': 'Aggiungi entrata',
+    'categories.color': 'Colore',
+    'categories.no_matches': 'Nessuna categoria corrisponde alla ricerca.',
     'dashboard.empty_expenses': 'Nessuna spesa in questo periodo',
     'dashboard.empty_incomes': 'Nessuna entrata in questo periodo',
     'dashboard.empty_hint': 'Aggiungi una registrazione o scegli un altro periodo per vedere i tuoi movimenti.',
@@ -202,6 +204,8 @@ export const translations = {
   },
   en: {
     'form.add_income': 'Add income',
+    'categories.color': 'Color',
+    'categories.no_matches': 'No categories match your search.',
     'dashboard.empty_expenses': 'No expenses in this period',
     'dashboard.empty_incomes': 'No income in this period',
     'dashboard.empty_hint': 'Add an entry or choose another period to see your transactions.',

@@ -382,6 +382,8 @@ test('expired sessions return to login and registration handles conflicts', asyn
 test('category form creates and edits a category with keyboard navigation', async ({ page }) => {
   await mockApp(page);
   await page.goto('/categories');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('button', { name: 'New Category', exact: true }).click();
   await page.getByLabel('Category Name').fill('Groceries');
   await page.getByRole('button', { name: 'Add Category' }).click();
   const category = page.getByRole('button', { name: /Groceries/ });
@@ -392,6 +394,36 @@ test('category form creates and edits a category with keyboard navigation', asyn
   await page.getByLabel('Category Name').fill('Food');
   await page.getByRole('button', { name: 'Save Changes' }).click();
   await expect(page.getByRole('button', { name: /Food/ })).toBeVisible();
+});
+
+test('category management starts with the list and preserves failed or unsaved edits', async ({ page }) => {
+  await mockApp(page, { withDashboardExpense: true });
+  await page.goto('/categories');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Food/ })).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath('categories-list.png'), fullPage: true });
+  await page.getByRole('button', { name: /Food/ }).click();
+  const editor = page.getByRole('dialog', { name: 'Edit Category' });
+  await editor.getByLabel('Category Name').fill('');
+  await editor.getByRole('button', { name: 'Save Changes' }).click();
+  await expect(editor.getByLabel('Category Name')).toBeFocused();
+  await expect(editor.getByLabel('Category Name')).toHaveAttribute('aria-describedby', 'category-name-error');
+  await editor.getByLabel('Category Name').fill('Groceries');
+  await page.route('**/categories/1', route => route.fulfill({ status: 500, headers: { 'access-control-allow-origin': '*' }, body: 'unavailable' }));
+  await editor.getByRole('button', { name: 'Save Changes' }).click();
+  await expect(editor.getByRole('alert')).toBeVisible();
+  await expect(editor.getByLabel('Category Name')).toHaveValue('Groceries');
+  await page.screenshot({ path: test.info().outputPath('category-editor.png'), fullPage: true });
+  page.once('dialog', dialog => dialog.dismiss());
+  await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(editor).toBeVisible();
+  page.once('dialog', dialog => dialog.accept());
+  await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(editor).toBeHidden();
+  await page.goto('/categories?new=income');
+  await expect(page.getByRole('radio', { name: 'Income', exact: true })).toBeChecked();
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page).toHaveURL(/\/categories$/);
 });
 
 test('category quick-add keeps its selection and input after a failed save', async ({ page }) => {

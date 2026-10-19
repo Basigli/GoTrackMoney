@@ -11,7 +11,7 @@ export default function CategorySection({ title, kind, categories, emptyText, on
 }) {
   return <section>
     <h3 className={`${styles.groupTitle} ${kind === 'expense' ? styles.expenseTitle : styles.incomeTitle}`}>{title}</h3>
-    <div className="list-container">
+    <div className={styles.categoryList}>
       {categories.map(category => <button type="button" key={category.id} className={`list-item ${styles.categoryCard}`} onClick={() => onEdit(category)}>
         <span className={styles.colorStripe} style={{ background: categoryColor(category) }} />
         <span className={styles.categoryEmoji}>{category.emoji || '📝'}</span>
