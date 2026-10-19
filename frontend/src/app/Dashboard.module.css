@@ -39,3 +39,8 @@
 .detailDate { font-size: 12px; color: var(--text-muted); }
 .incomeAmount { color: var(--success-color); }
 .expenseAmount { color: var(--danger-color); }
+.emptyState { margin: 0 20px; padding: 28px 24px; border: 1px solid var(--border-color); border-radius: 20px; background: var(--surface-color); text-align: center; }
+.emptyState h2 { font-size: 20px; margin-bottom: 12px; }
+.emptyState p { color: var(--text-muted); line-height: 1.5; margin-bottom: 16px; }
+.emptyState :global(.submit-btn) { width: auto; margin: 0; }
+.emptyAction { display: inline-flex; align-items: center; text-decoration: none; }

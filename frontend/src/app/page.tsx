@@ -152,7 +152,7 @@ function Dashboard({ token, user }: { token: string; user: SessionUser }) {
       {!dataReady && (dataErrorKey === periodKey || categoriesFailed ? <p role="alert">{t('analytics.load_error')} <button className="secondary-btn" onClick={() => { setDataErrorKey(''); setDataRevision(n => n + 1); void fetchCategories().catch(() => {}); }}>{t('analytics.retry')}</button></p> : <p role="status">{t('analytics.loading')}</p>)}
       {dataReady && <>
         <DashboardBalance income={totalIncome} expense={totalExpense} />
-        <DashboardCategories tab={activeTab} onTabChange={setActiveTab} groups={activeGroups} categories={categories} total={activeTotal} onSelect={setSelectedCategory} />
+        <DashboardCategories tab={activeTab} onTabChange={setActiveTab} groups={activeGroups} categories={categories} total={activeTotal} onSelect={setSelectedCategory} onAdd={() => openAddModal()} />
       </>}
       {showAddModal && <TransactionEditor token={token} categories={categories} item={editingItem}
         initialType={initialEntry.type} initialCategory={initialEntry.category} initialDate={initialEntry.date}

@@ -135,6 +135,22 @@ test('category overview puts the largest totals first with one decimal percentag
   await expect(rows.nth(0).locator('[class*="progressFill"]')).toHaveJSProperty('offsetHeight', 6);
 });
 
+test('empty dashboard guides category creation and keeps income actions relevant', async ({ page }) => {
+  await mockApp(page);
+  await page.goto('/?month=2024-02');
+  await expect(page.getByRole('heading', { name: 'No expenses in this period' })).toBeVisible();
+  await page.getByRole('link', { name: 'New Category' }).click();
+  await expect(page).toHaveURL(/categories\?new=expense/);
+  await page.route('**/categories', route => route.fulfill({ json: [
+    { id: 2, name: 'Salary', type: 'income' },
+  ], headers: { 'access-control-allow-origin': '*' } }));
+  await page.goto('/?month=2024-02');
+  await page.getByRole('button', { name: 'Incomes', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'No income in this period' })).toBeVisible();
+  await page.getByRole('button', { name: 'Add income', exact: true }).click();
+  await expect(page.getByRole('dialog').getByLabel('Type')).toHaveValue('income');
+});
+
 test('dashboard and analytics center the period picker between navigation arrows', async ({ page }) => {
   await mockApp(page);
   for (const url of ['/?month=2025-12', '/analytics?month=2025-12']) {

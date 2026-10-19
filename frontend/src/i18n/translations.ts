@@ -1,5 +1,10 @@
 export const translations = {
   it: {
+    'form.add_income': 'Aggiungi entrata',
+    'dashboard.empty_expenses': 'Nessuna spesa in questo periodo',
+    'dashboard.empty_incomes': 'Nessuna entrata in questo periodo',
+    'dashboard.empty_hint': 'Aggiungi una registrazione o scegli un altro periodo per vedere i tuoi movimenti.',
+    'dashboard.create_category_hint': 'Crea prima una categoria per iniziare a registrare i tuoi movimenti.',
     "form.close": "Chiudi",
     "form.discard": "Vuoi abbandonare le modifiche non salvate?",
     "form.amount_error": "Inserisci un importo maggiore di zero.",
@@ -196,6 +201,11 @@ export const translations = {
     'admin.actions': 'Azioni',
   },
   en: {
+    'form.add_income': 'Add income',
+    'dashboard.empty_expenses': 'No expenses in this period',
+    'dashboard.empty_incomes': 'No income in this period',
+    'dashboard.empty_hint': 'Add an entry or choose another period to see your transactions.',
+    'dashboard.create_category_hint': 'Create a category first to start recording your transactions.',
     "form.close": "Close",
     "form.discard": "Discard your unsaved changes?",
     "form.amount_error": "Enter an amount greater than zero.",
