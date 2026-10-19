@@ -4,7 +4,7 @@
 .header { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 .amount { color: var(--danger-color); }
 .match p { color: var(--text-muted); font-size: 14px; margin-top: 6px; }
-.badge { display: inline-block; margin-top: 8px; color: var(--primary-color); font-size: 12px; font-weight: 600; }
+.badge { display: inline-block; margin-top: 8px; color: var(--link-color); font-size: 12px; font-weight: 600; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
 .actions :global(.submit-btn) { width: auto; }
 .actions > button { flex: 1; margin-top: 0; }
