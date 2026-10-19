@@ -115,6 +115,21 @@ for (const language of ['en', 'it'] as const) {
   });
 }
 
+test('large analytics values remain inside summary cards on narrow screens', async ({ page }) => {
+  await mockApp(page, { withChartData: true });
+  await page.addInitScript(() => localStorage.setItem('app_language', 'it'));
+  await page.route('**/analytics/expenses-by-category?*', route => route.fulfill({ json: [{ category_id: 1, total_amount: 1234567.89 }], headers: { 'access-control-allow-origin': '*' } }));
+  await page.route('**/analytics/income-vs-expense?*', route => route.fulfill({ json: {
+    incomes: [{ year: 2024, month: 2, total_amount: 2469135.78 }], expenses: [{ year: 2024, month: 2, total_amount: 1234567.89 }],
+  }, headers: { 'access-control-allow-origin': '*' } }));
+  await page.goto('/analytics?month=2024-02');
+  const summaries = page.locator('.analytics-summary .money');
+  await expect(summaries).toHaveCount(4);
+  await expect(summaries.first()).toContainText('2.469.135,78');
+  expect(await summaries.evaluateAll(values => values.every(value => value.scrollWidth <= value.clientWidth))).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
 test('category overview puts the largest totals first with one decimal percentage', async ({ page }) => {
   await mockApp(page, { withDashboardExpense: true });
   await page.route('**/categories', route => route.fulfill({ json: [

@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import type { Income, Expense } from '@/types/domain';
 import { apiRequest } from '@/utils/api';
 import { categoryColor } from '@/utils/categoryColors';
-import { formatMoney } from '@/utils/money';
+import { formatMoney, formatCompactMoney } from '@/utils/money';
 import Money from '@/components/Money';
 import toast from 'react-hot-toast';
 import AppShell from '@/components/AppShell';
@@ -199,7 +199,7 @@ export default function AnalyticsPage() {
                 <BarChart data={barData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} tickFormatter={(value) => `${value}€`} />
+                  <YAxis width={80} axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} tickFormatter={value => formatCompactMoney(Number(value), language)} />
                   <BarTooltip
                     cursor={{ fill: 'var(--bg-color)' }}
                     contentStyle={{ borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--surface-elevated)', color: 'var(--text-color)' }}

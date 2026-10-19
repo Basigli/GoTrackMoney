@@ -420,7 +420,7 @@ input[type="datetime-local"]::-webkit-datetime-edit {
 
 
 /* Analytics summaries and an accessible alternative to the category chart. */
-.analytics-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; }
+.analytics-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; }
 .analytics-card { padding: 20px; border: 1px solid var(--border-color); border-radius: 20px; background: var(--surface-color); }
 .analytics-card strong { display: block; font-size: 24px; margin-top: 8px; overflow-wrap: anywhere; }
 .analytics-note { color: var(--text-muted); font-size: 13px; margin: 16px 0 24px; }
