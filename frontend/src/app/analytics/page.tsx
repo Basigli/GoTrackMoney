@@ -11,6 +11,8 @@ import { useAuth } from '@/hooks/useAuth';
 import type { Income, Expense } from '@/types/domain';
 import { apiRequest } from '@/utils/api';
 import { categoryColor } from '@/utils/categoryColors';
+import { formatMoney } from '@/utils/money';
+import Money from '@/components/Money';
 import toast from 'react-hot-toast';
 import AppShell from '@/components/AppShell';
 import styles from './Analytics.module.css';
@@ -39,9 +41,7 @@ export default function AnalyticsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const monthKey = format(filterDate, 'yyyy-MM');
   const { categories, categoryTotals: rawPieData, monthlyTotals: rawBarData, ready: isReady, failed: hasError, retry } = useAnalyticsData(token, monthKey);
-  const money = (value: number) => new Intl.NumberFormat(language === 'it' ? 'it-IT' : 'en-IE', {
-    style: 'currency', currency: 'EUR',
-  }).format(value);
+  const money = (value: number) => formatMoney(value, language);
 
   if (loading || !user) return null;
 
@@ -142,7 +142,7 @@ export default function AnalyticsPage() {
             [t('analytics.net_balance'), money(balance)],
             [t('analytics.savings_rate'), savingsRate === null ? '—' : new Intl.NumberFormat(language, { style: 'percent', maximumFractionDigits: 1 }).format(savingsRate)],
           ].map(([label, value]) => (
-            <div className="analytics-card" key={label}><div>{label}</div><strong>{value}</strong></div>
+            <div className="analytics-card" key={label}><div>{label}</div><strong className="money">{value}</strong></div>
           ))}
         </div>
         <p className="analytics-note">{format(filterDate, 'MMMM yyyy', { locale: dateLocale })} · {t('analytics.rate_note')}</p>
@@ -181,7 +181,7 @@ export default function AnalyticsPage() {
                 <tbody>{pieData.map(item => (
                   <tr key={item.id}>
                     <th scope="row"><span aria-hidden="true" style={{ color: item.color }}>● </span><Link href={transactionSearchLink(filterDate, "expense", item.id)}>{item.name}</Link></th>
-                    <td>{money(item.value)}</td>
+                    <td><Money amount={item.value} /></td>
                     <td>{expenseTotal > 0 ? new Intl.NumberFormat(language, { style: 'percent', maximumFractionDigits: 1 }).format(item.value / expenseTotal) : '—'}</td>
                   </tr>
                 ))}</tbody>

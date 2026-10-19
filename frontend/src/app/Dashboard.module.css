@@ -8,8 +8,8 @@
 }
 .balanceBanner { background: var(--balance-bg); border-radius: 24px; padding: 28px 24px; margin: 0 20px 24px; color: white; }
 .balanceTitle { font-size: 16px; opacity: .9; margin-bottom: 6px; }
-.balanceAmount { font-size: 42px; font-weight: 700; margin-bottom: 28px; }
-.balanceStats { display: flex; justify-content: space-between; }
+.balanceAmount { font-size: clamp(24px, 6vw, 42px); font-weight: 700; margin-bottom: 28px; }
+.balanceStats { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
 .statItem { display: flex; align-items: center; gap: 8px; }
 .statIcon { width: 28px; height: 28px; border-radius: 50%; display: flex; justify-content: center; align-items: center; background: var(--surface-color); font-size: 16px; }
 .expense { color: var(--danger-color); }
@@ -24,9 +24,9 @@
 @media (min-width: 1024px) { .categoryRow { background: var(--surface-color); } }
 .itemIcon { font-size: 28px; margin-right: 20px; width: 36px; text-align: center; }
 .itemContent { flex: 1; min-width: 0; }
-.itemHeader { display: flex; justify-content: space-between; margin-bottom: 8px; gap: 12px; }
-.itemTitle { font-weight: 600; font-size: 17px; }
-.itemAmount { font-weight: 700; font-size: 17px; }
+.itemHeader { display: flex; flex-wrap: wrap; justify-content: space-between; margin-bottom: 8px; gap: 8px 12px; }
+.itemTitle { font-weight: 600; font-size: 17px; overflow-wrap: anywhere; }
+.itemAmount { font-weight: 700; font-size: 17px; margin-left: auto; }
 .progressContainer { display: flex; align-items: center; gap: 12px; }
 .progressTrack { flex: 1; height: 8px; background: var(--progress-track); border-radius: 4px; overflow: hidden; border: 1px solid var(--progress-border); }
 .progressFill { display: block; height: 100%; border-radius: 4px; }

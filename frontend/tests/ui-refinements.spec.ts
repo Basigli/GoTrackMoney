@@ -98,6 +98,23 @@ async function mockApp(page: Page, options: { username?: string; isAdmin?: boole
   });
 }
 
+for (const language of ['en', 'it'] as const) {
+  test(`dashboard formats large financial values consistently without splitting currency (${language})`, async ({ page }) => {
+    await mockApp(page, { withDashboardExpense: true });
+    await page.addInitScript(language => localStorage.setItem('app_language', language), language);
+    await page.route('**/expenses/filter?*', route => route.fulfill({ json: [
+      { id: 1, name: 'Food', amount: 1234567.89, description: 'Large expense', category_id: 1, spent_on: '2024-02-15T12:00:00Z' },
+    ], headers: { 'access-control-allow-origin': '*' } }));
+    await page.goto('/?month=2024-02');
+    const amounts = page.locator('.money');
+    await expect(amounts.first()).toContainText(language === 'it' ? '-1.234.567,89' : '-€1,234,567.89');
+    await expect(amounts.first()).toHaveCSS('white-space', 'nowrap');
+    await page.getByRole('button', { name: /Food/ }).click();
+    await expect(page.getByRole('dialog').locator('.money')).toContainText(language === 'it' ? '-1.234.567,89' : '-€1,234,567.89');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+}
+
 test('dashboard and analytics center the period picker between navigation arrows', async ({ page }) => {
   await mockApp(page);
   for (const url of ['/?month=2025-12', '/analytics?month=2025-12']) {

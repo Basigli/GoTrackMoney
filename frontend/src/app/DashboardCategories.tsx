@@ -2,6 +2,7 @@ import type { Category, Income, Expense } from '@/types/domain';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { categoryColor } from '@/utils/categoryColors';
 import styles from './Dashboard.module.css';
+import Money from '@/components/Money';
 
 export type DashboardTab = 'uscite' | 'entrate';
 
@@ -30,7 +31,7 @@ export default function DashboardCategories({ tab, onTabChange, groups, categori
           <span className={styles.itemContent}>
             <span className={styles.itemHeader}>
               <span className={styles.itemTitle}>{category?.name || t('dashboard.unknown')}</span>
-              <span className={styles.itemAmount}>{amount.toFixed(2)} €</span>
+              <span className={styles.itemAmount}><Money amount={amount} /></span>
             </span>
             <span className={styles.progressContainer}>
               <span className={styles.progressTrack}><span className={styles.progressFill} style={{ width: `${percentage}%`, backgroundColor: categoryColor({ id, color: category?.color }) }} /></span>

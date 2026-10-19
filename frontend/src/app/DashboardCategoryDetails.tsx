@@ -5,6 +5,7 @@ import { useLanguage } from '@/i18n/LanguageContext';
 import SafeDialog from '@/components/SafeDialog';
 import type { DashboardTab } from './DashboardCategories';
 import styles from './Dashboard.module.css';
+import Money from '@/components/Money';
 
 export default function DashboardCategoryDetails({ categoryId, categories, tab, items, locale, onClose, onAddExpense, onEdit }: {
   categoryId: number;
@@ -29,7 +30,7 @@ export default function DashboardCategoryDetails({ categoryId, categories, tab, 
               {'is_periodic' in item && item.is_periodic && <span className={styles.periodicBadge}>{t('record.periodic')}</span>}
             </span>
             <span className={`${styles.itemAmount} ${tab === 'uscite' ? styles.expenseAmount : styles.incomeAmount}`}>
-              {tab === 'uscite' ? '-' : '+'}{item.amount.toFixed(2)} €
+              <Money amount={tab === 'uscite' ? -item.amount : item.amount} signed />
             </span>
           </span>
           <span className={styles.detailDate}>{format(new Date('spent_on' in item ? item.spent_on : item.received_on), 'd MMM yyyy, HH:mm', { locale })}</span>

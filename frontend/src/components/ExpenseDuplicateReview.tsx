@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useLanguage } from '@/i18n/LanguageContext';
 import type { DuplicateExpenseReview } from '@/utils/expenseDuplicates';
 import styles from './ExpenseDuplicateReview.module.css';
+import Money from './Money';
 
 export default function ExpenseDuplicateReview({ review, busy, failure, onBack, onConfirm }: {
   review: DuplicateExpenseReview; busy: boolean; failure: string;
@@ -13,7 +14,6 @@ export default function ExpenseDuplicateReview({ review, busy, failure, onBack, 
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { heading.current?.focus(); }, []);
   const date = new Intl.DateTimeFormat(language, { dateStyle: 'medium', timeStyle: 'short' });
-  const money = new Intl.NumberFormat(language, { style: 'currency', currency: 'EUR' });
 
   return <section aria-labelledby="duplicate-review-heading">
     <h3 id="duplicate-review-heading" ref={heading} tabIndex={-1}>{t('duplicate.title')}</h3>
@@ -22,7 +22,7 @@ export default function ExpenseDuplicateReview({ review, busy, failure, onBack, 
       {review.matches.map(match => <li key={match.id} className={styles.match}>
         <div className={styles.header}>
           <strong>{match.description || match.name}</strong>
-          <strong className={styles.amount}>{money.format(match.amount)}</strong>
+          <strong className={styles.amount}><Money amount={match.amount} /></strong>
         </div>
         <p><span aria-hidden="true">{match.category_emoji} </span>{match.category_name}</p>
         <p>{date.format(new Date(match.spent_on))}</p>

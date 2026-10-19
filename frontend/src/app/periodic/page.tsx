@@ -10,10 +10,11 @@ import { apiRequest } from '@/utils/api';
 import AppShell from '@/components/AppShell';
 import styles from './Periodic.module.css';
 import RecurringEditor from '@/components/RecurringEditor';
+import Money from '@/components/Money';
 
 export default function PeriodicPage() {
   const { token, user, loading } = useAuth();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const { data: snapshot, failed, refresh } = useRecurringData(token);
   const [editing, setEditing] = useState<PeriodicExpense | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
@@ -31,7 +32,6 @@ export default function PeriodicPage() {
     finally { submitting.current = false; setBusy(null); }
   };
   if (loading || !user || !token) return null;
-  const money = (amount:number) => new Intl.NumberFormat(language, { style:'currency', currency:'EUR' }).format(amount);
   return <AppShell>
     <main className="page-content">
       <h1>{t('record.periodic')}</h1>
@@ -40,8 +40,8 @@ export default function PeriodicPage() {
       </p>}
       {snapshot && <>
         <div className="analytics-summary">
-          <div className="analytics-card">{t('recurring.next_7')}<strong>{money(snapshot.upcoming.total_7)}</strong></div>
-          <div className="analytics-card">{t('recurring.next_30')}<strong>{money(snapshot.upcoming.total_30)}</strong></div>
+          <div className="analytics-card">{t('recurring.next_7')}<strong><Money amount={snapshot.upcoming.total_7} /></strong></div>
+          <div className="analytics-card">{t('recurring.next_30')}<strong><Money amount={snapshot.upcoming.total_30} /></strong></div>
         </div>
         <p className="analytics-note">{t('recurring.explanation')}</p>
         {[false,true].map(paused => <section key={String(paused)}>
@@ -51,7 +51,7 @@ export default function PeriodicPage() {
               <button className="transaction-row" onClick={() => setEditing(item)} disabled={busy !== null}>
                 <span><strong>{item.name}</strong><small>{snapshot.categories.find(c => c.id === item.category_id)?.name} · {t('recurring.every', { interval:String(item.period_interval), unit:t('record.' + item.period_unit).toLowerCase() })}</small>
                   <small>{t(paused ? 'recurring.paused' : 'recurring.next_due')}{!paused && ': ' + format(new Date(item.next_due_date), 'dd/MM/yyyy HH:mm')}</small></span>
-                <strong>{money(item.amount)}</strong>
+                <strong><Money amount={item.amount} /></strong>
               </button>
               <div className="form-row">
                 <button className="secondary-btn" disabled={busy !== null} onClick={() => action(item, paused ? 'resume' : 'pause')}>{t(paused ? 'recurring.resume' : 'recurring.pause')}</button>
@@ -65,7 +65,7 @@ export default function PeriodicPage() {
         <details><summary>{t('recurring.upcoming')}</summary>
           {snapshot.upcoming.items.length === 0 && <p>{t('recurring.none')}</p>}
           {snapshot.upcoming.items.map(item => <div className="transaction-row" key={item.schedule_id + ':' + item.due_date}>
-            <span>{item.name}<small>{format(new Date(item.due_date),'dd/MM/yyyy HH:mm')}</small></span><span>{money(item.amount)}</span>
+            <span>{item.name}<small>{format(new Date(item.due_date),'dd/MM/yyyy HH:mm')}</small></span><span><Money amount={item.amount} /></span>
           </div>)}
         </details>
       </>}

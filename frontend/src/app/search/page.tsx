@@ -9,6 +9,7 @@ import type { Transaction } from '@/utils/transactions';
 import AppShell from '@/components/AppShell';
 import styles from './Search.module.css';
 import TransactionEditor from '@/components/TransactionEditor';
+import Money from '@/components/Money';
 
 function SearchContent() {
   const { user, token, loading } = useAuth();
@@ -26,7 +27,6 @@ function SearchContent() {
     window.history.replaceState(null, '', '/search?' + next.toString());
   };
   if (loading || !user || !token) return null;
-  const money = (amount: number) => new Intl.NumberFormat(language, { style:'currency', currency:'EUR' }).format(amount);
   return <AppShell>
     <main className="page-content">
       <h1>{t('nav.search')}</h1>
@@ -59,7 +59,7 @@ function SearchContent() {
         <p className={styles.resultsCount} aria-live="polite">{t('search.results_count', { count: String(result.total) })}</p>
         <div className="list-container">{result.items.map(item => <button className="list-item transaction-row" key={item.type + ':' + item.id} onClick={() => setEditing(item)}>
           <span><strong>{item.description || item.name}</strong><small>{format(new Date(item.date), 'dd/MM/yyyy HH:mm')} · {categories.find(c => c.id === item.category_id)?.name || t('dashboard.unknown')}{item.is_periodic && ' · ' + t('record.periodic')}</small></span>
-          <span className={item.type === 'expense' ? 'amount-expense' : 'amount-income'}>{item.type === 'expense' ? '−' : '+'}{money(item.amount)}</span>
+          <span className={item.type === 'expense' ? 'amount-expense' : 'amount-income'}><Money amount={item.type === 'expense' ? -item.amount : item.amount} signed /></span>
         </button>)}</div>
         {result.total === 0 && <p>{t('search.empty')}</p>}
         <div className="form-row">

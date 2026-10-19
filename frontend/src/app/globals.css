@@ -431,6 +431,7 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 3px; }
 .danger, .field-error, .amount-expense { color: var(--danger-color); }
 .amount-income { color: var(--success-color); }
+.money { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .field-error { font-size: 14px; margin: 4px 0 12px; }
 .form-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0; }
 .form-row > label { flex: 1; min-width: 120px; }
