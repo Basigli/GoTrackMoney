@@ -29,7 +29,7 @@
 .itemAmount { font-weight: 700; font-size: 17px; }
 .progressContainer { display: flex; align-items: center; gap: 12px; }
 .progressTrack { flex: 1; height: 8px; background: var(--progress-track); border-radius: 4px; overflow: hidden; border: 1px solid var(--progress-border); }
-.progressFill { height: 100%; border-radius: 4px; }
+.progressFill { display: block; height: 100%; border-radius: 4px; }
 .progressText { font-size: 14px; color: var(--text-muted); min-width: 110px; text-align: right; }
 .detailsList { max-height: 60vh; overflow-y: auto; padding-right: 8px; }
 .detailsList .detailRow { width: 100%; padding: 12px 16px; margin-bottom: 8px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-color); color: var(--text-color); font: inherit; text-align: left; }
