@@ -188,6 +188,48 @@ test('login keeps labels visible and links errors to fields with comfortable pas
   await expect(page.getByLabel('Confirm Password')).toHaveAttribute('aria-describedby', 'auth-error');
 });
 
+for (const language of ['en', 'it'] as const) {
+  test(`details omit cancel and editor actions share a row with protected dismissal (${language})`, async ({ page }) => {
+    await mockApp(page, { withDashboardExpense: true });
+    await page.addInitScript(language => localStorage.setItem('app_language', language), language);
+    const italian = language === 'it';
+    await page.goto('/?month=2024-02');
+    await page.getByRole('button', { name: /Food/ }).click();
+    const details = page.getByRole('dialog', { name: italian ? 'Dettagli per Food' : 'Details for Food' });
+    await expect(details.getByRole('button', { name: italian ? 'Annulla' : 'Cancel', exact: true })).toHaveCount(0);
+    await details.getByRole('button', { name: italian ? 'Chiudi' : 'Close', exact: true }).click();
+    await expect(details).toBeHidden();
+    await page.getByRole('button', { name: /Food/ }).click();
+
+    for (const action of ['cancel', 'close', 'escape']) {
+      await details.getByRole('button', { name: /Dinner/ }).click();
+      const editor = page.getByRole('dialog', { name: italian ? 'Modifica Registrazione' : 'Edit Record' });
+      const cancel = editor.getByRole('button', { name: italian ? 'Annulla' : 'Cancel', exact: true });
+      const save = editor.getByRole('button', { name: italian ? 'Salva' : 'Save', exact: true });
+      const cancelBounds = await cancel.boundingBox();
+      const saveBounds = await save.boundingBox();
+      expect(cancelBounds && saveBounds).toBeTruthy();
+      expect(Math.abs(cancelBounds!.y - saveBounds!.y)).toBeLessThan(1);
+      expect(Math.abs(cancelBounds!.height - saveBounds!.height)).toBeLessThan(1);
+      expect(saveBounds!.x).toBeGreaterThan(cancelBounds!.x);
+      expect(cancelBounds!.height).toBeGreaterThanOrEqual(48);
+      const amount = editor.getByLabel(italian ? 'Importo' : 'Amount', { exact: true });
+      await amount.fill('21');
+      if (action === 'cancel') await page.screenshot({ path: test.info().outputPath(`editor-actions-${language}.png`), fullPage: true });
+      const dismiss = () => action === 'escape' ? page.keyboard.press('Escape') : editor.getByRole('button', { name: action === 'cancel' ? (italian ? 'Annulla' : 'Cancel') : (italian ? 'Chiudi' : 'Close'), exact: true }).click();
+      page.once('dialog', prompt => prompt.dismiss());
+      await dismiss();
+      await expect(editor).toBeVisible();
+      await expect(amount).toHaveValue('21');
+      page.once('dialog', prompt => prompt.accept());
+      await dismiss();
+      await expect(editor).toBeHidden();
+      await expect(details).toBeVisible();
+      await expect(details.locator('.money')).toContainText(italian ? '20,00' : '20.00');
+    }
+  });
+}
+
 test('transaction validation focuses the first error and describes each invalid field', async ({ page }) => {
   await mockApp(page, { withDashboardExpense: true });
   await page.goto('/?month=2024-02');
@@ -600,6 +642,7 @@ for (const language of ['en', 'it'] as const) {
     await editor.getByRole('button', { name: save, exact: true }).click();
     const heading = editor.getByRole('heading', { name: italian ? 'Possibile duplicato' : 'Possible duplicate' });
     await expect(heading).toBeVisible();
+    await expect(editor.getByRole('button', { name: italian ? 'Annulla' : 'Cancel', exact: true })).toHaveCount(0);
     await expect(heading).toBeFocused();
     await page.keyboard.press('Enter');
     expect(requests).toHaveLength(1);

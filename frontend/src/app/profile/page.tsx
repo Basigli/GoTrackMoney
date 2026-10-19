@@ -157,7 +157,7 @@ function ProfileContent({ token, user, logout }: { token: string; user: SessionU
       </div>
 
       {showDeleteModal && (
-        <SafeDialog title={t('auth.delete_account')} onClose={() => setShowDeleteModal(false)} dirty={deleteConfirmText.length > 0} showCancel={false} className={styles.deleteDialog}>
+        <SafeDialog title={t('auth.delete_account')} onClose={() => setShowDeleteModal(false)} dirty={deleteConfirmText.length > 0} className={styles.deleteDialog}>
             <p className={styles.deleteWarning}>
               {t('auth.delete_warning') || 'Warning: This action is irreversible and will delete all your data.'}
             </p>

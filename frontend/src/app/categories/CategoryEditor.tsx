@@ -3,6 +3,7 @@
 import { useRef, useState, type FormEvent } from 'react';
 import toast from 'react-hot-toast';
 import SafeDialog from '@/components/SafeDialog';
+import EditorActions from '@/components/EditorActions';
 import { useLanguage } from '@/i18n/LanguageContext';
 import type { Category } from '@/types/domain';
 import { apiRequest } from '@/utils/api';
@@ -45,7 +46,7 @@ export default function CategoryEditor({ token, category, initialType, onClose, 
     finally { submitting.current = false; setBusy(false); }
   };
   return <SafeDialog title={t(category ? 'categories.edit' : 'categories.new')} onClose={onClose} busy={busy} dirty={JSON.stringify(form) !== JSON.stringify(initial)}>
-    <form ref={ref} onSubmit={submit} noValidate className={styles.form}>
+    {close => <form ref={ref} onSubmit={submit} noValidate className={styles.form}>
       <fieldset disabled={busy}>
         <div className={styles.fields}>
           <div>
@@ -69,8 +70,8 @@ export default function CategoryEditor({ token, category, initialType, onClose, 
           </label>)}
         </div>
         {failure && <p role="alert" className="field-error">{failure}</p>}
-        <button type="submit" className="submit-btn">{t(busy ? 'form.saving' : category ? 'categories.save_btn' : 'categories.add_btn')}</button>
+        <EditorActions onCancel={close} busy={busy} submitLabel={t(busy ? 'form.saving' : category ? 'categories.save_btn' : 'categories.add_btn')} />
       </fieldset>
-    </form>
+    </form>}
   </SafeDialog>;
 }

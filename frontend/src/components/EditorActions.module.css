@@ -1,0 +1,9 @@
+.footer { display: flex; flex-direction: column; gap: 16px; margin-top: 20px; }
+.actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.footer .actions > button { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 48px; width: 100%; margin: 0; padding: 12px 16px; font: inherit; font-size: 16px; font-weight: 600; line-height: 20px; text-align: center; }
+.deleteButton { align-self: flex-start; }
+@media (min-width: 640px) {
+  .footer { flex-direction: row; align-items: center; justify-content: flex-end; }
+  .actions { min-width: 220px; }
+  .deleteButton { order: -1; margin-right: auto; }
+}

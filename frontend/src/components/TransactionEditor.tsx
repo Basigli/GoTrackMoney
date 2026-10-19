@@ -9,6 +9,7 @@ import { readDuplicateExpenseReview, type DuplicateExpenseReview } from '@/utils
 import { useLanguage } from '@/i18n/LanguageContext';
 import SafeDialog from './SafeDialog';
 import ExpenseDuplicateReview from './ExpenseDuplicateReview';
+import EditorActions from './EditorActions';
 import styles from './TransactionEditor.module.css';
 
 export interface SavedTransaction { type: TransactionType; category_id: number; date: string; deleted?: boolean }
@@ -85,7 +86,7 @@ export default function TransactionEditor({ token, categories, item, initialType
     finally { submitting.current = false; setBusy(false); }
   };
   return <SafeDialog title={t(item ? 'record.edit' : 'record.new')} dirty={dirty} busy={busy} onClose={onClose}>
-    {review ? <ExpenseDuplicateReview review={review} busy={busy} failure={failure}
+    {close => review ? <ExpenseDuplicateReview review={review} busy={busy} failure={failure}
       onBack={() => { setReview(null); setFailure(''); requestAnimationFrame(() => amountInput.current?.focus()); }}
       onConfirm={() => { void save(undefined, true); }} /> : <form ref={formRef} className="modal-form" onSubmit={save} noValidate>
       <fieldset disabled={busy}>
@@ -116,10 +117,7 @@ export default function TransactionEditor({ token, categories, item, initialType
         </div>}
         {errors.interval && <p id="interval-error" className="field-error">{errors.interval}</p>}
         {failure && <p role="alert" className="field-error">{failure}</p>}
-        <div className="form-row">
-          {item && <button type="button" className="secondary-btn danger" onClick={remove}>{t('form.delete')}</button>}
-          <button className="submit-btn" type="submit">{t(busy ? 'form.saving' : 'record.save')}</button>
-        </div>
+        <EditorActions onCancel={close} onDelete={item ? remove : undefined} busy={busy} submitLabel={t(busy ? 'form.saving' : 'record.save')} />
       </fieldset>
     </form>}
   </SafeDialog>;

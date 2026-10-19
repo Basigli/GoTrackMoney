@@ -5,6 +5,7 @@ import type { Category, PeriodicExpense } from '@/types/domain';
 import { useLanguage } from '@/i18n/LanguageContext';
 import { apiRequest } from '@/utils/api';
 import SafeDialog from './SafeDialog';
+import EditorActions from './EditorActions';
 
 export default function RecurringEditor({ item, token, categories, onClose, onSaved }: {
   item: PeriodicExpense; token: string; categories: Category[]; onClose: () => void; onSaved: () => void;
@@ -54,6 +55,7 @@ export default function RecurringEditor({ item, token, categories, onClose, onSa
     finally { submitting.current = false; setBusy(false); }
   };
   return <SafeDialog title={t('recurring.edit')} dirty={JSON.stringify(form) !== JSON.stringify(initial)} busy={busy} onClose={onClose}>
+    {close => <>
     <p className="analytics-note">{t('recurring.future_only')}</p>
     <form ref={formRef} className="modal-form" onSubmit={save} noValidate><fieldset disabled={busy}>
       {(['name','amount','description','period_interval','next_due_date'] as const).map(field => <div key={field}><label>
@@ -71,7 +73,8 @@ export default function RecurringEditor({ item, token, categories, onClose, onSa
         {['days','weeks','months','years'].map(unit => <option key={unit} value={unit}>{t('record.' + unit)}</option>)}
       </select></label>
       {failure && <p role="alert" className="field-error">{failure}</p>}
-      <button className="submit-btn">{t(busy ? 'form.saving' : 'record.save')}</button>
+      <EditorActions onCancel={close} busy={busy} submitLabel={t(busy ? 'form.saving' : 'record.save')} />
     </fieldset></form>
+    </>}
   </SafeDialog>;
 }

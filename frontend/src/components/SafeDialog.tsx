@@ -2,8 +2,8 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { useLanguage } from '@/i18n/LanguageContext';
 
-export default function SafeDialog({ title, dirty = false, busy = false, onClose, children, className, showCancel = true }: {
-  title: string; dirty?: boolean; busy?: boolean; onClose: () => void; children: ReactNode; className?: string; showCancel?: boolean;
+export default function SafeDialog({ title, dirty = false, busy = false, onClose, children, className }: {
+  title: string; dirty?: boolean; busy?: boolean; onClose: () => void; children: ReactNode | ((close: () => void) => ReactNode); className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const { t } = useLanguage();
@@ -35,8 +35,7 @@ export default function SafeDialog({ title, dirty = false, busy = false, onClose
     <div className="editor-body">
       <button className="modal-close" type="button" aria-label={t('form.close')} disabled={busy} onClick={close}>×</button>
       <h2>{title}</h2>
-      {children}
-      {showCancel && <button className="secondary-btn" type="button" disabled={busy} onClick={close}>{t('auth.cancel')}</button>}
+      {typeof children === 'function' ? children(close) : children}
     </div>
   </dialog>;
 }
