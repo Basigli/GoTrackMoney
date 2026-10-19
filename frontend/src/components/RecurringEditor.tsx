@@ -20,6 +20,7 @@ export default function RecurringEditor({ item, token, categories, onClose, onSa
   const submitting = useRef(false);
   const [errors, setErrors] = useState<Record<string,string>>({});
   const [failure, setFailure] = useState('');
+  const formRef = useRef<HTMLFormElement>(null);
   const update = (field: keyof typeof form, value: string) => setForm(old => ({ ...old, [field]: value }));
   const save = async (event: FormEvent) => {
     event.preventDefault();
@@ -34,7 +35,10 @@ export default function RecurringEditor({ item, token, categories, onClose, onSa
     const dateChanged = form.next_due_date !== initial.next_due_date;
     if (dateChanged && (!form.next_due_date || !Number.isFinite(new Date(form.next_due_date).getTime()) || new Date(form.next_due_date) <= new Date())) invalid.next_due_date = t('recurring.future_date');
     setErrors(invalid);
-    if (Object.keys(invalid).length) return;
+    if (Object.keys(invalid).length) {
+      requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
+      return;
+    }
     submitting.current = true; setBusy(true); setFailure('');
     try {
       await apiRequest<void>('/periodic-expenses/' + item.id, {
@@ -51,18 +55,18 @@ export default function RecurringEditor({ item, token, categories, onClose, onSa
   };
   return <SafeDialog title={t('recurring.edit')} dirty={JSON.stringify(form) !== JSON.stringify(initial)} busy={busy} onClose={onClose}>
     <p className="analytics-note">{t('recurring.future_only')}</p>
-    <form className="modal-form" onSubmit={save} noValidate><fieldset disabled={busy}>
-      {(['name','amount','description','period_interval','next_due_date'] as const).map(field => <label key={field}>
+    <form ref={formRef} className="modal-form" onSubmit={save} noValidate><fieldset disabled={busy}>
+      {(['name','amount','description','period_interval','next_due_date'] as const).map(field => <div key={field}><label>
         {t({ name:'recurring.name', amount:'record.amount', description:'record.description', period_interval:'recurring.interval', next_due_date:'recurring.next_due' }[field])}
         <input className="input-field" data-initial-focus={field === 'amount' ? true : undefined}
           type={field === 'next_due_date' ? 'datetime-local' : field === 'period_interval' ? 'number' : 'text'}
-          inputMode={field === 'amount' ? 'decimal' : undefined} value={form[field]} aria-invalid={!!errors[field]} onChange={e => update(field, e.target.value)} />
-        {errors[field] && <span className="field-error">{errors[field]}</span>}
-      </label>)}
-      <label>{t('record.category')}<select className="input-field" value={form.category_id} onChange={e => update('category_id', e.target.value)}>
+          inputMode={field === 'amount' ? 'decimal' : undefined} value={form[field]} aria-invalid={!!errors[field]} aria-describedby={errors[field] ? `recurring-${field}-error` : undefined} onChange={e => update(field, e.target.value)} />
+      </label>{errors[field] && <p id={`recurring-${field}-error`} className="field-error">{errors[field]}</p>}
+      </div>)}
+      <label>{t('record.category')}<select className="input-field" value={form.category_id} aria-invalid={!!errors.category_id} aria-describedby={errors.category_id ? 'recurring-category-error' : undefined} onChange={e => update('category_id', e.target.value)}>
         {categories.filter(c => c.type === 'expense').sort((a,b) => a.name.localeCompare(b.name, language, { sensitivity:'base' })).map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
       </select></label>
-      {errors.category_id && <p className="field-error">{errors.category_id}</p>}
+      {errors.category_id && <p id="recurring-category-error" className="field-error">{errors.category_id}</p>}
       <label>{t('recurring.unit')}<select className="input-field" value={form.period_unit} onChange={e => update('period_unit', e.target.value)}>
         {['days','weeks','months','years'].map(unit => <option key={unit} value={unit}>{t('record.' + unit)}</option>)}
       </select></label>

@@ -31,6 +31,7 @@ export default function TransactionEditor({ token, categories, item, initialType
   const [failure, setFailure] = useState('');
   const [review, setReview] = useState<DuplicateExpenseReview | null>(null);
   const amountInput = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const dirty = JSON.stringify(initial) !== JSON.stringify(form);
   const periodNotice = form.periodic ? null : transactionPeriodNotice(new Date(form.date), viewPeriod, language);
   const update = <K extends keyof typeof form>(key: K, value: typeof form[K]) => setForm(old => ({ ...old, [key]: value }));
@@ -45,7 +46,10 @@ export default function TransactionEditor({ token, categories, item, initialType
     if (!form.date || !Number.isFinite(date.getTime())) invalid.date = t('form.date_error');
     if (form.periodic && (!Number.isInteger(Number(form.interval)) || Number(form.interval) < 1 || Number(form.interval) > 10000)) invalid.interval = t('form.interval_error');
     setErrors(invalid);
-    if (Object.keys(invalid).length) return;
+    if (Object.keys(invalid).length) {
+      requestAnimationFrame(() => formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
+      return;
+    }
     submitting.current = true; setBusy(true); setFailure('');
     const periodic = !item && form.type === 'expense' && form.periodic;
     const endpoint = periodic ? '/periodic-expenses' : '/' + (form.type === 'expense' ? 'expenses' : 'incomes') + (item ? '/' + item.id : '');
@@ -83,20 +87,20 @@ export default function TransactionEditor({ token, categories, item, initialType
   return <SafeDialog title={t(item ? 'record.edit' : 'record.new')} dirty={dirty} busy={busy} onClose={onClose}>
     {review ? <ExpenseDuplicateReview review={review} busy={busy} failure={failure}
       onBack={() => { setReview(null); setFailure(''); requestAnimationFrame(() => amountInput.current?.focus()); }}
-      onConfirm={() => { void save(undefined, true); }} /> : <form className="modal-form" onSubmit={save} noValidate>
+      onConfirm={() => { void save(undefined, true); }} /> : <form ref={formRef} className="modal-form" onSubmit={save} noValidate>
       <fieldset disabled={busy}>
         <label>{t('record.type')}<select className="input-field" value={form.type} disabled={!!item}
           onChange={e => setForm(old => ({ ...old, type: e.target.value as TransactionType, category: '', periodic: false }))}>
           <option value="expense">{t('record.expense')}</option><option value="income">{t('record.income')}</option>
         </select></label>
         <label>{t('record.amount')}<input ref={amountInput} data-initial-focus className="input-field" inputMode="decimal" value={form.amount}
-          aria-invalid={!!errors.amount} aria-describedby="amount-error" onChange={e => update('amount', e.target.value)} /></label>
+          aria-invalid={!!errors.amount} aria-describedby={errors.amount ? 'amount-error' : undefined} onChange={e => update('amount', e.target.value)} /></label>
         {errors.amount && <p id="amount-error" className="field-error">{errors.amount}</p>}
-        <label>{t('record.category')}<select className="input-field" value={form.category} aria-invalid={!!errors.category} onChange={e => update('category', e.target.value)}>
+        <label>{t('record.category')}<select className="input-field" value={form.category} aria-invalid={!!errors.category} aria-describedby={errors.category ? 'category-error' : undefined} onChange={e => update('category', e.target.value)}>
           <option value="">{t('record.select_category')}</option>
           {categories.filter(c => c.type === form.type).sort((a,b) => a.name.localeCompare(b.name, language, { sensitivity: 'base' })).map(c => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
         </select></label>
-        {errors.category && <p className="field-error">{errors.category}</p>}
+        {errors.category && <p id="category-error" className="field-error">{errors.category}</p>}
         <label>{t('record.date_time')}<input className="input-field" type="datetime-local" value={form.date} aria-invalid={!!errors.date}
           aria-describedby={[errors.date && 'transaction-date-error', periodNotice && 'transaction-period-notice'].filter(Boolean).join(' ') || undefined}
           onChange={e => update('date', e.target.value)} /></label>
@@ -105,12 +109,12 @@ export default function TransactionEditor({ token, categories, item, initialType
         <label>{t('record.description')}<input className="input-field" value={form.description} onChange={e => update('description', e.target.value)} /></label>
         {!item && form.type === 'expense' && <label><input type="checkbox" checked={form.periodic} onChange={e => update('periodic', e.target.checked)} /> {t('record.periodic')}</label>}
         {form.periodic && <div className="form-row">
-          <label>{t('recurring.interval')}<input className="input-field" type="number" min="1" max="10000" value={form.interval} onChange={e => update('interval', e.target.value)} /></label>
+          <label>{t('recurring.interval')}<input className="input-field" type="number" min="1" max="10000" value={form.interval} aria-invalid={!!errors.interval} aria-describedby={errors.interval ? 'interval-error' : undefined} onChange={e => update('interval', e.target.value)} /></label>
           <label>{t('recurring.unit')}<select className="input-field" value={form.unit} onChange={e => update('unit', e.target.value)}>
             {['days','weeks','months','years'].map(unit => <option key={unit} value={unit}>{t('record.' + unit)}</option>)}
           </select></label>
         </div>}
-        {errors.interval && <p className="field-error">{errors.interval}</p>}
+        {errors.interval && <p id="interval-error" className="field-error">{errors.interval}</p>}
         {failure && <p role="alert" className="field-error">{failure}</p>}
         <div className="form-row">
           {item && <button type="button" className="secondary-btn danger" onClick={remove}>{t('form.delete')}</button>}

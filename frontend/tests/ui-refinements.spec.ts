@@ -151,6 +151,43 @@ test('empty dashboard guides category creation and keeps income actions relevant
   await expect(page.getByRole('dialog').getByLabel('Type')).toHaveValue('income');
 });
 
+test('login keeps labels visible and links errors to fields with comfortable password controls', async ({ page }) => {
+  await mockApp(page, { startAnonymous: true });
+  await page.goto('/');
+  await page.getByLabel('Username', { exact: true }).fill('alex');
+  await page.getByLabel('Password', { exact: true }).fill('wrong');
+  await expect(page.locator('label[for="auth-password"]')).toBeVisible();
+  const toggle = page.getByRole('button', { name: 'Show password', exact: true });
+  const size = await toggle.boundingBox();
+  expect(size && size.width >= 44 && size.height >= 44).toBeTruthy();
+  await toggle.click();
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('type', 'text');
+  await page.getByRole('button', { name: 'Login', exact: true }).click();
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('aria-describedby', 'auth-error');
+  await expect(page.locator('form').getByRole('alert')).toHaveText('Invalid username or password');
+  await page.getByRole('button', { name: "Don't have an account?" }).click();
+  await page.getByLabel('Password', { exact: true }).fill('correct');
+  await page.getByLabel('Confirm Password', { exact: true }).fill('mismatch');
+  await page.getByRole('button', { name: 'Register', exact: true }).click();
+  await expect(page.getByLabel('Confirm Password')).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.getByLabel('Confirm Password')).toHaveAttribute('aria-describedby', 'auth-error');
+});
+
+test('transaction validation focuses the first error and describes each invalid field', async ({ page }) => {
+  await mockApp(page, { withDashboardExpense: true });
+  await page.goto('/?month=2024-02');
+  await page.getByRole('button', { name: 'New Record', exact: true }).click();
+  const editor = page.getByRole('dialog');
+  await editor.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(editor.getByLabel('Amount', { exact: true })).toBeFocused();
+  await expect(editor.getByLabel('Amount', { exact: true })).toHaveAttribute('aria-describedby', 'amount-error');
+  await expect(editor.getByRole('combobox', { name: 'Category', exact: true })).toHaveAttribute('aria-describedby', 'category-error');
+  for (const control of [editor.getByRole('button', { name: 'Close', exact: true })]) {
+    const size = await control.boundingBox();
+    expect(size && size.width >= 44 && size.height >= 44).toBeTruthy();
+  }
+});
+
 test('dashboard and analytics center the period picker between navigation arrows', async ({ page }) => {
   await mockApp(page);
   for (const url of ['/?month=2025-12', '/analytics?month=2025-12']) {

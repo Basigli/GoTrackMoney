@@ -1,5 +1,6 @@
-.passwordField { position: relative; }
-.confirmPasswordField { position: relative; margin-top: 12px; }
+.label { display: block; font-size: 14px; margin-bottom: 8px; }
+.passwordField, .confirmPasswordField { position: relative; margin-bottom: 16px; }
+.passwordField input, .confirmPasswordField input { margin: 0; padding-right: 56px; }
 .confirmInput { margin: 0; }
-.passwordToggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; opacity: .6; }
+.passwordToggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; background: none; border: none; cursor: pointer; opacity: .6; }
 .footer { text-align: center; margin-top: 24px; }

@@ -152,8 +152,10 @@ input[type="color"]::-moz-color-swatch {
 
 .modal-close {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
   background: none;
   border: none;
   font-size: 28px;
@@ -277,6 +279,7 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); opacity: 1
 }
 
 .toggle-auth-btn {
+  min-height: 44px;
   background: none;
   border: none;
   color: var(--text-muted);
@@ -426,7 +429,7 @@ input[type="datetime-local"]::-webkit-datetime-edit {
 .page-content { padding: 24px 20px; }
 .page-content h1 { font-size: 24px; margin-bottom: 20px; }
 .page-content h2 { font-size: 20px; margin: 24px 0 12px; }
-.secondary-btn { padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--surface-color); color: var(--text-color); cursor: pointer; }
+.secondary-btn { min-height: 44px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--surface-color); color: var(--text-color); cursor: pointer; font: inherit; }
 button:disabled { opacity: .55; cursor: not-allowed; }
 button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 3px; }
 .danger, .field-error, .amount-expense { color: var(--danger-color); }
@@ -440,13 +443,15 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px soli
 .month-navigation-main .react-datepicker-wrapper, .month-navigation-main .react-datepicker__input-container { width: 100%; min-width: 0; }
 .month-arrow { min-width: 44px; min-height: 44px; padding: 8px; font-size: 20px; }
 .period-picker-button { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; padding: 8px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-color); color: var(--text-color); font: inherit; font-size: 17px; font-weight: 600; white-space: nowrap; cursor: pointer; }
-.period-reset { padding: 4px 10px; border: 0; background: transparent; color: var(--accent-color); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.period-reset { min-height: 44px; padding: 4px 10px; border: 0; background: transparent; color: var(--accent-color); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .editor-dialog { padding: 0; border: 1px solid var(--border-color); border-radius: 20px; width: min(520px, calc(100% - 24px)); max-height: 90dvh; background: var(--surface-color); color: var(--text-color); margin: auto; }
 .editor-dialog::backdrop { background: rgba(0,0,0,.5); }
 .editor-body { position: relative; padding: 28px; }
 .editor-body h2 { margin: 0 32px 20px 0; font-size: 22px; }
 .editor-body fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .editor-body label { display: block; font-size: 14px; margin-top: 12px; }
+.editor-body label:has(input[type="checkbox"]) { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.modal-form .input-field:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
 .editor-body .input-field { margin: 6px 0 8px; }
 .editor-body .submit-btn { margin: 12px 0; }
 .transaction-row { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 16px; padding: 16px; text-align: left; color: var(--text-color); background: transparent; border: 0; font: inherit; }

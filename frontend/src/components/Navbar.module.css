@@ -12,7 +12,7 @@
 @media (max-width: 1023px) {
   .bar { flex-direction: column; padding: 12px 20px; align-items: stretch; }
   .header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-  .menuButton { display: block; background: none; border: none; font-size: 24px; color: var(--text-color); cursor: pointer; }
+  .menuButton { display: block; width: 44px; height: 44px; background: none; border: none; font-size: 24px; color: var(--text-color); cursor: pointer; }
   .content { display: none; flex-direction: column; width: 100%; margin-top: 16px; gap: 16px; }
   .content.open { display: flex; }
   .links { flex-direction: column; width: 100%; gap: 8px; }
