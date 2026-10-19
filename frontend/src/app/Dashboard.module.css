@@ -6,7 +6,7 @@
   width: 48px; height: 48px; font-size: 28px; display: flex; justify-content: center;
   align-items: center; cursor: pointer; box-shadow: 0 4px 6px var(--primary-shadow);
 }
-.balanceBanner { background: var(--balance-bg); border-radius: 24px; padding: 28px 24px; margin: 0 20px 24px; color: var(--balance-on); }
+.balanceBanner { background: var(--balance-bg); border-radius: 24px; padding: 28px 24px; margin: 0 20px 24px; color: white; }
 .balanceTitle { font-size: 16px; opacity: .9; margin-bottom: 6px; }
 .balanceAmount { font-size: 42px; font-weight: 700; margin-bottom: 28px; }
 .balanceStats { display: flex; justify-content: space-between; }
@@ -35,7 +35,7 @@
 .detailsList .detailRow { width: 100%; padding: 12px 16px; margin-bottom: 8px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-color); color: var(--text-color); font: inherit; text-align: left; }
 .detailHeader { margin-bottom: 4px; }
 .detailTitle { display: flex; align-items: center; gap: 8px; }
-.periodicBadge { color: var(--link-color); font-size: 12px; font-weight: 700; padding: 2px 6px; background: var(--input-bg); border-radius: 8px; }
+.periodicBadge { color: var(--primary-color); font-size: 12px; font-weight: 700; padding: 2px 6px; background: var(--input-bg); border-radius: 8px; }
 .detailDate { font-size: 12px; color: var(--text-muted); }
 .incomeAmount { color: var(--success-color); }
 .expenseAmount { color: var(--danger-color); }

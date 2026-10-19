@@ -6,14 +6,12 @@
   --text-color: #333333;
   --primary-color: #a7b1f9;
   --primary-hover: #8e9bf5;
-  --primary-on: #1b1c31;
+  --primary-on: #ffffff;
   --primary-soft: rgba(167, 177, 249, 0.1);
   --primary-shadow: rgba(167, 177, 249, 0.3);
-  --accent-color: #6254b6;
-  --success-color: #047857;
-  --success-on: #ffffff;
-  --danger-color: #b91c1c;
-  --danger-on: #ffffff;
+  --accent-color: #8e9bf5;
+  --success-color: #10b981;
+  --danger-color: #ef4444;
   --surface-color: #ffffff;
   --surface-elevated: #ffffff;
   --card-bg: #ffffff;
@@ -21,14 +19,13 @@
   --input-bg: #e2e2e2;
   --input-surface: rgba(255, 255, 255, 0.9);
   --input-border: rgba(0, 0, 0, 0.1);
-  --text-muted: #5b6472;
+  --text-muted: #6b7280;
   --glass-bg: rgba(255, 255, 255, 0.85);
   --glass-outline: rgba(255, 255, 255, 0.5);
   --hover-bg: rgba(0, 0, 0, 0.02);
   --progress-track: #e2e8f0;
   --progress-border: #cbd5e1;
   --balance-bg: var(--primary-color);
-  --balance-on: var(--primary-on);
   --auth-gradient-end: var(--primary-color);
   --link-color: #6254b6;
 }
@@ -44,9 +41,7 @@
   --primary-shadow: rgba(89, 76, 173, 0.35);
   --accent-color: #ff9078;
   --success-color: #57d5ac;
-  --success-on: #1b1c31;
   --danger-color: #ff858e;
-  --danger-on: #1b1c31;
   --surface-color: #292a45;
   --surface-elevated: #32334f;
   --card-bg: #32334f;
@@ -61,7 +56,6 @@
   --progress-track: #3a3b55;
   --progress-border: #555773;
   --balance-bg: #554b92;
-  --balance-on: #ffffff;
   --auth-gradient-end: #363454;
   --link-color: #c6bfff;
 }
@@ -224,7 +218,7 @@ input[type="color"]::-moz-color-swatch {
   font-weight: 800;
   text-align: center;
   margin-bottom: 8px;
-  background: linear-gradient(90deg, var(--text-color), var(--link-color));
+  background: linear-gradient(90deg, var(--text-color), var(--primary-color));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -294,7 +288,7 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); opacity: 1
 }
 
 .toggle-auth-btn:hover {
-  color: var(--link-color);
+  color: var(--primary-color);
 }
 
 /* Custom DatePicker Styles */

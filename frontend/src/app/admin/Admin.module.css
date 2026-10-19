@@ -8,5 +8,5 @@
 .actions { white-space: nowrap; }
 .actions button + button { margin-left: 8px; }
 .actionButton { padding: 6px 12px; font-size: 14px; }
-.deleteButton { background: var(--danger-color); color: var(--danger-on); border: 0; border-radius: 8px; cursor: pointer; }
+.deleteButton { background: var(--danger-color); color: white; border: 0; border-radius: 8px; cursor: pointer; }
 .deleteButton:disabled { background: var(--border-color); }
