@@ -115,6 +115,26 @@ for (const language of ['en', 'it'] as const) {
   });
 }
 
+test('category overview puts the largest totals first with one decimal percentage', async ({ page }) => {
+  await mockApp(page, { withDashboardExpense: true });
+  await page.route('**/categories', route => route.fulfill({ json: [
+    { id: 1, name: 'Food', type: 'expense' }, { id: 2, name: 'Rent', type: 'expense' }, { id: 3, name: 'Zoo', type: 'expense' },
+  ], headers: { 'access-control-allow-origin': '*' } }));
+  await page.route('**/expenses/filter?*', route => route.fulfill({ json: [
+    { id: 1, name: 'Food', amount: 300, category_id: 1, spent_on: '2024-02-15T12:00:00Z' },
+    { id: 2, name: 'Rent', amount: 500, category_id: 2, spent_on: '2024-02-15T12:00:00Z' },
+    { id: 3, name: 'Zoo', amount: 300, category_id: 3, spent_on: '2024-02-15T12:00:00Z' },
+  ], headers: { 'access-control-allow-origin': '*' } }));
+  await page.goto('/?month=2024-02');
+  const rows = page.locator('.list-container > button');
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0)).toContainText('Rent');
+  await expect(rows.nth(0)).toContainText('45.5 % of total');
+  await expect(rows.nth(1)).toContainText('Food');
+  await expect(rows.nth(2)).toContainText('Zoo');
+  await expect(rows.nth(0).locator('[class*="progressFill"]')).toHaveJSProperty('offsetHeight', 6);
+});
+
 test('dashboard and analytics center the period picker between navigation arrows', async ({ page }) => {
   await mockApp(page);
   for (const url of ['/?month=2025-12', '/analytics?month=2025-12']) {

@@ -14,17 +14,18 @@ export default function DashboardCategories({ tab, onTabChange, groups, categori
   total: number;
   onSelect: (id: number) => void;
 }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const rows = Object.entries(groups).map(([categoryId, items]) => {
+    const id = Number(categoryId);
+    return { id, category: categories.find(item => item.id === id), amount: items.reduce((sum, item) => sum + item.amount, 0) };
+  }).sort((a, b) => b.amount - a.amount || (a.category?.name || '').localeCompare(b.category?.name || '', language) || a.id - b.id);
   return <>
     <div className={styles.tabs}>
       <button type="button" className={`${styles.tab} ${tab === 'uscite' ? styles.tabActive : ''}`} aria-pressed={tab === 'uscite'} onClick={() => onTabChange('uscite')}>{t('dashboard.expenses')}</button>
       <button type="button" className={`${styles.tab} ${tab === 'entrate' ? styles.tabActive : ''}`} aria-pressed={tab === 'entrate'} onClick={() => onTabChange('entrate')}>{t('dashboard.incomes')}</button>
     </div>
     <div className="list-container">
-      {Object.entries(groups).map(([categoryId, items]) => {
-        const id = Number(categoryId);
-        const category = categories.find(item => item.id === id);
-        const amount = items.reduce((sum, item) => sum + item.amount, 0);
+      {rows.map(({ id, category, amount }) => {
         const percentage = total > 0 ? amount / total * 100 : 0;
         return <button type="button" key={id} className={`list-item ${styles.categoryRow}`} onClick={() => onSelect(id)}>
           <span className={styles.itemIcon}>{category?.emoji || '📝'}</span>
@@ -35,7 +36,7 @@ export default function DashboardCategories({ tab, onTabChange, groups, categori
             </span>
             <span className={styles.progressContainer}>
               <span className={styles.progressTrack}><span className={styles.progressFill} style={{ width: `${percentage}%`, backgroundColor: categoryColor({ id, color: category?.color }) }} /></span>
-              <span className={styles.progressText}>{percentage.toFixed(2)} {t('dashboard.percentage_total')}</span>
+              <span className={styles.progressText}>{percentage.toLocaleString(language, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} {t('dashboard.percentage_total')}</span>
             </span>
           </span>
         </button>;
