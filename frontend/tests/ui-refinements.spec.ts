@@ -189,6 +189,68 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
   }
 }
 
+for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+  test(`page transitions keep navigation and pending search interactive (${reducedMotion})`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion });
+    await mockApp(page, { withDashboardExpense: true });
+    await page.addInitScript(() => {
+      document.addEventListener('animationstart', event => {
+        if (event.target instanceof HTMLElement && event.target.classList.contains('page-transition')) {
+          document.documentElement.dataset.pageTransitions = String(Number(document.documentElement.dataset.pageTransitions || 0) + 1);
+        }
+      });
+    });
+    let releaseResults = () => {};
+    const pendingResults = new Promise<void>(resolve => { releaseResults = resolve; });
+    await page.route('**/transactions/search?*', async route => {
+      if (route.request().method() === 'OPTIONS') return route.fallback();
+      await pendingResults;
+      await route.fulfill({ json: { items: [], total: 0, limit: 50, offset: 0 }, headers: { 'access-control-allow-origin': '*' } });
+    });
+    const transitionCount = () => page.evaluate(() => Number(document.documentElement.dataset.pageTransitions || 0));
+    const finishEntrance = () => page.locator('.page-transition').evaluate(async element => {
+      await Promise.all(element.getAnimations().map(animation => animation.finished));
+    });
+    try {
+      await page.goto('/?month=2024-02');
+      await expect(page.getByRole('heading', { level: 1, name: 'Dashboard', exact: true })).toBeVisible();
+      await finishEntrance();
+      const initialTransitions = await transitionCount();
+      const nav = page.getByRole('navigation', { name: 'Main navigation' });
+      const before = await nav.boundingBox();
+      await nav.getByRole('link', { name: 'Search', exact: true }).click();
+      await expect(page.getByRole('heading', { level: 1, name: 'Search', exact: true })).toBeVisible();
+      await finishEntrance();
+      const searchTransitions = await transitionCount();
+      if (reducedMotion === 'reduce') expect(searchTransitions).toBe(0);
+      else expect(searchTransitions).toBeGreaterThan(initialTransitions);
+      const after = await nav.boundingBox();
+      expect(before && after && before.y === after.y && before.height === after.height).toBeTruthy();
+      await expect(page.getByRole('status')).toBeVisible();
+      const search = page.getByRole('searchbox');
+      await search.fill('rent');
+      await expect(search).toBeFocused();
+      await expect(page).toHaveURL(/q=rent/);
+      const filters = page.getByRole('button', { name: 'Show filters', exact: true });
+      if (await filters.isVisible()) await filters.click();
+      await page.getByRole('combobox', { name: 'Type', exact: true }).selectOption('expense');
+      releaseResults();
+      await expect(page.getByText('0 results found', { exact: true })).toBeVisible();
+      await expect(search).toHaveValue('rent');
+      await expect(page.getByRole('combobox', { name: 'Type', exact: true })).toHaveValue('expense');
+      expect(await transitionCount()).toBe(searchTransitions);
+      await page.goBack();
+      await expect(page.getByRole('heading', { level: 1, name: 'Dashboard', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Choose month: Feb 2024', exact: true })).toBeVisible();
+      await finishEntrance();
+      if (reducedMotion === 'reduce') expect(await transitionCount()).toBe(0);
+      else expect(await transitionCount()).toBeGreaterThan(searchTransitions);
+    } finally {
+      releaseResults();
+    }
+  });
+}
+
 test('large analytics values remain inside summary cards on narrow screens', async ({ page }) => {
   await mockApp(page, { withChartData: true });
   await page.addInitScript(() => localStorage.setItem('app_language', 'it'));

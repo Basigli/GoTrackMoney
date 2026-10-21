@@ -131,6 +131,13 @@ input[type="color"]::-moz-color-swatch {
   }
 }
 
+/* Animate incoming content while navigation remains stationary. */
+.page-transition { animation: page-enter var(--motion-fast) var(--motion-ease); }
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
 /* List Items */
 .list-container {
   background: var(--bg-color);
@@ -479,5 +486,5 @@ button.transaction-row { cursor: pointer; }
 }
 @media (prefers-reduced-motion: reduce) {
   :root { --motion-fast: 0s; --motion-dialog: 0s; }
-  .editor-dialog[open], .editor-dialog[open]::backdrop { animation: none; }
+  .page-transition, .editor-dialog[open], .editor-dialog[open]::backdrop { animation: none; }
 }
