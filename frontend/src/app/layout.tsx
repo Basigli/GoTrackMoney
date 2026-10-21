@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 
@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   title: "GoTrackMoney",
   description: "Your financial dashboard",
 };
+
+export const viewport: Viewport = { viewportFit: 'cover' };
 
 import Providers from "@/components/Providers";
 

@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  /* config options here */
+  // The default development indicator covers the Home tab on mobile.
+  devIndicators: false,
 };
 
 export default nextConfig;

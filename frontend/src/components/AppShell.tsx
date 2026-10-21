@@ -9,6 +9,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
   if (session.status !== 'authenticated') return null;
   return <div className="app-container">
     <Navbar username={session.user.username} onLogout={logout} isAdmin={session.user.is_admin} />
-    {children}
+    <div className="page-transition">{children}</div>
   </div>;
 }

@@ -1,6 +1,4 @@
 .bar { display: flex; background: var(--surface-color); padding: 8px 20px; border-bottom: 1px solid var(--border-color); align-items: center; justify-content: space-between; }
-.header, .menuButton { display: none; }
-.brand { font-weight: 700; font-size: 18px; color: var(--primary-color); }
 .content { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 12px; min-width: 0; }
 .links { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 .right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: auto; }
@@ -10,13 +8,5 @@
 .link:hover, .active { color: var(--accent-color); background: var(--primary-soft); }
 .logout { display: flex; align-items: center; justify-content: center; min-height: 36px; padding: 8px 12px; line-height: 20px; background: none; border: none; color: var(--danger-color); font-weight: 600; cursor: pointer; font-size: 14px; }
 @media (max-width: 1023px) {
-  .bar { flex-direction: column; padding: 4px 20px; align-items: stretch; }
-  .header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-  .menuButton { display: block; width: 44px; height: 44px; background: none; border: none; font-size: 24px; color: var(--text-color); cursor: pointer; }
-  .content { display: none; flex-direction: column; width: 100%; margin-top: 4px; gap: 8px; }
-  .content.open { display: flex; }
-  .links { flex-direction: column; width: 100%; gap: 4px; }
-  .link { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 44px; text-align: center; padding: 8px 12px; }
-  .right { flex-direction: column; width: 100%; margin-left: 0; gap: 4px; padding-top: 8px; border-top: 1px solid var(--border-color); }
-  .profileLink, .logout { width: 100%; max-width: 100%; min-height: 44px; }
+  .bar { display: none; }
 }
