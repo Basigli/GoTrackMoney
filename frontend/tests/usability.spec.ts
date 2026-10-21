@@ -20,7 +20,7 @@ async function expense(request:APIRequestContext, headers:Record<string,string>,
 }
 async function nav(page:Page, name:string) {
   const link = page.getByRole('link',{ name, exact:true });
-  if (!await link.isVisible()) await page.getByRole('button',{ name:'Open menu' }).click();
+  if (!await link.isVisible()) await page.getByRole('button',{ name:'More', exact:true }).click();
   const target = await link.getAttribute("href");
   await link.click();
   await expect(page).toHaveURL(new RegExp(target! + "(?:\\?|$)"));

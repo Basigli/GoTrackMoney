@@ -508,7 +508,7 @@ test('theme selection applies immediately and stays separate for each browser ac
   await page.evaluate(() => localStorage.setItem('auth_token', 'ui-test-token'));
   await page.goto('/profile');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  if (test.info().project.name === 'mobile') await page.getByRole('button', { name: 'Open menu' }).click();
+  if (test.info().project.name === 'mobile') await page.getByRole('button', { name: 'More', exact: true }).click();
   await page.getByRole('button', { name: 'Logout' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   expect(await page.evaluate(() => localStorage.getItem('app_theme:1'))).toBe('dark');
@@ -540,7 +540,106 @@ test('dark surfaces remain readable across app pages and dialogs', async ({ page
   await page.screenshot({ path: test.info().outputPath('datepicker-dark.png') });
 });
 
-test('navbar keeps Logout reachable at tablet and desktop widths', async ({ page }, testInfo) => {
+for (const language of ['en', 'it'] as const) {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`bottom navigation opens each destination and restores focus (${language}, ${theme})`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'mobile');
+      await mockApp(page, { isAdmin: true, withDashboardExpense: true, withChartData: true, withRecurring: true });
+      await page.addInitScript(({ language, theme }) => {
+        localStorage.setItem('app_language', language);
+        localStorage.setItem('app_theme_active_user', '1');
+        localStorage.setItem('app_theme:1', theme);
+      }, { language, theme });
+      await page.goto('/?month=2024-02');
+      const italian = language === 'it';
+      const nav = page.getByRole('navigation', { name: italian ? 'Navigazione principale' : 'Main navigation' });
+      const more = nav.getByRole('button', { name: italian ? 'Altro' : 'More', exact: true });
+      await expect(nav).toBeVisible();
+      await expect(nav.getByRole('link')).toHaveCount(4);
+      await expect(page.getByRole('button', { name: /Open menu|Apri menu/ })).toHaveCount(0);
+      for (const target of await nav.locator('a, button').all()) {
+        const bounds = await target.boundingBox();
+        expect(bounds && bounds.width >= 44 && bounds.height >= 44).toBeTruthy();
+        await expect(target.locator('span')).toBeVisible();
+      }
+      await page.screenshot({ path: testInfo.outputPath(`bottom-navigation-${language}-${theme}.png`) });
+      for (const [label, route] of [
+        [italian ? 'Cerca' : 'Search', '/search'],
+        [italian ? 'Analisi' : 'Analytics', '/analytics'],
+        [italian ? 'Periodiche' : 'Recurring', '/periodic'],
+        ['Home', '/'],
+      ]) {
+        await nav.getByRole('link', { name: label, exact: true }).click();
+        await expect.poll(() => new URL(page.url()).pathname).toBe(route);
+        await expect(nav.getByRole('link', { name: label, exact: true })).toHaveAttribute('aria-current', 'page');
+        await expect(nav.locator('[aria-current]')).toHaveCount(1);
+      }
+      await more.focus();
+      await page.keyboard.press('Enter');
+      const panel = page.getByRole('dialog', { name: italian ? 'Altro' : 'More', exact: true });
+      await expect(panel).toBeVisible();
+      await expect(panel.getByRole('button', { name: italian ? 'Chiudi' : 'Close', exact: true })).toBeFocused();
+      await panel.evaluate(async element => { await Promise.all(element.getAnimations().map(animation => animation.finished)); });
+      await page.screenshot({ path: testInfo.outputPath(`more-navigation-${language}-${theme}.png`) });
+      await page.keyboard.press('Escape');
+      await expect(panel).toHaveCount(0);
+      await expect(more).toBeFocused();
+      await more.click();
+      await panel.getByRole('link', { name: italian ? 'Categorie' : 'Categories', exact: true }).click();
+      await expect(page).toHaveURL(/\/categories$/);
+      await expect(panel).toHaveCount(0);
+      await expect(more).toHaveAttribute('aria-current', 'true');
+      await page.goBack();
+      await expect(nav.getByRole('link', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'page');
+      await expect(more).not.toHaveAttribute('aria-current');
+      await more.click();
+      await panel.getByRole('link', { name: italian ? 'Pannello Admin' : 'Admin Panel', exact: true }).click();
+      await expect(page).toHaveURL(/\/admin$/);
+      await more.click();
+      await panel.getByRole('link', { name: /ui-test/ }).click();
+      await expect(page).toHaveURL(/\/profile$/);
+      await more.click();
+      await panel.getByRole('button', { name: italian ? 'Esci' : 'Logout', exact: true }).click();
+      await expect(page.getByRole('heading', { name: italian ? 'Accedi' : 'Login', exact: true })).toBeVisible();
+      await expect(nav).toHaveCount(0);
+    });
+  }
+}
+
+test('bottom navigation leaves final controls reachable and closes its panel on desktop resize', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile');
+  await mockApp(page, { withDashboardExpense: true });
+  for (const width of [320, 390, 768, 1023]) {
+    await page.setViewportSize({ width, height: 600 });
+    await page.goto('/profile');
+    const nav = page.getByRole('navigation', { name: 'Main navigation' });
+    const lastAction = page.getByRole('button', { name: 'Delete Account', exact: true });
+    await lastAction.scrollIntoViewIfNeeded();
+    const navBounds = await nav.boundingBox();
+    const actionBounds = await lastAction.boundingBox();
+    expect(navBounds && actionBounds && actionBounds.y + actionBounds.height < navBounds.y).toBeTruthy();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await lastAction.click();
+    const confirmation = page.getByRole('dialog', { name: 'Delete Account', exact: true });
+    await expect(confirmation.getByLabel('Confirmation phrase', { exact: true })).toBeFocused();
+    await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await expect(confirmation).toHaveCount(0);
+    await page.getByRole('button', { name: 'More', exact: true }).click();
+    const panel = page.getByRole('dialog', { name: 'More', exact: true });
+    await expect(panel.getByRole('link', { name: 'Admin Panel', exact: true })).toHaveCount(0);
+    await expect(panel.getByRole('button', { name: 'Logout', exact: true })).toBeInViewport();
+    await page.keyboard.press('Escape');
+  }
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.setViewportSize({ width: 1024, height: 600 });
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'More', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Dashboard', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Search', exact: true }).click();
+  await expect(page).toHaveURL(/\/search$/);
+});
+
+test('navbar keeps account destinations reachable at tablet and desktop widths', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop');
   await mockApp(page, { username: 'very-long-account-name-that-must-not-hide-logout', isAdmin: true });
   await page.goto('/');
@@ -549,12 +648,12 @@ test('navbar keeps Logout reachable at tablet and desktop widths', async ({ page
     for (const width of [768, 769, 1023, 1024, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/');
-      if (width < 1024) await page.getByRole('button', { name: language === 'it' ? 'Apri menu' : 'Open menu' }).click();
+      if (width < 1024) await page.getByRole('button', { name: language === 'it' ? 'Altro' : 'More', exact: true }).click();
       const logout = page.getByRole('button', { name: language === 'it' ? 'Esci' : 'Logout' });
       await expect(logout).toBeVisible();
       const bounds = await logout.boundingBox();
       expect(bounds && bounds.x >= 0 && bounds.x + bounds.width <= width).toBeTruthy();
-      const profileBounds = await page.getByRole('link', { name: 'very-long-account-name-that-must-not-hide-logout' }).boundingBox();
+      const profileBounds = await page.getByRole('link', { name: /very-long-account-name-that-must-not-hide-logout/ }).boundingBox();
       expect(profileBounds).not.toBeNull();
       if (width < 1024) {
         expect(Math.abs(profileBounds!.x + profileBounds!.width / 2 - (bounds!.x + bounds!.width / 2))).toBeLessThan(1);
@@ -581,8 +680,8 @@ test('session flow restores protected navigation, profile changes, and logout', 
   await page.goto('/profile');
   await page.getByLabel('Username').fill('alex-updated');
   await page.getByRole('button', { name: 'Save Profile' }).click();
-  if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'Open menu' }).click();
-  await expect(page.getByRole('link', { name: 'alex-updated' })).toBeVisible();
+  if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'More', exact: true }).click();
+  await expect(page.getByRole('link', { name: /alex-updated/ })).toBeVisible();
   await page.getByRole('button', { name: 'Logout' }).click();
   await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem('auth_token'))).toBeNull();
