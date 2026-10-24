@@ -1,0 +1,64 @@
+.scanner { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.content { overflow-y: auto; overscroll-behavior: contain; padding: 0 24px 12px; min-height: 0; }
+.intro { margin: 0 0 20px; line-height: 1.5; }
+.note, .privacy, .hint { color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+.note { margin: 12px 0; }
+.fileInput { display: none; }
+.actions { display: grid; gap: 12px; }
+.actions > button { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px; text-align: start; }
+.actions svg { width: 28px; height: 28px; flex-shrink: 0; color: var(--link-color); }
+.actions strong { display: block; font-weight: 600; }
+.actions small { display: block; margin-top: 4px; color: var(--text-muted); font-size: 13px; font-weight: 400; }
+.arrow { margin-inline-start: auto; font-size: 26px; color: var(--text-muted); }
+.privacy { display: flex; align-items: flex-start; gap: 8px; margin: 20px 0 0; }
+.privacy svg { flex-shrink: 0; margin-top: 2px; }
+.footer { display: flex; flex-wrap: wrap; justify-content: flex-end; flex-shrink: 0; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--border-color); background: var(--surface-color); }
+.footer > button { min-width: min(100%, 140px); min-height: 44px; font: inherit; font-size: 14px; }
+.footer > :global(.submit-btn) { width: auto; margin: 0; padding: 12px 14px; border-radius: 12px; line-height: 20px; }
+.progress { display: grid; justify-items: center; gap: 16px; padding: 20px 0; text-align: center; }
+.progress p { margin: 0; line-height: 1.5; }
+.readingIcon { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 16px; background: var(--primary-soft); color: var(--link-color); }
+.progress progress { width: min(100%, 320px); height: 8px; accent-color: var(--primary-color); }
+.reviewHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; }
+.reviewHeader h3 { margin: 0; font-size: 17px; line-height: 1.4; }
+.reviewHeader h3:focus { outline: none; }
+.replaceButton { padding: 6px 10px; min-height: 44px; font-size: 13px; }
+.reviewNote { margin: 8px 0 16px; color: var(--text-muted); line-height: 1.5; font-size: 14px; }
+.notice { padding: 12px; border-radius: 12px; background: var(--primary-soft); font-size: 14px; line-height: 1.5; }
+.reviewGrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); align-items: start; gap: 24px; }
+.photo { border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; }
+.photo summary { display: flex; align-items: center; gap: 10px; padding: 8px 12px; min-height: 44px; font-size: 14px; cursor: pointer; list-style: none; }
+.photo summary::-webkit-details-marker { display: none; }
+.photo summary img { width: 26px; height: 32px; object-fit: cover; border-radius: 4px; }
+.chevron { margin-inline-start: auto; font-size: 20px; }
+.photo[open] .chevron { transform: rotate(180deg); }
+.preview { padding: 8px; background: var(--input-bg); }
+.preview img { display: block; width: 100%; height: auto; max-height: 420px; object-fit: contain; }
+.review, .fields { min-width: 0; }
+.fields > label:first-child { margin-top: 0; }
+.review :global(.input-field) { min-width: 0; max-width: 100%; }
+.hint { margin: 0 0 8px; }
+.dateFields { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 12px; }
+.dateFields > div { min-width: 0; }
+.dateFields :global(.input-field) { appearance: none; min-height: 48px; padding: 12px 8px; }
+.recognized { margin: 12px 0 0; border-top: 1px solid var(--border-color); }
+.recognized summary { cursor: pointer; min-height: 44px; padding: 12px 0; font-size: 13px; color: var(--text-muted); }
+.recognized pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 200px; overflow: auto; padding: 12px; border-radius: 12px; background: var(--input-bg); font-size: 12px; }
+@media (pointer: fine) {
+  .actions > .cameraAction { display: none; }
+}
+@media (max-width: 699px) {
+  .reviewGrid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .preview img { max-height: 300px; }
+}
+@media (max-width: 480px) {
+  .content { padding-inline: 20px; }
+  .reviewHeader { column-gap: 8px; }
+  .reviewHeader h3 { font-size: 16px; }
+  .replaceButton { padding-inline: 8px; }
+  .footer { padding: 12px 20px; gap: 8px; }
+  .footer > button { flex: 1; min-width: min(100%, 120px); }
+  .footer:has(> button:nth-child(2)) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+  .footer:has(> button:nth-child(2)) > button { min-width: 0; }
+  .dateFields { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}

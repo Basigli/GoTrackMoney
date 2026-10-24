@@ -3,21 +3,28 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prepare:ocr": "node scripts/prepare-ocr.mjs",
+    "predev": "npm run prepare:ocr",
     "dev": "next dev",
+    "prebuild": "npm run prepare:ocr",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@tesseract.js-data/eng": "1.0.0",
+    "@tesseract.js-data/ita": "1.0.0",
     "@types/react-datepicker": "^6.2.0",
     "date-fns": "^4.4.0",
+    "libheif-js": "1.23.5",
     "next": "16.2.9",
     "react": "19.2.4",
     "react-datepicker": "^9.1.0",
     "react-dom": "19.2.4",
     "react-hot-toast": "^2.6.0",
-    "recharts": "^3.8.1"
+    "recharts": "^3.8.1",
+    "tesseract.js": "7.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
