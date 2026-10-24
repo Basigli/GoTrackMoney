@@ -71,6 +71,8 @@ test('real browser OCR fills a reviewed expense and preserves duplicate confirma
   await expect(editor.getByLabel('Amount (EUR)', { exact: true })).toHaveValue('20.00');
   await expect(editor.getByLabel('Date', { exact: true })).toHaveValue('2026-10-24');
   await expect(editor.getByLabel('Time', { exact: true })).toHaveValue('16:42');
+  const photo = editor.locator('details').filter({ has: page.locator('summary', { hasText: 'Receipt photo' }) });
+  if (!await photo.evaluate(element => (element as HTMLDetailsElement).open)) await photo.locator('summary').click();
   await expect(editor.getByRole('img', { name: 'Receipt photo to review' })).toBeVisible();
   expect(assets.length).toBeGreaterThan(0);
   expect(assets.every(url => new URL(url).origin === 'http://localhost:3100')).toBe(true);
@@ -79,7 +81,7 @@ test('real browser OCR fills a reviewed expense and preserves duplicate confirma
   expect(unexpectedUploads).toHaveLength(0);
   await expect.poll(() => workers.length > 0 && workers.every(Boolean)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath('receipt-review.png') });
-  await editor.getByRole('button', { name: 'Use these details', exact: true }).click();
+  await editor.getByRole('button', { name: 'Continue to expense', exact: true }).click();
   await expect(editor.getByLabel('Amount', { exact: true })).toHaveValue('20');
   await expect(editor.getByLabel('Description', { exact: true })).toHaveValue('COOP MARKET');
   await expect(editor.getByRole('combobox', { name: 'Category', exact: true })).toHaveValue('1');
@@ -105,14 +107,14 @@ test('ambiguous Italian receipt requires corrections and remains usable on a nar
   await expect(editor.getByText('Sono presenti totali diversi: scegli l’importo finale da registrare.')).toBeVisible();
   await expect(editor.getByLabel('Importo (EUR)', { exact: true })).toHaveValue('');
   await expect(editor.getByLabel('Ora', { exact: true })).toHaveValue('');
-  await editor.getByRole('button', { name: 'Usa questi dati', exact: true }).click();
+  await editor.getByRole('button', { name: 'Continua alla spesa', exact: true }).click();
   await expect(editor.getByLabel('Importo (EUR)', { exact: true })).toBeFocused();
-  await expect(editor.getByLabel('Importo (EUR)', { exact: true })).toHaveAttribute('aria-describedby', 'receipt-amount-error');
+  await expect(editor.getByLabel('Importo (EUR)', { exact: true })).toHaveAttribute('aria-describedby', /receipt-amount-error/);
   await editor.getByLabel('Importo (EUR)', { exact: true }).fill('23,43');
   await editor.getByLabel('Ora', { exact: true }).fill('12:30');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath('receipt-italian-dark.png') });
-  await editor.getByRole('button', { name: 'Usa questi dati', exact: true }).click();
+  await editor.getByRole('button', { name: 'Continua alla spesa', exact: true }).click();
   await expect(editor.getByLabel('Importo', { exact: true })).toHaveValue('23.43');
   await expect(editor.getByLabel('Data e Ora', { exact: true })).toHaveValue('2026-10-24T12:30');
 });
@@ -206,6 +208,8 @@ test('HEIC bytes with a PNG filename decode locally and have a working preview',
   const editor = await openScanner(page);
   await editor.getByLabel('Choose image', { exact: true }).setInputFiles({ name: 'renamed.png', mimeType: 'image/png', buffer: readFileSync(path.join(__dirname, 'fixtures/receipt.heic')) });
   await expect(editor.getByLabel('Amount (EUR)', { exact: true })).toHaveValue('12.34', { timeout: 20000 });
+  const photo = editor.locator('details').filter({ has: page.locator('summary', { hasText: 'Receipt photo' }) });
+  if (!await photo.evaluate(element => (element as HTMLDetailsElement).open)) await photo.locator('summary').click();
   const preview = editor.getByRole('img', { name: 'Receipt photo to review' });
   await expect.poll(() => preview.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
   await expect.poll(() => heifWorkers.length === 1 && heifWorkers.every(Boolean)).toBe(true);
@@ -247,6 +251,8 @@ test('an optional local receipt photo reaches an editable review', async ({ page
   const editor = await openScanner(page);
   await editor.getByLabel('Choose image', { exact: true }).setInputFiles(process.env.RECEIPT_TEST_IMAGE!);
   await expect(editor.getByLabel('Merchant (description)', { exact: true })).toBeVisible({ timeout: 75000 });
+  const photo = editor.locator('details').filter({ has: page.locator('summary', { hasText: 'Receipt photo' }) });
+  if (!await photo.evaluate(element => (element as HTMLDetailsElement).open)) await photo.locator('summary').click();
   const preview = editor.getByRole('img', { name: 'Receipt photo to review' });
   await expect.poll(() => preview.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
   const fields = {
@@ -258,4 +264,72 @@ test('an optional local receipt photo reaches an editable review', async ({ page
   };
   await testInfo.attach('local-receipt-diagnostics', { body: JSON.stringify(fields, null, 2), contentType: 'application/json' });
   if (process.env.RECEIPT_EXPECTED_AMOUNT) await expect(editor.getByLabel('Amount (EUR)', { exact: true })).toHaveValue(process.env.RECEIPT_EXPECTED_AMOUNT);
+});
+
+test('receipt entry sits beside Amount and is offered only for new one-off expenses', async ({ page }, testInfo) => {
+  await mockApp(page, { withDashboardExpense: true });
+  await page.goto('/?month=2024-02');
+  await page.getByRole('button', { name: 'New expense', exact: true }).click();
+  const editor = page.getByRole('dialog');
+  const scan = editor.getByRole('button', { name: 'Scan receipt', exact: true });
+  const label = editor.locator('label[for="transaction-amount"]');
+  const bounds = await scan.boundingBox();
+  const labelBounds = await label.boundingBox();
+  expect(bounds && labelBounds).toBeTruthy();
+  expect(bounds!.height).toBeGreaterThanOrEqual(44);
+  expect(Math.abs(bounds!.y + bounds!.height / 2 - labelBounds!.y - labelBounds!.height / 2)).toBeLessThan(2);
+  await page.screenshot({ path: testInfo.outputPath('receipt-entry.png'), animations: 'disabled' });
+  await editor.getByRole('combobox', { name: 'Type', exact: true }).selectOption('income');
+  await expect(scan).toHaveCount(0);
+  await editor.getByRole('combobox', { name: 'Type', exact: true }).selectOption('expense');
+  await editor.getByRole('checkbox').check();
+  await expect(scan).toHaveCount(0);
+  await editor.getByRole('checkbox').uncheck();
+  await scan.click();
+  const camera = editor.getByRole('button', { name: 'Take photo', exact: true });
+  if (testInfo.project.name === 'mobile') await expect(camera).toBeVisible();
+  else await expect(camera).toBeHidden();
+  await expect(editor.getByRole('button', { name: 'Choose image', exact: true })).toBeFocused();
+  await page.screenshot({ path: testInfo.outputPath('receipt-selection.png') });
+});
+
+test('receipt review keeps actions visible while the photo and recognized text expand', async ({ page }, testInfo) => {
+  await mockApp(page, { withDashboardExpense: true });
+  if (testInfo.project.name === 'mobile') await page.setViewportSize({ width: 320, height: 568 });
+  await mockRecognition(page, ['SHOP', '24/10/2026 12:30', 'TOTAL 20,00', ...Array(35).fill('Product 1,00')].join('\n'));
+  const editor = await openScanner(page);
+  await editor.getByLabel('Choose image', { exact: true }).setInputFiles(await receiptPhoto(page));
+  await expect(editor.getByRole('heading', { name: 'Review details', exact: true })).toBeFocused();
+  const headingBounds = await editor.getByRole('heading', { name: 'Review details', exact: true }).boundingBox();
+  const changeBounds = await editor.getByRole('button', { name: 'Change photo', exact: true }).boundingBox();
+  expect(headingBounds && changeBounds).toBeTruthy();
+  expect(Math.abs(headingBounds!.y + headingBounds!.height / 2 - changeBounds!.y - changeBounds!.height / 2)).toBeLessThan(2);
+  const photo = editor.locator('details').filter({ has: page.locator('summary', { hasText: 'Receipt photo' }) });
+  await expect(photo).toHaveJSProperty('open', testInfo.project.name === 'desktop');
+  const continueButton = editor.getByRole('button', { name: 'Continue to expense', exact: true });
+  const checkFooter = async () => {
+    const bounds = await continueButton.boundingBox();
+    const backBounds = await editor.getByRole('button', { name: 'Back to form', exact: true }).boundingBox();
+    expect(bounds).toBeTruthy();
+    expect(backBounds).toBeTruthy();
+    expect(Math.abs(bounds!.y - backBounds!.y)).toBeLessThan(1);
+    expect(Math.abs(bounds!.height - backBounds!.height)).toBeLessThan(1);
+    expect(bounds!.y).toBeGreaterThanOrEqual(0);
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+    expect(await continueButton.evaluate(button => {
+      const bounds = button.getBoundingClientRect();
+      return button.contains(document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2));
+    })).toBe(true);
+    expect(await editor.evaluate(dialog => dialog.scrollHeight <= dialog.clientHeight + 1)).toBe(true);
+  };
+  await checkFooter();
+  await page.screenshot({ path: testInfo.outputPath('receipt-review-compact.png') });
+  if (testInfo.project.name === 'mobile') await photo.locator('summary').click();
+  await expect(editor.getByRole('img', { name: 'Receipt photo to review' })).toBeVisible();
+  await editor.getByText('Show recognized text', { exact: true }).click();
+  await checkFooter();
+  await page.screenshot({ path: testInfo.outputPath('receipt-review-expanded.png') });
+  await continueButton.click();
+  await expect(editor.getByLabel('Amount', { exact: true })).toHaveValue('20');
+  await expect(editor.getByRole('combobox', { name: 'Category', exact: true })).toHaveValue('1');
 });
