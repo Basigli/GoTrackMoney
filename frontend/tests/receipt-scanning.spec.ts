@@ -1,0 +1,183 @@
+import { expect, test, type Page } from '@playwright/test';
+import { mockApp } from './helpers/mockApp';
+
+async function receiptPhoto(page: Page) {
+  const encoded = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 900; canvas.height = 700;
+    const context = canvas.getContext('2d')!;
+    context.fillStyle = 'white'; context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = 'black'; context.font = '32px monospace';
+    ['COOP MARKET', '', 'DOCUMENTO COMMERCIALE', '24/10/2026 16:42', '', 'PANE                  5,00', 'FRUTTA               15,00', '', 'TOTALE COMPLESSIVO   20,00', 'DI CUI IVA            1,82', 'CONTANTI             25,00', 'RESTO                 5,00'].forEach((line, index) => context.fillText(line, 45, 60 + index * 48));
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  return { name: 'receipt.png', mimeType: 'image/png', buffer: Buffer.from(encoded, 'base64') };
+}
+
+async function openScanner(page: Page, italian = false) {
+  await page.goto('/?month=2024-02');
+  await page.getByRole('button', { name: italian ? 'Nuova spesa' : 'New expense', exact: true }).click();
+  const editor = page.getByRole('dialog');
+  await editor.getByRole('combobox', { name: italian ? 'Categoria' : 'Category', exact: true }).selectOption('1');
+  await editor.getByRole('button', { name: italian ? 'Scansiona scontrino' : 'Scan receipt', exact: true }).click();
+  return editor;
+}
+
+async function mockRecognition(page: Page, text: string | null) {
+  await page.route('**/ocr/tesseract-7.0.0/lang/*', route => route.fulfill({ body: 'test language' }));
+  await page.route('**/ocr/tesseract-7.0.0/worker.min.js', route => route.fulfill({ contentType: 'application/javascript', body: `
+    self.onmessage = ({ data: request }) => {
+      const { workerId, jobId, action } = request;
+      if (action === 'recognize') {
+        self.postMessage({ workerId, jobId, action, status: 'progress', data: { status: 'recognizing text', progress: 0.5 } });
+        ${text === null ? 'return;' : ''}
+      }
+      self.postMessage({ workerId, jobId, action, status: 'resolve', data: action === 'recognize' ? { text: ${JSON.stringify(text)}, confidence: 95 } : {} });
+    }` }));
+}
+
+test('real browser OCR fills a reviewed expense and preserves duplicate confirmation', async ({ page }, testInfo) => {
+  test.setTimeout(60000);
+  await mockApp(page, { withDashboardExpense: true, withDuplicateReview: true });
+  const assets: string[] = [];
+  const submissions: Record<string, unknown>[] = [];
+  const unexpectedUploads: string[] = [];
+  page.on('request', request => {
+    if (request.url().includes('/ocr/')) assets.push(request.url());
+    if (request.method() === 'POST' && new URL(request.url()).pathname === '/expenses') submissions.push(request.postDataJSON());
+    else if (request.method() === 'POST') unexpectedUploads.push(request.url());
+  });
+  const editor = await openScanner(page);
+  expect(assets).toHaveLength(0);
+  const workers: boolean[] = [];
+  page.on('worker', worker => {
+    if (!worker.url().includes('/ocr/')) return;
+    const index = workers.push(false) - 1;
+    worker.on('close', () => { workers[index] = true; });
+  });
+  await editor.getByLabel('Choose image', { exact: true }).setInputFiles(await receiptPhoto(page));
+  await expect(editor.getByLabel('Merchant (description)', { exact: true })).toHaveValue('COOP MARKET', { timeout: 45000 });
+  await expect(editor.getByLabel('Amount (EUR)', { exact: true })).toHaveValue('20.00');
+  await expect(editor.getByLabel('Date', { exact: true })).toHaveValue('2026-10-24');
+  await expect(editor.getByLabel('Time', { exact: true })).toHaveValue('16:42');
+  await expect(editor.getByRole('img', { name: 'Receipt photo to review' })).toBeVisible();
+  expect(assets.length).toBeGreaterThan(0);
+  expect(assets.every(url => new URL(url).origin === 'http://localhost:3100')).toBe(true);
+  expect(submissions).toHaveLength(0);
+  expect(unexpectedUploads).toHaveLength(0);
+  await expect.poll(() => workers.length > 0 && workers.every(Boolean)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('receipt-review.png') });
+  await editor.getByRole('button', { name: 'Use these details', exact: true }).click();
+  await expect(editor.getByLabel('Amount', { exact: true })).toHaveValue('20');
+  await expect(editor.getByLabel('Description', { exact: true })).toHaveValue('COOP MARKET');
+  await expect(editor.getByRole('combobox', { name: 'Category', exact: true })).toHaveValue('1');
+  await expect(editor.getByLabel('Date & Time', { exact: true })).toHaveValue('2026-10-24T16:42');
+  expect(submissions).toHaveLength(0);
+  await editor.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(editor.getByRole('heading', { name: 'Possible duplicate', exact: true })).toBeVisible();
+  expect(submissions).toHaveLength(1);
+  expect(submissions[0].allow_duplicate).toBeUndefined();
+  await editor.getByRole('button', { name: 'Save anyway', exact: true }).click();
+  await expect(editor).toHaveCount(0);
+  expect(submissions).toHaveLength(2);
+  expect(submissions[1]).toMatchObject({ amount: 20, category_id: 1, description: 'COOP MARKET', allow_duplicate: true });
+});
+
+test('ambiguous Italian receipt requires corrections and remains usable on a narrow dark screen', async ({ page }, testInfo) => {
+  await mockApp(page, { withDashboardExpense: true });
+  await page.addInitScript(() => { localStorage.setItem('app_language', 'it'); localStorage.setItem('app_theme_active_user', '1'); localStorage.setItem('app_theme:1', 'dark'); });
+  if (testInfo.project.name === 'mobile') await page.setViewportSize({ width: 320, height: 640 });
+  await mockRecognition(page, 'NEGOZIO\n24/10/2026\nTOTALE 20,00\nTOTAL 25,00');
+  const editor = await openScanner(page, true);
+  await editor.getByLabel('Scegli immagine', { exact: true }).setInputFiles(await receiptPhoto(page));
+  await expect(editor.getByText('Sono presenti totali diversi: scegli l’importo finale da registrare.')).toBeVisible();
+  await expect(editor.getByLabel('Importo (EUR)', { exact: true })).toHaveValue('');
+  await expect(editor.getByLabel('Ora', { exact: true })).toHaveValue('');
+  await editor.getByRole('button', { name: 'Usa questi dati', exact: true }).click();
+  await expect(editor.getByLabel('Importo (EUR)', { exact: true })).toBeFocused();
+  await expect(editor.getByLabel('Importo (EUR)', { exact: true })).toHaveAttribute('aria-describedby', 'receipt-amount-error');
+  await editor.getByLabel('Importo (EUR)', { exact: true }).fill('23,43');
+  await editor.getByLabel('Ora', { exact: true }).fill('12:30');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath('receipt-italian-dark.png') });
+  await editor.getByRole('button', { name: 'Usa questi dati', exact: true }).click();
+  await expect(editor.getByLabel('Importo', { exact: true })).toHaveValue('23.43');
+  await expect(editor.getByLabel('Data e Ora', { exact: true })).toHaveValue('2026-10-24T12:30');
+});
+
+test('invalid images and OCR download failures preserve the manual draft', async ({ page }) => {
+  await mockApp(page, { withDashboardExpense: true });
+  await page.goto('/?month=2024-02');
+  await page.getByRole('button', { name: 'New expense', exact: true }).click();
+  const editor = page.getByRole('dialog');
+  await editor.getByLabel('Amount', { exact: true }).fill('17.50');
+  await editor.getByLabel('Description', { exact: true }).fill('Keep my draft');
+  await editor.getByRole('button', { name: 'Scan receipt', exact: true }).click();
+  const file = editor.getByLabel('Choose image', { exact: true });
+  await file.setInputFiles({ name: 'document.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF') });
+  await expect(editor.getByRole('alert')).toContainText('PDFs and other files are not supported');
+  await file.setInputFiles({ name: 'broken.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('broken') });
+  await expect(editor.getByRole('alert')).toContainText('cannot read the image');
+  await file.setInputFiles({ name: 'large.png', mimeType: 'image/png', buffer: Buffer.alloc(12 * 1024 * 1024 + 1) });
+  await expect(editor.getByRole('alert')).toContainText('exceeds 12 MB');
+  await page.route('**/ocr/tesseract-7.0.0/lang/*', route => route.fulfill({ status: 503, body: 'unavailable' }));
+  await file.setInputFiles(await receiptPhoto(page));
+  await expect(editor.getByRole('alert')).toContainText('Reading failed');
+  await editor.getByRole('button', { name: 'Back to form', exact: true }).click();
+  await expect(editor.getByLabel('Amount', { exact: true })).toHaveValue('17.50');
+  await expect(editor.getByLabel('Description', { exact: true })).toHaveValue('Keep my draft');
+  await expect(editor.getByLabel('Amount', { exact: true })).toBeFocused();
+});
+
+test('cancelling recognition terminates the worker and leaves the expense unsaved', async ({ page }) => {
+  await mockApp(page, { withDashboardExpense: true });
+  await mockRecognition(page, null);
+  let terminated = false;
+  page.on('worker', worker => { if (worker.url().includes('/ocr/')) worker.on('close', () => { terminated = true; }); });
+  const editor = await openScanner(page);
+  await editor.getByLabel('Choose image', { exact: true }).setInputFiles(await receiptPhoto(page));
+  await expect(editor.getByText('Reading receipt…', { exact: true })).toBeVisible();
+  await editor.getByRole('button', { name: 'Stop reading', exact: true }).click();
+  await expect.poll(() => terminated).toBe(true);
+  await expect(editor.getByRole('button', { name: 'Choose image', exact: true })).toBeEnabled();
+  await editor.getByRole('button', { name: 'Back to form', exact: true }).click();
+  await expect(editor.getByLabel('Amount', { exact: true })).toHaveValue('');
+  await expect(editor.getByRole('combobox', { name: 'Category', exact: true })).toHaveValue('1');
+  page.once('dialog', prompt => prompt.accept());
+  await editor.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(editor).toHaveCount(0);
+});
+
+test('a stalled recognition times out and returns to manual entry', async ({ page }) => {
+  await mockApp(page, { withDashboardExpense: true });
+  await mockRecognition(page, null);
+  const editor = await openScanner(page);
+  await page.clock.install();
+  await editor.getByLabel('Choose image', { exact: true }).setInputFiles(await receiptPhoto(page));
+  await expect(editor.getByText('Reading receipt…', { exact: true })).toBeVisible();
+  await page.clock.fastForward(120001);
+  await expect(editor.getByRole('alert')).toContainText('Reading stopped because it took too long');
+  await expect(editor.getByRole('button', { name: 'Choose image', exact: true })).toBeEnabled();
+  await editor.getByRole('button', { name: 'Back to form', exact: true }).click();
+  await expect(editor.getByLabel('Amount', { exact: true })).toHaveValue('');
+});
+
+test('closing a receipt review protects it even before the expense form changes', async ({ page }) => {
+  await mockApp(page, { withDashboardExpense: true });
+  await mockRecognition(page, 'SHOP\n24/10/2026 12:30\nTOTAL 20,00');
+  await page.goto('/?month=2024-02');
+  await page.getByRole('button', { name: 'New expense', exact: true }).click();
+  const editor = page.getByRole('dialog');
+  await editor.getByRole('button', { name: 'Scan receipt', exact: true }).click();
+  await editor.getByLabel('Choose image', { exact: true }).setInputFiles(await receiptPhoto(page));
+  await expect(editor.getByLabel('Amount (EUR)', { exact: true })).toHaveValue('20.00');
+  let prompted = false;
+  page.once('dialog', prompt => { prompted = true; void prompt.dismiss(); });
+  await editor.getByRole('button', { name: 'Close', exact: true }).click();
+  expect(prompted).toBe(true);
+  await expect(editor.getByLabel('Amount (EUR)', { exact: true })).toHaveValue('20.00');
+  await editor.getByRole('button', { name: 'Back to form', exact: true }).click();
+  await expect(editor.getByLabel('Amount', { exact: true })).toHaveValue('');
+  await editor.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(editor).toHaveCount(0);
+});

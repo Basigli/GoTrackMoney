@@ -1,6 +1,7 @@
 'use client';
 import { useRef, useState, type FormEvent } from 'react';
 import { format } from 'date-fns';
+import dynamic from 'next/dynamic';
 import toast from 'react-hot-toast';
 import type { Category } from '@/types/domain';
 import { transactionPeriodNotice, type Transaction, type TransactionType, type TransactionViewPeriod } from '@/utils/transactions';
@@ -11,6 +12,8 @@ import SafeDialog from './SafeDialog';
 import ExpenseDuplicateReview from './ExpenseDuplicateReview';
 import EditorActions from './EditorActions';
 import styles from './TransactionEditor.module.css';
+
+const ReceiptScanner = dynamic(() => import('./ReceiptScanner'), { ssr: false });
 
 export interface SavedTransaction { type: TransactionType; category_id: number; date: string; deleted?: boolean }
 export default function TransactionEditor({ token, categories, item, initialType = 'expense', initialCategory, initialDate = new Date(), viewPeriod, onClose, onSaved }: {
@@ -31,6 +34,8 @@ export default function TransactionEditor({ token, categories, item, initialType
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState('');
   const [review, setReview] = useState<DuplicateExpenseReview | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [receiptDirty, setReceiptDirty] = useState(false);
   const amountInput = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const dirty = JSON.stringify(initial) !== JSON.stringify(form);
@@ -85,11 +90,19 @@ export default function TransactionEditor({ token, categories, item, initialType
     } catch { setFailure(t('form.delete_error')); }
     finally { submitting.current = false; setBusy(false); }
   };
-  return <SafeDialog title={t(item ? 'record.edit' : 'record.new')} dirty={dirty} busy={busy} onClose={onClose}>
+  return <SafeDialog title={t(showScanner ? 'receipt.title' : item ? 'record.edit' : 'record.new')} dirty={dirty || receiptDirty} busy={busy} onClose={onClose}>
     {close => review ? <ExpenseDuplicateReview review={review} busy={busy} failure={failure}
       onBack={() => { setReview(null); setFailure(''); requestAnimationFrame(() => amountInput.current?.focus()); }}
-      onConfirm={() => { void save(undefined, true); }} /> : <form ref={formRef} className="modal-form" onSubmit={save} noValidate>
+      onConfirm={() => { void save(undefined, true); }} /> : showScanner ? <ReceiptScanner
+        onReviewReady={() => setReceiptDirty(true)}
+        onCancel={() => { setShowScanner(false); setReceiptDirty(false); requestAnimationFrame(() => amountInput.current?.focus()); }}
+        onApply={details => {
+          setForm(old => ({ ...old, amount: details.amount, description: details.merchant || old.description, date: `${details.date}T${details.time}` }));
+          setErrors({}); setFailure(''); setShowScanner(false); setReceiptDirty(false);
+          requestAnimationFrame(() => amountInput.current?.focus());
+        }} /> : <form ref={formRef} className="modal-form" onSubmit={save} noValidate>
       <fieldset disabled={busy}>
+        {!item && form.type === 'expense' && !form.periodic && <button type="button" className={`secondary-btn ${styles.scanButton}`} onClick={() => setShowScanner(true)}>{t('receipt.scan')}</button>}
         <label>{t('record.type')}<select className="input-field" value={form.type} disabled={!!item}
           onChange={e => setForm(old => ({ ...old, type: e.target.value as TransactionType, category: '', periodic: false }))}>
           <option value="expense">{t('record.expense')}</option><option value="income">{t('record.income')}</option>

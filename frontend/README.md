@@ -27,3 +27,17 @@ npx playwright test --config playwright.ui.config.ts
 ```
 
 The UI Playwright suite uses mocked API responses and needs no database. The broader suite in `tests/usability.spec.ts` uses a real backend and requires `TEST_DATABASE_URL` pointing to a migrated PostgreSQL database whose name ends in `_test`; run it with `npx playwright test`.
+
+## Receipt scanning
+
+New, non-recurring expenses offer **Scan receipt**. Choose a photo or use the phone's native camera picker, review the extracted merchant, total, purchase date and time, and select **Use these details**. This fills the existing expense form and preserves its selected category. Saving remains explicit and uses the existing validation and duplicate review. Scanning is unavailable when editing entries or creating income or recurring payments.
+
+Photos and recognized receipt text stay in browser memory; they are not uploaded or stored. Only the expense fields are sent when the user saves. Tesseract.js runs recognition in a browser worker, loaded after image selection. Italian and English language data and worker/core files are served from this app, without a third-party OCR service. Normal browsing does not load these assets. The first scan downloads several megabytes; later scans can use the browser's HTTP cache.
+
+`npm run dev` and `npm run build` prepare the versioned OCR assets under `public/ocr/` from pinned npm packages. These generated files are ignored by Git. The existing frontend Dockerfile copies them into the production image automatically; no backend service, database migration, GPU or OCR installation on the host is needed. If you upgrade the runtime or language packages, also change the asset path in `scripts/prepare-ocr.mjs` and `src/utils/receiptOcr.ts` to invalidate cached assets. Both paths currently use `tesseract-7.0.0`.
+
+The scanner accepts JPEG, PNG, WebP and browser-decodable HEIC/HEIF images up to 12 MB. It corrects orientation through browser decoding and limits the longest processed edge to 2400 pixels. Unsupported images, download errors, empty text and a two-minute timeout leave manual entry available. Active recognition is terminated on cancellation or closing; cancellation during engine startup releases the worker when initialization completes.
+
+Extraction is deliberately conservative: totals must have an explicit total/due label, VAT/subtotals/cash/change are excluded, conflicting totals or dates stay blank, and foreign currencies are never silently treated as euros. Supported dates are day/month/year and ISO year-month-day. Date and time must be reviewed and completed before applying; missing times are not invented. No category is inferred automatically. Poor photos, unusual layouts, rotated text, localized month names and OCR errors can require manual correction.
+
+`receipt-parser.spec.ts` covers the extraction rules. `receipt-scanning.spec.ts` includes real browser OCR of a generated receipt, review and duplicate confirmation, narrow-screen Italian/dark styling, image/download failures, draft preservation and worker cancellation. Run these with `npx playwright test --config playwright.ui.config.ts receipt-parser.spec.ts receipt-scanning.spec.ts`. These checks use Chromium desktop/mobile emulation; accuracy and camera/HEIC behavior should also be evaluated with representative receipts on physical phones.

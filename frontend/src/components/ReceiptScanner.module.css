@@ -1,0 +1,23 @@
+.note { color: var(--text-muted); font-size: 13px; line-height: 1.5; margin-bottom: 12px; }
+.fileInput { display: none; }
+.actions, .footer { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+.actions > button, .footer > button { flex: 1; min-width: min(100%, 150px); min-height: 44px; font: inherit; font-size: 15px; }
+.footer > :global(.submit-btn) { width: auto; margin: 0; padding: 12px 14px; border-radius: 12px; line-height: 20px; }
+.footer { margin-bottom: 0; }
+.progress { display: grid; gap: 12px; margin: 20px 0; }
+.progress progress { width: 100%; accent-color: var(--primary-color); }
+.reviewNote { margin: 16px 0 12px; line-height: 1.5; font-size: 14px; }
+.issues { padding-left: 20px; margin: 12px 0; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
+.preview { margin: 16px 0; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--input-bg); }
+.preview img { display: block; width: 100%; height: auto; max-height: 220px; object-fit: contain; }
+.review { min-width: 0; }
+.review :global(.input-field) { min-width: 0; max-width: 100%; }
+.dateFields { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 12px; }
+.dateFields > div { min-width: 0; }
+.dateFields :global(.input-field) { appearance: none; min-height: 48px; padding: 12px 8px; }
+@media (max-width: 480px) {
+  .dateFields { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+.recognized { margin: 16px 0; }
+.recognized summary { cursor: pointer; min-height: 44px; padding: 12px 0; }
+.recognized pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 200px; overflow: auto; padding: 12px; border-radius: 12px; background: var(--input-bg); font-size: 12px; }
