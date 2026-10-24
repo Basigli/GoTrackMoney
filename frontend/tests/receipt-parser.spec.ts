@@ -60,3 +60,7 @@ test('empty text never invents financial information or a merchant', () => {
   expect(extractReceipt('')).toEqual({ merchant: '', amount: '', date: '', time: '', issues: ['amount_missing', 'date_missing', 'time_missing', 'merchant_missing'] });
   expect(extractReceipt('DOCUMENTO COMMERCIALE\nVia Roma 10\nP.IVA 123456789\nTOTALE 10,00').merchant).toBe('');
 });
+
+test('merchant selection skips marketing and social headers before the business name', () => {
+  expect(extractReceipt('A\npp\n1\nun mondo per la casa\nSEGUICI SU\nTikTok\nAB\n1\n@exampleshop\nExample Market\nVia Roma 1\nDOCUMENTO COMMERCIALE\nTOTAL 12,34').merchant).toBe('Example Market');
+});

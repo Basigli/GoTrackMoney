@@ -1,0 +1,3 @@
+`receipt.heic` is a synthetic 160 × 240 test receipt containing only “TEST RECEIPT” and “TOTAL 12.34”, generated with an SVG rendered through Sharp and encoded using macOS `sips -s format heic`. It contains no real purchase or personal data. Tests deliberately give it a PNG filename and MIME type to exercise content detection and the browser HEIF fallback.
+
+To diagnose an actual photo without committing it, set `RECEIPT_TEST_IMAGE` to its absolute path and run the `optional local receipt` test in `receipt-scanning.spec.ts`. Optionally set `RECEIPT_EXPECTED_AMOUNT` to check its printed total. Diagnostic attachments stay in the ignored Playwright output directory.

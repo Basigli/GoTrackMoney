@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { mockApp } from './helpers/mockApp';
 
 async function receiptPhoto(page: Page) {
@@ -23,16 +25,25 @@ async function openScanner(page: Page, italian = false) {
   return editor;
 }
 
-async function mockRecognition(page: Page, text: string | null) {
+async function mockRecognition(page: Page, text: string | null, totalReadings?: string[]) {
+  const firstResult = { text, confidence: 95, blocks: totalReadings ? [{ paragraphs: [{ lines: [{
+    text: 'TOTALE COMPLESSIVO 2,%\n', words: [
+      { text: 'TOTALE', bbox: { x0: 45, y0: 420, x1: 180, y1: 460 } },
+      { text: 'COMPLESSIVO', bbox: { x0: 190, y0: 420, x1: 420, y1: 460 } },
+      { text: '2,%', bbox: { x0: 450, y0: 420, x1: 530, y1: 460 } },
+    ],
+  }] }] }] : null };
   await page.route('**/ocr/tesseract-7.0.0/lang/*', route => route.fulfill({ body: 'test language' }));
   await page.route('**/ocr/tesseract-7.0.0/worker.min.js', route => route.fulfill({ contentType: 'application/javascript', body: `
+    let readings = 0;
     self.onmessage = ({ data: request }) => {
       const { workerId, jobId, action } = request;
       if (action === 'recognize') {
         self.postMessage({ workerId, jobId, action, status: 'progress', data: { status: 'recognizing text', progress: 0.5 } });
         ${text === null ? 'return;' : ''}
       }
-      self.postMessage({ workerId, jobId, action, status: 'resolve', data: action === 'recognize' ? { text: ${JSON.stringify(text)}, confidence: 95 } : {} });
+      const result = action === 'recognize' ? (readings++ === 0 ? ${JSON.stringify(firstResult)} : { text: (${JSON.stringify(totalReadings || [])})[readings - 2] || '', confidence: 95 }) : {};
+      self.postMessage({ workerId, jobId, action, status: 'resolve', data: result });
     }` }));
 }
 
@@ -63,6 +74,7 @@ test('real browser OCR fills a reviewed expense and preserves duplicate confirma
   await expect(editor.getByRole('img', { name: 'Receipt photo to review' })).toBeVisible();
   expect(assets.length).toBeGreaterThan(0);
   expect(assets.every(url => new URL(url).origin === 'http://localhost:3100')).toBe(true);
+  expect(assets.some(url => url.includes('/ocr/heif-'))).toBe(false);
   expect(submissions).toHaveLength(0);
   expect(unexpectedUploads).toHaveLength(0);
   await expect.poll(() => workers.length > 0 && workers.every(Boolean)).toBe(true);
@@ -180,4 +192,70 @@ test('closing a receipt review protects it even before the expense form changes'
   await expect(editor.getByLabel('Amount', { exact: true })).toHaveValue('');
   await editor.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(editor).toHaveCount(0);
+});
+
+test('HEIC bytes with a PNG filename decode locally and have a working preview', async ({ page }) => {
+  await mockApp(page, { withDashboardExpense: true });
+  await mockRecognition(page, 'SHOP\n24/10/2026 12:30\nTOTAL 12,34');
+  const heifWorkers: boolean[] = [];
+  page.on('worker', worker => {
+    if (!worker.url().includes('/ocr/heif-')) return;
+    const index = heifWorkers.push(false) - 1;
+    worker.on('close', () => { heifWorkers[index] = true; });
+  });
+  const editor = await openScanner(page);
+  await editor.getByLabel('Choose image', { exact: true }).setInputFiles({ name: 'renamed.png', mimeType: 'image/png', buffer: readFileSync(path.join(__dirname, 'fixtures/receipt.heic')) });
+  await expect(editor.getByLabel('Amount (EUR)', { exact: true })).toHaveValue('12.34', { timeout: 20000 });
+  const preview = editor.getByRole('img', { name: 'Receipt photo to review' });
+  await expect.poll(() => preview.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+  await expect.poll(() => heifWorkers.length === 1 && heifWorkers.every(Boolean)).toBe(true);
+});
+
+test('cancelling HEIC conversion terminates the decoder before OCR starts', async ({ page }) => {
+  await mockApp(page, { withDashboardExpense: true });
+  await page.route('**/ocr/heif-1.23.5/worker.js', route => route.fulfill({ contentType: 'application/javascript', body: 'self.onmessage = () => {};' }));
+  let terminated = false;
+  let ocrRequested = false;
+  page.on('worker', worker => { if (worker.url().includes('/ocr/heif-')) worker.on('close', () => { terminated = true; }); });
+  page.on('request', request => { if (request.url().includes('/ocr/tesseract-')) ocrRequested = true; });
+  const editor = await openScanner(page);
+  const workerStarted = page.waitForEvent('worker');
+  await editor.getByLabel('Choose image', { exact: true }).setInputFiles({ name: 'receipt.heic', mimeType: 'image/heic', buffer: readFileSync(path.join(__dirname, 'fixtures/receipt.heic')) });
+  await workerStarted;
+  await editor.getByRole('button', { name: 'Stop reading', exact: true }).click();
+  await expect.poll(() => terminated).toBe(true);
+  expect(ocrRequested).toBe(false);
+  await editor.getByRole('button', { name: 'Back to form', exact: true }).click();
+  await expect(editor.getByLabel('Amount', { exact: true })).toHaveValue('');
+});
+
+for (const agree of [true, false]) {
+  test(`a condensed total is recovered only when close-up readings agree (${agree})`, async ({ page }) => {
+    await mockApp(page, { withDashboardExpense: true });
+    await mockRecognition(page, 'SHOP\n24/10/2026 12:30\nTOTALE COMPLESSIVO 2,%\n', ['22,95', agree ? '22.95' : '29,95']);
+    const editor = await openScanner(page);
+    await editor.getByLabel('Choose image', { exact: true }).setInputFiles(await receiptPhoto(page));
+    await expect(editor.getByLabel('Merchant (description)', { exact: true })).toBeVisible();
+    await expect(editor.getByLabel('Amount (EUR)', { exact: true })).toHaveValue(agree ? '22.95' : '');
+  });
+}
+
+test('an optional local receipt photo reaches an editable review', async ({ page }, testInfo) => {
+  test.skip(!process.env.RECEIPT_TEST_IMAGE, 'Set RECEIPT_TEST_IMAGE to diagnose a local photo without committing it.');
+  test.setTimeout(90000);
+  await mockApp(page, { withDashboardExpense: true });
+  const editor = await openScanner(page);
+  await editor.getByLabel('Choose image', { exact: true }).setInputFiles(process.env.RECEIPT_TEST_IMAGE!);
+  await expect(editor.getByLabel('Merchant (description)', { exact: true })).toBeVisible({ timeout: 75000 });
+  const preview = editor.getByRole('img', { name: 'Receipt photo to review' });
+  await expect.poll(() => preview.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+  const fields = {
+    merchant: await editor.getByLabel('Merchant (description)', { exact: true }).inputValue(),
+    amount: await editor.getByLabel('Amount (EUR)', { exact: true }).inputValue(),
+    date: await editor.getByLabel('Date', { exact: true }).inputValue(),
+    time: await editor.getByLabel('Time', { exact: true }).inputValue(),
+    text: await editor.locator('details pre').textContent(),
+  };
+  await testInfo.attach('local-receipt-diagnostics', { body: JSON.stringify(fields, null, 2), contentType: 'application/json' });
+  if (process.env.RECEIPT_EXPECTED_AMOUNT) await expect(editor.getByLabel('Amount (EUR)', { exact: true })).toHaveValue(process.env.RECEIPT_EXPECTED_AMOUNT);
 });

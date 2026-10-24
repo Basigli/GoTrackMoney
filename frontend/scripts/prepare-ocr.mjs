@@ -22,3 +22,11 @@ for (const language of ['ita', 'eng']) {
 }
 await copyFile(join(runtime, 'LICENSE.md'), join(destination, 'LICENSE-tesseract.txt'));
 await copyFile(join(core, 'LICENSE'), join(destination, 'LICENSE-core.txt'));
+
+const heif = dirname(require.resolve('libheif-js/package.json'));
+const heifDestination = join(root, 'public/ocr/heif-1.23.5');
+await mkdir(heifDestination, { recursive: true });
+await copyFile(join(heif, 'libheif-wasm/libheif-bundle.js'), join(heifDestination, 'libheif-bundle.js'));
+await copyFile(join(heif, 'LICENSE'), join(heifDestination, 'LICENSE.txt'));
+await copyFile(join(heif, 'README.md'), join(heifDestination, 'README.txt'));
+await copyFile(join(root, 'src/workers/receiptHeif.js'), join(heifDestination, 'worker.js'));

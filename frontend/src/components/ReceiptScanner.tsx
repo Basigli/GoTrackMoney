@@ -52,7 +52,7 @@ export default function ReceiptScanner({ onApply, onCancel, onReviewReady }: { o
       const result = await Promise.race([recognition, aborted]);
       if (request.signal.aborted) return;
       if (!result.text.trim()) throw new Error('empty');
-      imageUrl.current = URL.createObjectURL(file);
+      imageUrl.current = URL.createObjectURL(result.image);
       setPreview(imageUrl.current);
       setText(result.text);
       setLowQuality(result.confidence < 70);

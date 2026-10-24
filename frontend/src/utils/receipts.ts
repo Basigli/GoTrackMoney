@@ -12,6 +12,11 @@ const normalize = (text: string) => text.normalize('NFKD').replace(/[\u0300-\u03
 const totalLabel = /\b(?:TOTALE(?:\s+(?:COMPLESSIVO|DOCUMENTO|DA PAGARE|EURO))?|GRAND TOTAL|TOTAL(?:\s+DUE)?|AMOUNT DUE|BALANCE DUE)\b/;
 const notTotal = /\b(?:SUB\s?TOTAL[EI]?|IVA|VAT|TAX|TASSE|RESTO|CHANGE|CONTANTI|CASH|PAGAMENTO|PAYMENT|CARTA|CARD|BANCOMAT|POS|SCONTO|SCONTI|DISCOUNT|SAVINGS|RISPARMIO|NON PAGATO|NON RISCOSSO)\b/;
 
+export function isReceiptTotalLine(line: string): boolean {
+  const label = normalize(line);
+  return totalLabel.test(label) && !notTotal.test(label);
+}
+
 // Keep cents exact and support both 1.234,56 and 1,234.56.
 export function receiptAmount(value: string): string | null {
   const compact = value.replace(/[\s€]/g, '');
@@ -42,8 +47,7 @@ export function extractReceipt(text: string): ReceiptDetails {
   const issues: ReceiptIssue[] = [];
   const totals = new Set<string>();
   lines.forEach((line, index) => {
-    const label = normalize(line);
-    if (!totalLabel.test(label) || notTotal.test(label)) return;
+    if (!isReceiptTotalLine(line)) return;
     let values = amounts(line);
     // Some receipts print the total on the line immediately below its label.
     if (!values.length && index + 1 < lines.length && /^(?:EUR\s*|€\s*)?[\d., ]+(?:\s*EUR|\s*€)?$/i.test(lines[index + 1])) values = amounts(lines[index + 1]);
@@ -70,9 +74,11 @@ export function extractReceipt(text: string): ReceiptDetails {
   const time = times.size === 1 ? [...times][0] : '';
   if (!time) issues.push('time_missing');
 
-  const merchant = lines.slice(0, 8).find(line => {
+  const headerEnd = lines.findIndex(line => /\b(?:DOCUMENTO COMMERCIALE|FISCAL RECEIPT)\b/.test(normalize(line)));
+  const merchant = lines.slice(0, headerEnd < 0 ? 20 : Math.min(headerEnd, 20)).find(line => {
     const value = normalize(line);
     return /[A-Z]{3}/.test(value) && line.length <= 100 &&
+      !line.includes('@') && !/\b(?:UN MONDO PER|SEGUICI|FOLLOW|TIKTOK|INSTAGRAM|FACEBOOK)\b/.test(value) &&
       !/\b(?:DOCUMENTO|COMMERCIALE|RICEVUTA|SCONTRINO|FISCALE|RECEIPT|WELCOME|BENVENUTI|GRAZIE|THANK|COPIA|VIA|VIALE|PIAZZA|STREET|ROAD|TEL|TELEFONO|P[ .]?IVA|PARTITA|WWW|HTTP|DATA|DATE|ORA|TOTALE|TOTAL)\b/.test(value) &&
       (value.match(/\d/g)?.length || 0) < value.replace(/[^A-Z]/g, '').length;
   }) || '';
