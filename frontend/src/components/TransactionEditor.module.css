@@ -1,7 +1,5 @@
 .periodNotice { margin: 0 0 12px; padding: 12px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--primary-soft); color: var(--text-color); font-size: 14px; line-height: 1.5; }
-.amountHeader { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; margin-top: 12px; }
-.amountHeader label { margin: 0; }
-.scanButton { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 6px 10px; font-size: 13px; background: var(--primary-soft); }
+.scanButton { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin: 0 0 8px; min-height: 44px; padding: 6px 10px; font-size: 13px; background: var(--primary-soft); }
 .scanButton svg { flex-shrink: 0; }
 .scannerDialog { overflow: hidden; }
 .reviewDialog { width: min(800px, calc(100% - 24px)); }

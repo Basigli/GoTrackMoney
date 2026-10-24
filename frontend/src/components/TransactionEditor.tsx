@@ -102,17 +102,15 @@ export default function TransactionEditor({ token, categories, item, initialType
           requestAnimationFrame(() => amountInput.current?.focus());
         }} /> : <form ref={formRef} className="modal-form" onSubmit={save} noValidate>
       <fieldset disabled={busy}>
+        {!item && form.type === 'expense' && !form.periodic && <button type="button" className={`secondary-btn ${styles.scanButton}`} onClick={() => setShowScanner(true)}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 7h6M9 11h6M9 15h3"/></svg>
+          {t('receipt.scan')}
+        </button>}
         <label>{t('record.type')}<select className="input-field" value={form.type} disabled={!!item}
           onChange={e => setForm(old => ({ ...old, type: e.target.value as TransactionType, category: '', periodic: false }))}>
           <option value="expense">{t('record.expense')}</option><option value="income">{t('record.income')}</option>
         </select></label>
-        <div className={styles.amountHeader}>
-          <label htmlFor="transaction-amount">{t('record.amount')}</label>
-          {!item && form.type === 'expense' && !form.periodic && <button type="button" className={`secondary-btn ${styles.scanButton}`} onClick={() => setShowScanner(true)}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 7h6M9 11h6M9 15h3"/></svg>
-            {t('receipt.scan')}
-          </button>}
-        </div>
+        <label htmlFor="transaction-amount">{t('record.amount')}</label>
         <input id="transaction-amount" ref={amountInput} data-initial-focus className="input-field" inputMode="decimal" value={form.amount}
           aria-invalid={!!errors.amount} aria-describedby={errors.amount ? 'amount-error' : undefined} onChange={e => update('amount', e.target.value)} />
         {errors.amount && <p id="amount-error" className="field-error">{errors.amount}</p>}

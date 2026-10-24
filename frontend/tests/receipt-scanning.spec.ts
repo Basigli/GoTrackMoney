@@ -266,18 +266,19 @@ test('an optional local receipt photo reaches an editable review', async ({ page
   if (process.env.RECEIPT_EXPECTED_AMOUNT) await expect(editor.getByLabel('Amount (EUR)', { exact: true })).toHaveValue(process.env.RECEIPT_EXPECTED_AMOUNT);
 });
 
-test('receipt entry sits beside Amount and is offered only for new one-off expenses', async ({ page }, testInfo) => {
+test('receipt entry sits above Type and is offered only for new one-off expenses', async ({ page }, testInfo) => {
   await mockApp(page, { withDashboardExpense: true });
   await page.goto('/?month=2024-02');
   await page.getByRole('button', { name: 'New expense', exact: true }).click();
   const editor = page.getByRole('dialog');
   const scan = editor.getByRole('button', { name: 'Scan receipt', exact: true });
-  const label = editor.locator('label[for="transaction-amount"]');
+  const type = editor.getByRole('combobox', { name: 'Type', exact: true });
   const bounds = await scan.boundingBox();
-  const labelBounds = await label.boundingBox();
-  expect(bounds && labelBounds).toBeTruthy();
+  const typeBounds = await type.boundingBox();
+  expect(bounds && typeBounds).toBeTruthy();
   expect(bounds!.height).toBeGreaterThanOrEqual(44);
-  expect(Math.abs(bounds!.y + bounds!.height / 2 - labelBounds!.y - labelBounds!.height / 2)).toBeLessThan(2);
+  expect(bounds!.y + bounds!.height).toBeLessThan(typeBounds!.y);
+  expect(Math.abs(bounds!.width - typeBounds!.width)).toBeLessThan(2);
   await page.screenshot({ path: testInfo.outputPath('receipt-entry.png'), animations: 'disabled' });
   await editor.getByRole('combobox', { name: 'Type', exact: true }).selectOption('income');
   await expect(scan).toHaveCount(0);
