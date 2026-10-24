@@ -25,11 +25,11 @@ async function openScanner(page: Page, italian = false) {
   return editor;
 }
 
-async function mockRecognition(page: Page, text: string | null, totalReadings?: string[]) {
+async function mockRecognition(page: Page, text: string | null, totalReadings?: string[], totalLabel = 'TOTALE COMPLESSIVO') {
   const firstResult = { text, confidence: 95, blocks: totalReadings ? [{ paragraphs: [{ lines: [{
-    text: 'TOTALE COMPLESSIVO 2,%\n', words: [
-      { text: 'TOTALE', bbox: { x0: 45, y0: 420, x1: 180, y1: 460 } },
-      { text: 'COMPLESSIVO', bbox: { x0: 190, y0: 420, x1: 420, y1: 460 } },
+    text: `${totalLabel} 2,%\n`, words: [
+      { text: totalLabel.split(' ')[0], bbox: { x0: 45, y0: 420, x1: 180, y1: 460 } },
+      { text: totalLabel.split(' ')[1], bbox: { x0: 190, y0: 420, x1: 420, y1: 460 } },
       { text: '2,%', bbox: { x0: 450, y0: 420, x1: 530, y1: 460 } },
     ],
   }] }] }] : null };
@@ -233,15 +233,17 @@ test('cancelling HEIC conversion terminates the decoder before OCR starts', asyn
   await expect(editor.getByLabel('Amount', { exact: true })).toHaveValue('');
 });
 
-for (const agree of [true, false]) {
-  test(`a condensed total is recovered only when close-up readings agree (${agree})`, async ({ page }) => {
-    await mockApp(page, { withDashboardExpense: true });
-    await mockRecognition(page, 'SHOP\n24/10/2026 12:30\nTOTALE COMPLESSIVO 2,%\n', ['22,95', agree ? '22.95' : '29,95']);
-    const editor = await openScanner(page);
-    await editor.getByLabel('Choose image', { exact: true }).setInputFiles(await receiptPhoto(page));
-    await expect(editor.getByLabel('Merchant (description)', { exact: true })).toBeVisible();
-    await expect(editor.getByLabel('Amount (EUR)', { exact: true })).toHaveValue(agree ? '22.95' : '');
-  });
+for (const label of ['TOTALE COMPLESSIVO', 'IMPORTO EUR']) {
+  for (const agree of [true, false]) {
+    test(`a condensed total is recovered only when close-up readings agree (${label}, ${agree})`, async ({ page }) => {
+      await mockApp(page, { withDashboardExpense: true });
+      await mockRecognition(page, `SHOP\n24/10/2026 12:30\n${label} 2,%\n`, ['22,95', agree ? '22.95' : '29,95'], label);
+      const editor = await openScanner(page);
+      await editor.getByLabel('Choose image', { exact: true }).setInputFiles(await receiptPhoto(page));
+      await expect(editor.getByLabel('Merchant (description)', { exact: true })).toBeVisible();
+      await expect(editor.getByLabel('Amount (EUR)', { exact: true })).toHaveValue(agree ? '22.95' : '');
+    });
+  }
 }
 
 test('an optional local receipt photo reaches an editable review', async ({ page }, testInfo) => {

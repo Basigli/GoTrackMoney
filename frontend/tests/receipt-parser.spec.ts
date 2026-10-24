@@ -34,6 +34,33 @@ test('conflicting totals require review and repeated matching totals are accepte
   expect(extractReceipt('SHOP\nTOTAL 20,00 25,00').amount).toBe('');
 });
 
+test('card-terminal slips recognize explicit euro amounts despite surrounding OCR noise', () => {
+  expect(extractReceipt(`EXAMPLE PHARMACY
+DOCUMENTO GESTIONALE
+MASTERCARD
+ACQUISTO
+DATA 23/10/26 ORA 12:02
+PAN: ************1234
+i È IMPORTO EUR 46,30 i
+TRANSAZIONE APPROVATA
+23-10-2026 12:02`)).toMatchObject({ amount: '46.30', date: '2026-10-23', time: '12:02', issues: [] });
+  for (const label of ['IMPORTO EUR', 'IMPORTO: EUR', 'IMPORTO €', 'AMOUNT EUR', 'AMOUNT: EUR']) {
+    expect(extractReceipt(`SHOP\n${label} 1.234,56`).amount).toBe('1234.56');
+  }
+  expect(extractReceipt('SHOP\nIMPORTO EUR\n46,30').amount).toBe('46.30');
+});
+
+test('card amounts preserve ambiguity, currency and non-total safeguards', () => {
+  for (const text of ['IMPORTO 46,30', 'AMOUNT 46.30', 'IMPORTO IVA EUR 2,00', 'IMPORTO SCONTO EUR 3,00', 'SUBTOTALE IMPORTO EUR 20,00', 'TOTALE NON RISCOSSO IMPORTO EUR 20,00']) {
+    expect(extractReceipt(`SHOP\n${text}`).amount).toBe('');
+  }
+  for (const text of ['IMPORTO EUR 46,30\nTOTALE 50,00', 'IMPORTO EUR 46,30 50,00']) {
+    expect(extractReceipt(`SHOP\n${text}`)).toMatchObject({ amount: '', issues: expect.arrayContaining(['amount_ambiguous']) });
+  }
+  expect(extractReceipt('SHOP\nTOTALE 46,30\nIMPORTO EUR 46,30').amount).toBe('46.30');
+  expect(extractReceipt('SHOP\nAMOUNT USD 46.30')).toMatchObject({ amount: '', issues: expect.arrayContaining(['currency_unsupported']) });
+});
+
 test('subtotals, payments, item prices and taxes never become a guessed total', () => {
   for (const text of ['TOTAL VAT 2.00', 'TOTALE IVA 2,00', 'SUBTOTALE 20,00', 'TOTALE NON RISCOSSO 20,00', 'TOTAL SAVINGS 5.00', 'CASH 50.00\nCHANGE 10.00', 'APPLE 2,00\nBREAD 3,00']) {
     expect(extractReceipt(text).amount).toBe('');

@@ -10,11 +10,14 @@ export interface ReceiptDetails {
 
 const normalize = (text: string) => text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
 const totalLabel = /\b(?:TOTALE(?:\s+(?:COMPLESSIVO|DOCUMENTO|DA PAGARE|EURO))?|GRAND TOTAL|TOTAL(?:\s+DUE)?|AMOUNT DUE|BALANCE DUE)\b/;
+// Card-terminal slips label the charged amount with its currency instead of
+// "total". Keep the currency explicit so generic amount columns are ignored.
+const cardAmountLabel = /\b(?:IMPORTO|AMOUNT)\s*:?\s*(?:EUR\b|€)/;
 const notTotal = /\b(?:SUB\s?TOTAL[EI]?|IVA|VAT|TAX|TASSE|RESTO|CHANGE|CONTANTI|CASH|PAGAMENTO|PAYMENT|CARTA|CARD|BANCOMAT|POS|SCONTO|SCONTI|DISCOUNT|SAVINGS|RISPARMIO|NON PAGATO|NON RISCOSSO)\b/;
 
 export function isReceiptTotalLine(line: string): boolean {
   const label = normalize(line);
-  return totalLabel.test(label) && !notTotal.test(label);
+  return (totalLabel.test(label) || cardAmountLabel.test(label)) && !notTotal.test(label);
 }
 
 // Keep cents exact and support both 1.234,56 and 1,234.56.
