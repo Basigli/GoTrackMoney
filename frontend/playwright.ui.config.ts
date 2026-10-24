@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
-  testMatch: 'ui-refinements.spec.ts',
+  testMatch: ['ui-refinements.spec.ts', 'receipt-parser.spec.ts'],
   timeout: 30000,
   fullyParallel: false,
   workers: 1,
