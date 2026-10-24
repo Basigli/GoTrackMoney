@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { extractReceipt, receiptAmount } from '../src/utils/receipts';
+import { extractReceipt, receiptAmount, receiptTotalLines } from '../src/utils/receipts';
 
 test('Italian receipt extracts the grand total and ignores VAT, cash and change', () => {
   expect(extractReceipt(`COOP SUPERMERCATO
@@ -32,6 +32,12 @@ test('conflicting totals require review and repeated matching totals are accepte
   expect(extractReceipt('SHOP\nTOTALE 20,00\nTOTAL 25,00')).toMatchObject({ amount: '', issues: expect.arrayContaining(['amount_ambiguous']) });
   expect(extractReceipt('SHOP\nTOTALE 20,00\nTOTAL 20.00').amount).toBe('20.00');
   expect(extractReceipt('SHOP\nTOTAL 20,00 25,00').amount).toBe('');
+});
+
+test('total recovery selects only labelled totals and their numeric continuation', () => {
+  expect(receiptTotalLines('OTHER SHOP\n25/10/2026 10:00\nPRODUCT 7,00\nTOTALE EURO\n14.09\nIVA 1,28')).toEqual(['TOTALE EURO', '14.09']);
+  expect(receiptTotalLines('TOTAL 14.09\n50.00\nCASH 20.00')).toEqual(['TOTAL 14.09']);
+  expect(receiptTotalLines('TOTAL\nVAT 1.28\n14.09')).toEqual(['TOTAL']);
 });
 
 test('card-terminal slips recognize explicit euro amounts despite surrounding OCR noise', () => {

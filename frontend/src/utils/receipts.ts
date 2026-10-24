@@ -38,6 +38,22 @@ function amounts(line: string): string[] {
     .flatMap(match => { const value = receiptAmount(match[1]); return value ? [value] : []; });
 }
 
+function receiptLines(text: string): string[] {
+  return text.slice(0, 50000).normalize('NFKC').split(/\r?\n/).map(line => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
+}
+
+// Keep a numeric continuation only when the labelled line has no amount.
+// Sharing this selection lets OCR recovery add totals without replacing other fields.
+export function receiptTotalLines(text: string): string[] {
+  const lines = receiptLines(text);
+  return lines.flatMap((line, index) => {
+    if (!isReceiptTotalLine(line)) return [];
+    const next = lines[index + 1];
+    if (!amounts(line).length && next && /^(?:EUR\s*|€\s*)?[\d., ]+(?:\s*EUR|\s*€)?$/i.test(next)) return [line, next];
+    return [line];
+  });
+}
+
 function validDate(year: number, month: number, day: number): string | null {
   if (year < 2000 || year > 2099 || month < 1 || month > 12 || day < 1 || day > 31) return null;
   const date = new Date(Date.UTC(year, month - 1, day));
@@ -46,16 +62,10 @@ function validDate(year: number, month: number, day: number): string | null {
 }
 
 export function extractReceipt(text: string): ReceiptDetails {
-  const lines = text.slice(0, 50000).normalize('NFKC').split(/\r?\n/).map(line => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const lines = receiptLines(text);
   const issues: ReceiptIssue[] = [];
   const totals = new Set<string>();
-  lines.forEach((line, index) => {
-    if (!isReceiptTotalLine(line)) return;
-    let values = amounts(line);
-    // Some receipts print the total on the line immediately below its label.
-    if (!values.length && index + 1 < lines.length && /^(?:EUR\s*|€\s*)?[\d., ]+(?:\s*EUR|\s*€)?$/i.test(lines[index + 1])) values = amounts(lines[index + 1]);
-    values.forEach(value => totals.add(value));
-  });
+  receiptTotalLines(text).forEach(line => amounts(line).forEach(value => totals.add(value)));
   const unsupportedCurrency = /[$£¥]|\b(?:USD|GBP|CHF|CAD|AUD|JPY|CNY|SEK|NOK|DKK|PLN|RON|TRY)\b/i.test(text);
   let amount = totals.size === 1 ? [...totals][0] : '';
   if (!totals.size) issues.push('amount_missing');

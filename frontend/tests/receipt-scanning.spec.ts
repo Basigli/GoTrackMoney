@@ -336,3 +336,90 @@ test('receipt review keeps actions visible while the photo and recognized text e
   await expect(editor.getByLabel('Amount', { exact: true })).toHaveValue('20');
   await expect(editor.getByRole('combobox', { name: 'Category', exact: true })).toHaveValue('1');
 });
+
+async function mockLayoutRecognition(page: Page, first: string, second: string | null, fail = false) {
+  await mockRecognition(page, first);
+  const modes: string[] = [];
+  const workers: boolean[] = [];
+  page.on('worker', worker => {
+    if (!worker.url().includes('/ocr/tesseract-')) return;
+    const index = workers.push(false) - 1;
+    worker.on('close', () => { workers[index] = true; });
+  });
+  await page.route('**/__test_ocr_layout', route => {
+    modes.push(route.request().postData()!);
+    return route.fulfill({ body: 'ok' });
+  });
+  await page.route('**/ocr/tesseract-7.0.0/worker.min.js', route => route.fulfill({ contentType: 'application/javascript', body: `
+    let mode = '6';
+    self.onmessage = async ({ data: request }) => {
+      const { workerId, jobId, action } = request;
+      if (action === 'setParameters') mode = request.payload.params.tessedit_pageseg_mode;
+      if (action === 'recognize') {
+        await fetch('/__test_ocr_layout', { method: 'POST', body: mode });
+        self.postMessage({ workerId, jobId, action, status: 'progress', data: { status: 'recognizing text', progress: 0.5 } });
+        if (mode === '3' && ${second === null}) return;
+        if (mode === '3' && ${fail}) {
+          self.postMessage({ workerId, jobId, action, status: 'reject', data: 'layout recognition failed' });
+          return;
+        }
+      }
+      const data = action === 'recognize' ? { text: mode === '3' ? ${JSON.stringify(second)} : ${JSON.stringify(first)}, confidence: 95, blocks: null } : {};
+      self.postMessage({ workerId, jobId, action, status: 'resolve', data });
+    }` }));
+  return { modes, workers };
+}
+
+for (const scenario of [
+  { name: 'oversized total', second: 'TOTALE EURO\n14.09', amount: '14.09' },
+  { name: 'conflicting totals', second: 'TOTALE EURO 14.09\nTOTAL 15.00', amount: '' },
+  { name: 'foreign currency', second: 'TOTAL USD 14.09', amount: '' },
+  { name: 'unlabelled prices', second: 'PRODUCT 14.09\nVAT 1.28', amount: '' },
+  { name: 'failed retry', second: '', amount: '', fail: true },
+]) {
+  test(`layout recovery preserves the first reading and handles ${scenario.name}`, async ({ page }) => {
+    await mockApp(page, { withDashboardExpense: true });
+    const { modes, workers } = await mockLayoutRecognition(page, 'SHOP\n24/10/2026 11:05', `OTHER SHOP\n25/10/2026 10:00\n${scenario.second}`, scenario.fail);
+    const editor = await openScanner(page);
+    await editor.getByLabel('Choose image', { exact: true }).setInputFiles(await receiptPhoto(page));
+    await expect(editor.getByLabel('Amount (EUR)', { exact: true })).toHaveValue(scenario.amount);
+    await expect(editor.getByLabel('Merchant (description)', { exact: true })).toHaveValue('SHOP');
+    await expect(editor.getByLabel('Date', { exact: true })).toHaveValue('2026-10-24');
+    await expect(editor.getByLabel('Time', { exact: true })).toHaveValue('11:05');
+    await expect(editor.locator('details pre')).not.toContainText('OTHER SHOP');
+    if (scenario.name === 'conflicting totals') await expect(editor.getByText('Different totals were found: choose the final amount to record.')).toBeVisible();
+    expect(modes).toEqual(['6', '3']);
+    await expect.poll(() => workers.length === 1 && workers.every(Boolean)).toBe(true);
+  });
+}
+
+test('known, conflicting, foreign and labelled unreadable totals do not trigger a layout retry', async ({ page }) => {
+  await mockApp(page, { withDashboardExpense: true });
+  await page.goto('/?month=2024-02');
+  await page.getByRole('button', { name: 'New expense', exact: true }).click();
+  const editor = page.getByRole('dialog');
+  for (const text of ['TOTAL 14.09', 'TOTAL 14.09\nTOTAL 15.00', 'TOTAL USD 14.09', 'USD 14.09', 'TOTALE EURO 2,%']) {
+    const { modes, workers } = await mockLayoutRecognition(page, `SHOP\n24/10/2026 11:05\n${text}`, null);
+    await editor.getByRole('button', { name: 'Scan receipt', exact: true }).click();
+    await editor.getByLabel('Choose image', { exact: true }).setInputFiles(await receiptPhoto(page));
+    await expect(editor.getByLabel('Merchant (description)', { exact: true })).toHaveValue('SHOP');
+    expect(modes).toEqual(['6']);
+    await expect.poll(() => workers.length === 1 && workers.every(Boolean)).toBe(true);
+    await editor.getByRole('button', { name: 'Back to form', exact: true }).click();
+  }
+});
+
+test('cancelling a layout retry terminates the same OCR worker', async ({ page }) => {
+  await mockApp(page, { withDashboardExpense: true });
+  const { modes, workers } = await mockLayoutRecognition(page, 'SHOP\n24/10/2026 11:05', null);
+  const editor = await openScanner(page);
+  await editor.getByLabel('Choose image', { exact: true }).setInputFiles(await receiptPhoto(page));
+  await expect(editor.getByText('Looking for the total…', { exact: true })).toBeVisible();
+  await expect.poll(() => modes).toEqual(['6', '3']);
+  await editor.getByRole('button', { name: 'Stop reading', exact: true }).click();
+  expect(modes).toEqual(['6', '3']);
+  await expect.poll(() => workers.length === 1 && workers.every(Boolean)).toBe(true);
+  await expect(editor.getByRole('button', { name: 'Choose image', exact: true })).toBeFocused();
+  await editor.getByRole('button', { name: 'Back to form', exact: true }).click();
+  await expect(editor.getByLabel('Amount', { exact: true })).toHaveValue('');
+});

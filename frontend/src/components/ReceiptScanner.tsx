@@ -137,7 +137,7 @@ export default function ReceiptScanner({ onApply, onCancel, onReviewReady }: { o
       {progress && <div className={styles.progress} role="status">
         <span className={styles.readingIcon} aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 7h6M9 11h6M9 15h3"/></svg></span>
         <p>{t(`receipt.${progress.stage}`)}</p>
-        <progress max="1" value={progress.stage === 'recognizing' ? progress.progress : undefined} aria-label={t('receipt.progress')} />
+        <progress max="1" value={progress.stage === 'recognizing' || progress.stage === 'recovering' ? progress.progress : undefined} aria-label={t('receipt.progress')} />
         <button type="button" className="secondary-btn" onClick={stop}>{t('receipt.stop')}</button>
       </div>}
       {failure && <p role="alert" className="field-error">{failure}</p>}
